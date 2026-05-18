@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+*.local
+.vite
+.DS_Store
+*.log
+
+# TypeScript incremental build artifacts
+*.tsbuildinfo
+
+# Per-user Claude Code settings
+.claude/settings.local.json
