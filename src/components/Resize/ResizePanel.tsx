@@ -1,16 +1,18 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useImageStore } from '../../stores/imageStore'
 import {
   computePresets,
   formatBytes,
   formatFilename,
   loadImage,
-  resizeAndEncode
+  processAndEncode,
+  computeCenteredCoverCrop
 } from '../../lib/imageResize'
 import { downloadBlob } from '../../lib/download'
 import { groupedPresets } from '../../lib/socialPresets'
 import CropOverlay from './CropOverlay'
-import type { OutputFormat, PresetSize } from '../../types/image'
+import SocialCropOverlay from './SocialCropOverlay'
+import type { OutputFormat, PresetSize, ResizeTarget, SourceCrop, SourceImage } from '../../types/image'
 
 const FORMAT_LABEL: Record<OutputFormat, string> = {
   'image/jpeg': 'JPEG',
@@ -27,6 +29,10 @@ export default function ResizePanel() {
   const cropMode = useImageStore((s) => s.cropMode)
   const setCropMode = useImageStore((s) => s.setCropMode)
   const applyCrop = useImageStore((s) => s.applyCrop)
+  const socialCrop = useImageStore((s) => s.socialCrop)
+  const applySocialPreset = useImageStore((s) => s.applySocialPreset)
+  const moveSocialCrop = useImageStore((s) => s.moveSocialCrop)
+  const clearSocialCrop = useImageStore((s) => s.clearSocialCrop)
 
   const selected = useMemo(
     () => images.find((i) => i.id === selectedId) ?? null,
@@ -37,6 +43,10 @@ export default function ResizePanel() {
   const [batchExporting, setBatchExporting] = useState(false)
   const [cropApplying, setCropApplying] = useState(false)
   const [lastResult, setLastResult] = useState<{ bytes: number; width: number; height: number } | null>(null)
+  const [socialOpen, setSocialOpen] = useState(false)
+
+  // Hooks always run — the actual encode work is gated on having a real target.
+  const estimate = useEncodedPreview(selected, target, socialCrop, !!selected && !!target && !cropMode)
 
   if (!selected || !target) {
     return (
@@ -71,12 +81,6 @@ export default function ResizePanel() {
     }
   }
 
-  function applySocialPreset(w: number, h: number) {
-    // Social presets have specific aspects that almost never match the source.
-    // Unlock aspect so the user gets exactly the target dimensions.
-    setTarget({ width: w, height: h, aspectLocked: false })
-  }
-
   async function commitCrop(rect: { x: number; y: number; width: number; height: number }) {
     setCropApplying(true)
     try {
@@ -95,7 +99,7 @@ export default function ResizePanel() {
     try {
       const { image, objectUrl } = await loadImage(selected.file)
       try {
-        const blob = await resizeAndEncode(image, target.width, target.height, target.format, target.quality)
+        const blob = await processAndEncode(image, socialCrop, target.width, target.height, target.format, target.quality)
         downloadBlob(blob, formatFilename(selected.name, target.width, target.height, target.format))
         setLastResult({ bytes: blob.size, width: target.width, height: target.height })
       } finally {
@@ -120,14 +124,21 @@ export default function ResizePanel() {
         try {
           let w = target.width
           let h = target.height
-          if (target.aspectLocked) {
+          let crop: SourceCrop | null = null
+          if (socialCrop) {
+            // Per-image centered cover crop at the preset aspect — the user's
+            // hand-positioned crop only applies to the currently-selected image.
+            crop = img.id === selected!.id
+              ? socialCrop
+              : computeCenteredCoverCrop(img.width, img.height, target.width, target.height)
+          } else if (target.aspectLocked) {
             const longTarget = Math.max(target.width, target.height)
             const longSrc = Math.max(img.width, img.height)
             const ratio = Math.min(1, longTarget / longSrc)
             w = Math.max(1, Math.round(img.width * ratio))
             h = Math.max(1, Math.round(img.height * ratio))
           }
-          const blob = await resizeAndEncode(image, w, h, target.format, target.quality)
+          const blob = await processAndEncode(image, crop, w, h, target.format, target.quality)
           zip.file(formatFilename(img.name, w, h, target.format), blob)
         } finally {
           URL.revokeObjectURL(objectUrl)
@@ -150,6 +161,14 @@ export default function ResizePanel() {
   ) ?? null
 
   const social = groupedPresets()
+  const activeSocialLabel = (() => {
+    if (!socialCrop) return null
+    for (const g of social) {
+      const hit = g.items.find((p) => p.width === target.width && p.height === target.height)
+      if (hit) return `${g.group} · ${hit.label}`
+    }
+    return null
+  })()
 
   return (
     <div className="flex-1 min-h-0 grid lg:grid-cols-[1fr_360px]">
@@ -165,15 +184,22 @@ export default function ResizePanel() {
               <span aria-hidden="true">✂</span> Cropping
             </span>
           )}
+          {!cropMode && socialCrop && activeSocialLabel && (
+            <span className="ml-auto inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium">
+              <span aria-hidden="true">📐</span> {activeSocialLabel}
+            </span>
+          )}
         </div>
         <PreviewArea
           image={selected}
-          targetW={target.width}
-          targetH={target.height}
+          target={target}
+          socialCrop={socialCrop}
           cropMode={cropMode}
           cropApplying={cropApplying}
+          previewUrl={estimate.state === 'ready' ? estimate.previewUrl : null}
           onCommitCrop={commitCrop}
           onCancelCrop={() => setCropMode(false)}
+          onMoveSocialCrop={moveSocialCrop}
         />
       </div>
 
@@ -221,7 +247,7 @@ export default function ResizePanel() {
             <div className="grid grid-cols-3 gap-2">
               {(['S', 'M', 'L'] as PresetSize[]).map((p) => {
                 const dim = presets[p]
-                const isActive = presetMatch === p
+                const isActive = !socialCrop && presetMatch === p
                 return (
                   <button
                     key={p}
@@ -247,38 +273,74 @@ export default function ResizePanel() {
           </div>
 
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Social media</h2>
-            <div className="space-y-2.5">
-              {social.map((g) => (
-                <div key={g.group}>
-                  <div className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">{g.group}</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {g.items.map((p) => {
-                      const isActive = target.width === p.width && target.height === p.height
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => applySocialPreset(p.width, p.height)}
-                          title={`${p.width} × ${p.height} px`}
-                          className={[
-                            'px-2 py-1 rounded-md border text-[11px] font-medium transition-colors',
-                            isActive
-                              ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
-                              : 'border-slate-200 text-slate-600 hover:border-orange-400 hover:bg-orange-50/40'
-                          ].join(' ')}
-                        >
-                          {p.label}
-                        </button>
-                      )
-                    })}
+            <button
+              type="button"
+              onClick={() => setSocialOpen((v) => !v)}
+              aria-expanded={socialOpen}
+              className="w-full flex items-center justify-between gap-2 py-1 group"
+            >
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">
+                Social Media Sizes
+              </span>
+              <span className="flex items-center gap-1.5">
+                {socialCrop && (
+                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5">
+                    Active
+                  </span>
+                )}
+                <span
+                  aria-hidden="true"
+                  className={[
+                    'text-slate-400 group-hover:text-slate-600 transition-transform',
+                    socialOpen ? 'rotate-90' : ''
+                  ].join(' ')}
+                >
+                  ▶
+                </span>
+              </span>
+            </button>
+            {socialOpen && (
+              <div className="mt-2 space-y-2.5">
+                {socialCrop && (
+                  <button
+                    type="button"
+                    onClick={clearSocialCrop}
+                    className="w-full text-left text-[11px] text-orange-700 hover:text-orange-900 bg-orange-50 hover:bg-orange-100 rounded-md px-2 py-1.5 ring-1 ring-orange-200 transition-colors"
+                  >
+                    Clear social crop · go back to free sizing
+                  </button>
+                )}
+                {social.map((g) => (
+                  <div key={g.group}>
+                    <div className="text-[10px] uppercase tracking-wide text-slate-400 mb-1">{g.group}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {g.items.map((p) => {
+                        const isActive = !!socialCrop && target.width === p.width && target.height === p.height
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => applySocialPreset(p.width, p.height)}
+                            title={`${p.width} × ${p.height} px`}
+                            className={[
+                              'px-2 py-1 rounded-md border text-[11px] font-medium transition-colors',
+                              isActive
+                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
+                                : 'border-slate-200 text-slate-600 hover:border-orange-400 hover:bg-orange-50/40'
+                            ].join(' ')}
+                          >
+                            {p.label}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] text-slate-400 leading-snug">
-              Tip: crop first to control which part of your photo fills the preset.
-            </p>
+                ))}
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  Picking a size shows a crop frame on the preview — drag it to reframe so your image isn't squished.
+                </p>
+              </div>
+            )}
           </div>
 
           <div>
@@ -363,11 +425,32 @@ export default function ResizePanel() {
                   onChange={(e) => setTarget({ quality: Number(e.target.value) / 100 })}
                   className="w-full accent-orange-600"
                 />
+                <p className="mt-1 text-[10px] text-slate-400 leading-snug">
+                  The preview reflects the chosen quality.
+                </p>
               </div>
             )}
           </div>
 
           <div className="space-y-2 pt-2 border-t border-slate-200">
+            <div className="rounded-md bg-slate-50 ring-1 ring-slate-200 px-3 py-2 text-[11px] text-slate-600 leading-relaxed">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Estimated output</span>
+                <span className="font-medium tabular-nums text-slate-800">
+                  {estimate.state === 'ready'
+                    ? formatBytes(estimate.bytes)
+                    : estimate.state === 'computing'
+                      ? '…'
+                      : '—'}
+                </span>
+              </div>
+              <div className="mt-0.5 flex items-center justify-between text-slate-400">
+                <span>{target.width}×{target.height} {target.format.replace('image/', '').toUpperCase()}</span>
+                {estimate.state === 'ready' && (
+                  <span>{Math.round((1 - estimate.bytes / selected.bytes) * 100)}% vs source</span>
+                )}
+              </div>
+            </div>
             <button
               type="button"
               onClick={exportSelected}
@@ -405,23 +488,125 @@ export default function ResizePanel() {
   )
 }
 
+type Estimate =
+  | { state: 'idle' }
+  | { state: 'computing' }
+  | { state: 'ready'; bytes: number; previewUrl: string }
+  | { state: 'error' }
+
+/**
+ * Debounced live encode of the currently-selected image at the current output
+ * settings. Returns the resulting byte count for size estimation and a
+ * preview object URL so the preview pane can reflect the chosen quality.
+ *
+ * The decoded HTMLImageElement is cached per selected image so each setting
+ * tweak only pays the encode cost, not the decode cost.
+ */
+function useEncodedPreview(
+  selected: SourceImage | null,
+  target: ResizeTarget | null,
+  socialCrop: SourceCrop | null,
+  enabled: boolean
+): Estimate {
+  const [estimate, setEstimate] = useState<Estimate>({ state: 'idle' })
+  const sourceRef = useRef<{ id: string; image: HTMLImageElement } | null>(null)
+  const previewUrlRef = useRef<string | null>(null)
+
+  const sid = selected?.id ?? null
+  const tw = target?.width ?? 0
+  const th = target?.height ?? 0
+  const tf = target?.format ?? 'image/jpeg'
+  const tq = target?.quality ?? 1
+  const cx = socialCrop?.x ?? null
+  const cy = socialCrop?.y ?? null
+  const cw = socialCrop?.width ?? null
+  const ch = socialCrop?.height ?? null
+
+  useEffect(() => {
+    if (!enabled || !selected || !target) {
+      setEstimate({ state: 'idle' })
+      return
+    }
+    let cancelled = false
+    setEstimate((prev) => {
+      if (prev.state === 'ready') return { state: 'computing' }
+      return prev.state === 'computing' ? prev : { state: 'computing' }
+    })
+    const tid = window.setTimeout(async () => {
+      try {
+        let source = sourceRef.current
+        if (!source || source.id !== selected.id) {
+          const { image } = await loadImage(selected.file)
+          if (cancelled) return
+          sourceRef.current = { id: selected.id, image }
+          source = sourceRef.current
+        }
+        const blob = await processAndEncode(
+          source.image,
+          socialCrop,
+          target.width,
+          target.height,
+          target.format,
+          target.quality
+        )
+        if (cancelled) return
+        const url = URL.createObjectURL(blob)
+        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+        previewUrlRef.current = url
+        setEstimate({ state: 'ready', bytes: blob.size, previewUrl: url })
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Encode preview failed', err)
+          setEstimate({ state: 'error' })
+        }
+      }
+    }, 220)
+    return () => {
+      cancelled = true
+      window.clearTimeout(tid)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, sid, tw, th, tf, tq, cx, cy, cw, ch])
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
+  }, [])
+
+  return estimate
+}
+
 interface PreviewAreaProps {
-  image: import('../../types/image').SourceImage
-  targetW: number
-  targetH: number
+  image: SourceImage
+  target: ResizeTarget
+  socialCrop: SourceCrop | null
   cropMode: boolean
   cropApplying: boolean
+  previewUrl: string | null
   onCommitCrop: (rect: { x: number; y: number; width: number; height: number }) => void
   onCancelCrop: () => void
+  onMoveSocialCrop: (x: number, y: number) => void
 }
 
 /**
- * Preview pane: shows the image at the *target* output dimensions when not
- * cropping, fitting to the container when the target is larger than the
- * available space. A small chip in the corner reports whether the preview
- * is showing the image at 100% or at a shrunk fraction of the actual output.
+ * Preview pane. Three display modes:
+ *   - cropMode → manual cropper (CropOverlay)
+ *   - socialCrop → pannable crop window (SocialCropOverlay)
+ *   - otherwise → encoded-output preview (reflects quality + format)
  */
-function PreviewArea({ image, targetW, targetH, cropMode, cropApplying, onCommitCrop, onCancelCrop }: PreviewAreaProps) {
+function PreviewArea({
+  image,
+  target,
+  socialCrop,
+  cropMode,
+  cropApplying,
+  previewUrl,
+  onCommitCrop,
+  onCancelCrop,
+  onMoveSocialCrop
+}: PreviewAreaProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
 
@@ -443,21 +628,23 @@ function PreviewArea({ image, targetW, targetH, cropMode, cropApplying, onCommit
   const availW = Math.max(1, box.w - PADDING)
   const availH = Math.max(1, box.h - PADDING)
   const fitScale = box.w && box.h
-    ? Math.min(1, Math.min(availW / targetW, availH / targetH))
+    ? Math.min(1, Math.min(availW / target.width, availH / target.height))
     : 1
-  const displayW = Math.max(1, Math.round(targetW * fitScale))
-  const displayH = Math.max(1, Math.round(targetH * fitScale))
+  const displayW = Math.max(1, Math.round(target.width * fitScale))
+  const displayH = Math.max(1, Math.round(target.height * fitScale))
   const pct = Math.round(fitScale * 100)
 
   return (
     <div ref={wrapperRef} className="relative flex-1 min-h-[55vh] lg:min-h-0 overflow-hidden checker-bg">
       {cropMode ? (
         <CropOverlay image={image} onCommit={onCommitCrop} onCancel={onCancelCrop} />
+      ) : socialCrop ? (
+        <SocialCropOverlay image={image} crop={socialCrop} onMove={onMoveSocialCrop} />
       ) : (
         <>
           <div className="absolute inset-0 flex items-center justify-center p-6">
             <img
-              src={image.objectUrl}
+              src={previewUrl ?? image.objectUrl}
               alt={image.name}
               draggable={false}
               style={{ width: displayW, height: displayH }}
@@ -466,7 +653,7 @@ function PreviewArea({ image, targetW, targetH, cropMode, cropApplying, onCommit
           </div>
           <div className="absolute bottom-3 right-3 pointer-events-none flex items-center gap-2">
             <span className="bg-slate-900/85 text-white text-[11px] font-medium tabular-nums px-2 py-1 rounded-md">
-              {targetW} × {targetH}
+              {target.width} × {target.height}
             </span>
             <span
               className={[

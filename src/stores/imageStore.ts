@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { OutputFormat, ResizeTarget, SourceImage } from '../types/image'
-import { loadImage } from '../lib/imageResize'
+import type { OutputFormat, ResizeTarget, SourceCrop, SourceImage } from '../types/image'
+import { computeCenteredCoverCrop, loadImage } from '../lib/imageResize'
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10)
@@ -19,6 +19,12 @@ interface ImageStore {
   target: ResizeTarget | null
   loading: boolean
   cropMode: boolean
+  /**
+   * Non-destructive crop applied when a social-media preset is active.
+   * Lives only in memory and is consumed by the export pipeline — the source
+   * image is never rewritten. Cleared when the user picks a non-social size.
+   */
+  socialCrop: SourceCrop | null
   /** Add one or more files; only successfully-decoded images are appended. */
   addFiles: (files: File[] | FileList) => Promise<void>
   selectImage: (id: string) => void
@@ -31,6 +37,15 @@ interface ImageStore {
   /** Replace the currently-selected image with a cropped version. Coords are
    *  in source pixels. After commit, future resize ops work on the cropped data. */
   applyCrop: (rect: { x: number; y: number; width: number; height: number }) => Promise<void>
+  /**
+   * Pick a social-media preset: set the output dimensions and initialise a
+   * centered, max-size crop at that aspect ratio so the source isn't squished.
+   */
+  applySocialPreset: (width: number, height: number) => void
+  /** Move the social-crop rectangle while keeping its size. */
+  moveSocialCrop: (x: number, y: number) => void
+  /** Forget the social crop — the source aspect controls again. */
+  clearSocialCrop: () => void
 }
 
 function makeDefaultTarget(img: SourceImage): ResizeTarget {
@@ -57,6 +72,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   target: null,
   loading: false,
   cropMode: false,
+  socialCrop: null,
 
   async addFiles(input) {
     const files = Array.from(input).filter(looksLikeImage)
@@ -99,7 +115,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   selectImage(id) {
     const img = get().images.find((i) => i.id === id)
     if (!img) return
-    set({ selectedId: id, target: makeDefaultTarget(img) })
+    set({ selectedId: id, target: makeDefaultTarget(img), socialCrop: null })
   },
 
   removeImage(id) {
@@ -108,12 +124,17 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     if (removed) URL.revokeObjectURL(removed.objectUrl)
     const remaining = images.filter((i) => i.id !== id)
     if (remaining.length === 0) {
-      set({ images: [], selectedId: null, target: null })
+      set({ images: [], selectedId: null, target: null, socialCrop: null })
       return
     }
     if (selectedId === id) {
       const nextSelected = remaining[0]!
-      set({ images: remaining, selectedId: nextSelected.id, target: makeDefaultTarget(nextSelected) })
+      set({
+        images: remaining,
+        selectedId: nextSelected.id,
+        target: makeDefaultTarget(nextSelected),
+        socialCrop: null
+      })
     } else {
       set({ images: remaining })
     }
@@ -121,24 +142,61 @@ export const useImageStore = create<ImageStore>((set, get) => ({
 
   clearAll() {
     for (const img of get().images) URL.revokeObjectURL(img.objectUrl)
-    set({ images: [], selectedId: null, target: null })
+    set({ images: [], selectedId: null, target: null, socialCrop: null })
   },
 
   setTarget(partial) {
     const current = get().target
     if (!current) return
-    set({ target: { ...current, ...partial } })
+    // Editing dimensions manually drops any social-preset crop — the user is
+    // back in "literal width × height" mode.
+    const sizeChanged = partial.width !== undefined || partial.height !== undefined
+    const next: Partial<ImageStore> = { target: { ...current, ...partial } }
+    if (sizeChanged) next.socialCrop = null
+    set(next as ImageStore)
   },
 
   resetTargetToSelected() {
     const { images, selectedId } = get()
     const img = images.find((i) => i.id === selectedId)
     if (!img) return
-    set({ target: makeDefaultTarget(img) })
+    set({ target: makeDefaultTarget(img), socialCrop: null })
   },
 
   setCropMode(on) {
-    set({ cropMode: on })
+    // Entering the manual cropper supersedes the social crop overlay.
+    if (on) set({ cropMode: true, socialCrop: null })
+    else set({ cropMode: false })
+  },
+
+  applySocialPreset(width, height) {
+    const { images, selectedId, target } = get()
+    const img = images.find((i) => i.id === selectedId)
+    if (!img || !target) return
+    const crop = computeCenteredCoverCrop(img.width, img.height, width, height)
+    set({
+      target: { ...target, width, height, aspectLocked: false },
+      socialCrop: crop
+    })
+  },
+
+  moveSocialCrop(x, y) {
+    const { socialCrop, images, selectedId } = get()
+    const img = images.find((i) => i.id === selectedId)
+    if (!socialCrop || !img) return
+    const maxX = Math.max(0, img.width - socialCrop.width)
+    const maxY = Math.max(0, img.height - socialCrop.height)
+    set({
+      socialCrop: {
+        ...socialCrop,
+        x: Math.max(0, Math.min(maxX, Math.round(x))),
+        y: Math.max(0, Math.min(maxY, Math.round(y)))
+      }
+    })
+  },
+
+  clearSocialCrop() {
+    set({ socialCrop: null })
   },
 
   async applyCrop(rect) {
@@ -180,7 +238,8 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       set({
         images: images.map((i) => (i.id === img.id ? updated : i)),
         target: makeDefaultTarget(updated),
-        cropMode: false
+        cropMode: false,
+        socialCrop: null
       })
     } finally {
       URL.revokeObjectURL(objectUrl)

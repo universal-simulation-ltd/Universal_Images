@@ -1,4 +1,4 @@
-import type { OutputFormat, PresetSize } from '../types/image'
+import type { OutputFormat, PresetSize, SourceCrop } from '../types/image'
 
 const HEIC_EXT_RE = /\.(heic|heif)$/i
 const HEIC_MIME = new Set(['image/heic', 'image/heif'])
@@ -151,6 +151,10 @@ export async function resizeAndEncode(
   quality: number
 ): Promise<Blob> {
   const canvas = drawDownscaled(source, Math.max(1, Math.round(targetW)), Math.max(1, Math.round(targetH)))
+  return encodeCanvas(canvas, format, quality)
+}
+
+function encodeCanvas(canvas: HTMLCanvasElement, format: OutputFormat, quality: number): Promise<Blob> {
   const useQuality = format === 'image/png' ? undefined : Math.min(1, Math.max(0, quality))
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -162,6 +166,105 @@ export async function resizeAndEncode(
       useQuality
     )
   })
+}
+
+/**
+ * Crop a region from the source then iteratively downscale into the target
+ * canvas. Mirrors the half-step logic of drawDownscaled to avoid aliasing
+ * when the crop rectangle is much bigger than the requested output.
+ */
+function drawCropAndDownscale(
+  source: HTMLImageElement,
+  crop: SourceCrop,
+  targetW: number,
+  targetH: number
+): HTMLCanvasElement {
+  const cropW = Math.max(1, Math.round(crop.width))
+  const cropH = Math.max(1, Math.round(crop.height))
+
+  let canvas = document.createElement('canvas')
+  canvas.width = cropW
+  canvas.height = cropH
+  const c0 = canvas.getContext('2d')!
+  c0.imageSmoothingEnabled = true
+  c0.imageSmoothingQuality = 'high'
+  c0.drawImage(source, crop.x, crop.y, crop.width, crop.height, 0, 0, cropW, cropH)
+
+  let currentW = cropW
+  let currentH = cropH
+
+  while (currentW >= targetW * 2 && currentH >= targetH * 2) {
+    const nextW = Math.max(Math.round(currentW / 2), targetW)
+    const nextH = Math.max(Math.round(currentH / 2), targetH)
+    const next = document.createElement('canvas')
+    next.width = nextW
+    next.height = nextH
+    const ctx = next.getContext('2d')!
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(canvas, 0, 0, currentW, currentH, 0, 0, nextW, nextH)
+    canvas = next
+    currentW = nextW
+    currentH = nextH
+  }
+
+  if (currentW === targetW && currentH === targetH) return canvas
+
+  const out = document.createElement('canvas')
+  out.width = targetW
+  out.height = targetH
+  const ctx = out.getContext('2d')!
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(canvas, 0, 0, currentW, currentH, 0, 0, targetW, targetH)
+  return out
+}
+
+/**
+ * Run the source through an optional crop, then resize and encode to the
+ * given output format. Used for both export and the live preview encode.
+ */
+export async function processAndEncode(
+  source: HTMLImageElement,
+  crop: SourceCrop | null,
+  targetW: number,
+  targetH: number,
+  format: OutputFormat,
+  quality: number
+): Promise<Blob> {
+  const tw = Math.max(1, Math.round(targetW))
+  const th = Math.max(1, Math.round(targetH))
+  const canvas = crop
+    ? drawCropAndDownscale(source, crop, tw, th)
+    : drawDownscaled(source, tw, th)
+  return encodeCanvas(canvas, format, quality)
+}
+
+/**
+ * Largest rectangle with the target aspect ratio that fits inside the source,
+ * centered. Used as the default position when a social preset is selected.
+ */
+export function computeCenteredCoverCrop(
+  srcW: number,
+  srcH: number,
+  targetW: number,
+  targetH: number
+): SourceCrop {
+  const presetAspect = targetW / targetH
+  let w = srcW
+  let h = w / presetAspect
+  if (h > srcH) {
+    h = srcH
+    w = h * presetAspect
+  }
+  const rw = Math.max(1, Math.round(w))
+  const rh = Math.max(1, Math.round(h))
+  return {
+    x: Math.max(0, Math.round((srcW - rw) / 2)),
+    y: Math.max(0, Math.round((srcH - rh) / 2)),
+    width: rw,
+    height: rh
+  }
 }
 
 export function formatFilename(originalName: string, width: number, height: number, format: OutputFormat) {

@@ -26,3 +26,11 @@ export interface ResizeTarget {
 }
 
 export type PresetSize = 'S' | 'M' | 'L'
+
+/** Crop rectangle in source-image pixel space. */
+export interface SourceCrop {
+  x: number
+  y: number
+  width: number
+  height: number
+}

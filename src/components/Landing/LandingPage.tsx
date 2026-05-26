@@ -1,15 +1,36 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useImageStore } from '../../stores/imageStore'
 import ImageIllustration from './ImageIllustration'
 
 export default function LandingPage() {
   const inputRef = useRef<HTMLInputElement>(null)
   const addFiles = useImageStore((s) => s.addFiles)
+  const [loadingExample, setLoadingExample] = useState(false)
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     if (files && files.length > 0) await addFiles(files)
     e.target.value = ''
+  }
+
+  async function loadExample() {
+    if (loadingExample) return
+    setLoadingExample(true)
+    try {
+      const url = `${import.meta.env.BASE_URL}Example_Image.jpg`
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`Failed to load example image (${res.status})`)
+      const blob = await res.blob()
+      const file = new File([blob], 'Example_Image.jpg', {
+        type: blob.type || 'image/jpeg'
+      })
+      await addFiles([file])
+    } catch (err) {
+      console.error(err)
+      alert(`Couldn't load the example image: ${(err as Error).message}`)
+    } finally {
+      setLoadingExample(false)
+    }
   }
 
   return (
@@ -57,6 +78,22 @@ export default function LandingPage() {
                   hidden
                   onChange={onPick}
                 />
+
+                <div className="mt-4 flex items-center gap-3 text-xs text-slate-500">
+                  <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+                  <span>or</span>
+                  <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={loadExample}
+                  disabled={loadingExample}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
+                >
+                  <span aria-hidden="true">🧪</span>
+                  {loadingExample ? 'Loading example…' : 'Try with example image'}
+                </button>
 
                 <ul className="mt-5 grid grid-cols-2 gap-2 text-xs text-slate-600">
                   <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> JPEG, PNG, WebP, HEIC</li>
