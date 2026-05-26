@@ -61,7 +61,7 @@ export default function App() {
         product="images"
         productLogo={<ProductLogo />}
         fileMenu={<AppMenu />}
-        contentMaxWidth="100%"
+        suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
       />
 
       <main className="flex-1 min-h-0 flex">
