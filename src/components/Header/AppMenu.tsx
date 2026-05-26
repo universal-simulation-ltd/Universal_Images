@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useImageStore } from '../../stores/imageStore'
 
+// The per-app "File" dropdown that slots into <UniversalAppsNavBar />.
+// Holds Open-images and Clear-all actions; stays in sync with the store.
 export default function AppMenu() {
   const images = useImageStore((s) => s.images)
   const addFiles = useImageStore((s) => s.addFiles)
@@ -41,26 +43,9 @@ export default function AppMenu() {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
         aria-expanded={open}
-        title="Universal Images — menu"
-        className="flex items-center gap-2 px-1.5 py-1 rounded-md hover:bg-white/5 transition-colors text-white"
+        className="h-8 px-3 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium ring-1 ring-slate-200 flex items-center gap-1.5"
       >
-        <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-orange-600 text-white">
-          <svg
-            viewBox="0 0 16 16"
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <rect x="1.5" y="2.75" width="13" height="10.5" rx="1.5" />
-            <circle cx="5" cy="6" r="1.1" fill="currentColor" stroke="none" />
-            <path d="M2.5 11 L5.5 7.8 L8 9.8 L10.5 7 L13.5 10.2" />
-          </svg>
-        </span>
-        <span className="hidden sm:inline font-semibold tracking-tight">Universal Images</span>
+        File
         <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
           <path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -77,7 +62,7 @@ export default function AppMenu() {
         <div className="absolute left-0 mt-2 w-60 bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200 z-50 overflow-hidden">
           <button
             onClick={() => { fileInputRef.current?.click(); setOpen(false) }}
-            className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-orange-50 hover:text-orange-700 text-sm"
+            className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-emerald-50 hover:text-emerald-700 text-sm"
           >
             <span aria-hidden="true">🖼</span>
             <span className="flex-1 text-left font-medium">

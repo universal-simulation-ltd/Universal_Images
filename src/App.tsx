@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { UniversalBar } from '@unisim/sdk'
+import { UniversalAppsNavBar } from '@unisim/sdk'
 import AppMenu from './components/Header/AppMenu'
-import VersionChip from './components/Header/VersionChip'
+import ProductLogo from './components/Header/ProductLogo'
 import LandingPage from './components/Landing/LandingPage'
 import ImageGrid from './components/Grid/ImageGrid'
 import ResizePanel from './components/Resize/ResizePanel'
@@ -57,13 +57,12 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-full bg-slate-100">
-      <UniversalBar />
-      <header className="bg-slate-900 text-white">
-        <div className="mx-auto w-full flex items-center gap-2 px-2 sm:px-3 py-2 min-h-[52px]">
-          <AppMenu />
-          <VersionChip />
-        </div>
-      </header>
+      <UniversalAppsNavBar
+        product="images"
+        productLogo={<ProductLogo />}
+        fileMenu={<AppMenu />}
+        contentMaxWidth="100%"
+      />
 
       <main className="flex-1 min-h-0 flex">
         {loading && !hasImages ? (
