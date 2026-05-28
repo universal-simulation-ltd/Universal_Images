@@ -1,0 +1,23 @@
+# Cloudflare Pages rewrites — Universal Images is served under /images/ but the
+# built files in dist/ are flat (Vite's `base` only rewrites URLs INSIDE the
+# HTML; it does not place files in dist/images/).
+#
+# 200 status = transparent rewrite (URL bar unchanged). Specific rules first,
+# broad SPA fallback last.
+
+# Service-worker + PWA artefacts.
+/images/sw.js                /sw.js                200
+/images/registerSW.js        /registerSW.js        200
+/images/manifest.webmanifest /manifest.webmanifest 200
+/images/workbox-*            /workbox-:splat       200
+
+# Hashed asset bundles.
+/images/assets/*             /assets/:splat        200
+
+# Static files referenced from index.html / app code (BASE_URL-prefixed).
+/images/favicon.svg          /favicon.svg          200
+/images/unisim-icon.png      /unisim-icon.png      200
+/images/Example_Image.jpg    /Example_Image.jpg    200
+
+# SPA fallback — everything else under /images/ serves the shell.
+/images/*                    /index.html           200
