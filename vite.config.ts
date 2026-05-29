@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -7,11 +7,19 @@ import pkg from './package.json' with { type: 'json' }
 // Universal Images is served at opensource.unisim.co.uk/images in production.
 // `base` + PWA scope derive from Vite's `mode`; local dev stays `/`.
 export default defineConfig(({ mode }) => {
+  // Merge .env files with process.env (Cloudflare Pages injects vars into
+  // process.env at build time without the VITE_ prefix requirement).
+  // Accept both VITE_SUPABASE_URL and SUPABASE_URL so either naming works.
+  const fileEnv = loadEnv(mode, process.cwd(), '')
+  const env = { ...process.env, ...fileEnv }
+
   const BASE_PATH = mode === 'production' ? '/images/' : '/'
   return {
     base: BASE_PATH,
     define: {
-      __APP_VERSION__: JSON.stringify(pkg.version)
+      __APP_VERSION__: JSON.stringify(pkg.version),
+      __SUPABASE_URL__: JSON.stringify(env.VITE_SUPABASE_URL ?? env.SUPABASE_URL ?? ''),
+      __SUPABASE_ANON_KEY__: JSON.stringify(env.VITE_SUPABASE_ANON_KEY ?? env.SUPABASE_ANON_KEY ?? ''),
     },
     resolve: {
       // Force a single React instance so @unisim/sdk's hooks share the same
