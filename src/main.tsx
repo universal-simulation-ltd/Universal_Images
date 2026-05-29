@@ -12,8 +12,8 @@ if (import.meta.env.DEV) {
 }
 
 const universalConfig = {
-  supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
-  supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+  supabaseUrl: __SUPABASE_URL__,
+  supabaseAnonKey: __SUPABASE_ANON_KEY__,
   product: 'images' as const,
   cookieDomain: import.meta.env.PROD ? '.unisim.co.uk' : undefined,
 }
