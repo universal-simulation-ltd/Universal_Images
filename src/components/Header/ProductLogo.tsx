@@ -3,7 +3,7 @@
 export default function ProductLogo() {
   return (
     <a
-      href="/"
+      href={import.meta.env.BASE_URL}
       className="inline-flex items-center gap-2 text-slate-900 no-underline px-1 py-0.5 rounded-md hover:bg-slate-50"
       aria-label="Universal Images — home"
     >

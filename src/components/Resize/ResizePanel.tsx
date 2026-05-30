@@ -20,7 +20,11 @@ const FORMAT_LABEL: Record<OutputFormat, string> = {
   'image/webp': 'WebP'
 }
 
-export default function ResizePanel() {
+interface ResizePanelProps {
+  onShowGrid?: () => void
+}
+
+export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const images = useImageStore((s) => s.images)
   const selectedId = useImageStore((s) => s.selectedId)
   const target = useImageStore((s) => s.target)
@@ -50,7 +54,16 @@ export default function ResizePanel() {
 
   if (!selected || !target) {
     return (
-      <div className="flex-1 flex items-center justify-center text-sm text-slate-400">
+      <div className="flex-1 flex flex-col items-center justify-center gap-4 text-sm text-slate-400">
+        {onShowGrid && (
+          <button
+            type="button"
+            onClick={onShowGrid}
+            className="md:hidden inline-flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            Open an image
+          </button>
+        )}
         Select an image to resize.
       </div>
     )
@@ -173,19 +186,36 @@ export default function ResizePanel() {
   return (
     <div className="flex-1 min-h-0 grid lg:grid-cols-[1fr_360px]">
       <div className="flex flex-col bg-slate-100 min-h-0">
-        <div className="px-4 py-2 border-b border-slate-200 bg-white flex items-center gap-3 text-xs text-slate-500">
+        <div className="px-3 py-2 border-b border-slate-200 bg-white flex items-center gap-2 text-xs text-slate-500">
+          {/* Mobile: tap to open image picker overlay */}
+          {onShowGrid && (
+            <button
+              type="button"
+              onClick={onShowGrid}
+              title="All images"
+              className="md:hidden shrink-0 inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-md px-2 py-1 text-[11px] font-medium tabular-nums transition-colors"
+            >
+              <svg viewBox="0 0 12 12" className="w-3 h-3" fill="currentColor" aria-hidden="true">
+                <rect x="0.5" y="0.5" width="4.5" height="4.5" rx="0.75" />
+                <rect x="7" y="0.5" width="4.5" height="4.5" rx="0.75" />
+                <rect x="0.5" y="7" width="4.5" height="4.5" rx="0.75" />
+                <rect x="7" y="7" width="4.5" height="4.5" rx="0.75" />
+              </svg>
+              {images.length}
+            </button>
+          )}
           <span className="font-medium text-slate-700 truncate">{selected.name}</span>
-          <span>·</span>
-          <span>{selected.width} × {selected.height} px</span>
-          <span>·</span>
-          <span>{formatBytes(selected.bytes)}</span>
+          <span className="hidden sm:inline shrink-0">·</span>
+          <span className="hidden sm:inline shrink-0">{selected.width} × {selected.height} px</span>
+          <span className="hidden sm:inline shrink-0">·</span>
+          <span className="hidden sm:inline shrink-0">{formatBytes(selected.bytes)}</span>
           {cropMode && (
-            <span className="ml-auto inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium">
+            <span className="ml-auto inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0">
               <span aria-hidden="true">✂</span> Cropping
             </span>
           )}
           {!cropMode && socialCrop && activeSocialLabel && (
-            <span className="ml-auto inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium">
+            <span className="ml-auto inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0">
               <span aria-hidden="true">📐</span> {activeSocialLabel}
             </span>
           )}

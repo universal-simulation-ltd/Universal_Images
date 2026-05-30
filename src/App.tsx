@@ -17,6 +17,13 @@ export default function App() {
   const [dragOver, setDragOver] = useState(false)
   const dragCounter = useRef(0)
 
+  // Mobile image-picker overlay — hidden by default; shown when user taps the grid button.
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const hasImages = images.length > 0
+  useEffect(() => {
+    if (!hasImages) setMobileSidebarOpen(false)
+  }, [hasImages])
+
   useEffect(() => {
     function onEnter(e: DragEvent) {
       if (!e.dataTransfer?.types.includes('Files')) return
@@ -53,8 +60,6 @@ export default function App() {
     }
   }, [addFiles])
 
-  const hasImages = images.length > 0
-
   return (
     <div className="flex flex-col h-full bg-slate-100">
       <UniversalAppsNavBar
@@ -64,15 +69,30 @@ export default function App() {
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
       />
 
-      <main className="flex-1 min-h-0 flex">
+      <main className="flex-1 min-h-0 flex relative">
         {loading && !hasImages ? (
           <div className="flex-1 flex items-center justify-center text-slate-500">
             Decoding images…
           </div>
         ) : hasImages ? (
           <>
-            <ImageGrid />
-            <ResizePanel />
+            {/* Thumbnail sidebar — always visible on desktop, hidden on mobile */}
+            <div className="hidden md:flex shrink-0">
+              <ImageGrid />
+            </div>
+
+            {/* Editor panel — full-width on mobile since sidebar is hidden */}
+            <ResizePanel onShowGrid={() => setMobileSidebarOpen(true)} />
+
+            {/* Mobile image-picker overlay */}
+            {mobileSidebarOpen && (
+              <div className="absolute inset-0 z-30 flex md:hidden">
+                <ImageGrid
+                  mobileExpanded
+                  onBack={() => setMobileSidebarOpen(false)}
+                />
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-1 min-h-0">
