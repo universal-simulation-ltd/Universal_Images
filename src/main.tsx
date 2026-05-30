@@ -11,9 +11,12 @@ if (import.meta.env.DEV) {
   }
 }
 
+// Fall back to a non-empty placeholder so createClient() never throws when
+// the env vars aren't set. Auth calls will fail gracefully; the local-first
+// image tool still renders and works without authentication.
 const universalConfig = {
-  supabaseUrl: __SUPABASE_URL__,
-  supabaseAnonKey: __SUPABASE_ANON_KEY__,
+  supabaseUrl: __SUPABASE_URL__ || 'https://placeholder.supabase.co',
+  supabaseAnonKey: __SUPABASE_ANON_KEY__ || 'placeholder-anon-key',
   product: 'images' as const,
   cookieDomain: import.meta.env.PROD ? '.unisim.co.uk' : undefined,
 }
