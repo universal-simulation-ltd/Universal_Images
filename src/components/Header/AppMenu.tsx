@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useImageStore } from '../../stores/imageStore'
 
-// The per-app "File" dropdown that slots into <UniversalAppsNavBar />.
+// The per-app "Actions" dropdown that slots into <UniversalAppsNavBar />.
 // Holds Open-images and Clear-all actions; stays in sync with the store.
 export default function AppMenu() {
   const images = useImageStore((s) => s.images)
@@ -45,7 +45,7 @@ export default function AppMenu() {
         aria-expanded={open}
         className="h-9 px-3 rounded-md bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 text-sm font-medium flex items-center gap-1.5 transition-colors shadow-sm"
       >
-        File
+        Actions
         <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
           <path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>

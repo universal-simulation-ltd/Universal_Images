@@ -230,6 +230,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
           onCommitCrop={commitCrop}
           onCancelCrop={() => setCropMode(false)}
           onMoveSocialCrop={moveSocialCrop}
+          setCropMode={setCropMode}
         />
       </div>
 
@@ -618,6 +619,7 @@ interface PreviewAreaProps {
   onCommitCrop: (rect: { x: number; y: number; width: number; height: number }) => void
   onCancelCrop: () => void
   onMoveSocialCrop: (x: number, y: number) => void
+  setCropMode: (next: boolean) => void
 }
 
 /**
@@ -635,7 +637,8 @@ function PreviewArea({
   previewUrl,
   onCommitCrop,
   onCancelCrop,
-  onMoveSocialCrop
+  onMoveSocialCrop,
+  setCropMode
 }: PreviewAreaProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
@@ -672,13 +675,38 @@ function PreviewArea({
         <SocialCropOverlay image={image} crop={socialCrop} onMove={onMoveSocialCrop} />
       ) : (
         <>
-          <div className="absolute inset-0 flex items-center justify-center p-6">
+          <div
+            className="absolute inset-0 flex items-center justify-center p-6"
+            onPointerDown={(e) => {
+              // No tool active and the user starts dragging on the image →
+              // auto-engage the crop tool so they can draw a selection
+              // without first hunting for the "Crop image" button.
+              if (e.button !== 0) return
+              const startX = e.clientX
+              const startY = e.clientY
+              const THRESHOLD = 5
+              function onMove(ev: PointerEvent) {
+                if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > THRESHOLD) {
+                  cleanup()
+                  setCropMode(true)
+                }
+              }
+              function cleanup() {
+                document.removeEventListener('pointermove', onMove)
+                document.removeEventListener('pointerup', cleanup)
+                document.removeEventListener('pointercancel', cleanup)
+              }
+              document.addEventListener('pointermove', onMove)
+              document.addEventListener('pointerup', cleanup)
+              document.addEventListener('pointercancel', cleanup)
+            }}
+          >
             <img
               src={previewUrl ?? image.objectUrl}
               alt={image.name}
               draggable={false}
               style={{ width: displayW, height: displayH }}
-              className="block object-fill shadow-lg ring-1 ring-slate-200 bg-white"
+              className="block object-fill shadow-lg ring-1 ring-slate-200 bg-white cursor-crosshair"
             />
           </div>
           <div className="absolute bottom-3 right-3 pointer-events-none flex items-center gap-2">
