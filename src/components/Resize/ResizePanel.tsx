@@ -425,49 +425,6 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
             </div>
           </div>
 
-          <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Format</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {(['image/jpeg', 'image/webp', 'image/png'] as OutputFormat[]).map((f) => {
-                const isActive = target.format === f
-                return (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => setTarget({ format: f })}
-                    className={[
-                      'py-2 rounded-lg border text-xs font-medium transition-colors',
-                      isActive
-                        ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
-                        : 'border-slate-200 text-slate-600 hover:border-orange-400'
-                    ].join(' ')}
-                  >
-                    {FORMAT_LABEL[f]}
-                  </button>
-                )
-              })}
-            </div>
-            {showQuality && (
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
-                  <span>Quality</span>
-                  <span>{Math.round(target.quality * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min={10}
-                  max={100}
-                  value={Math.round(target.quality * 100)}
-                  onChange={(e) => setTarget({ quality: Number(e.target.value) / 100 })}
-                  className="w-full accent-orange-600"
-                />
-                <p className="mt-1 text-[10px] text-slate-400 leading-snug">
-                  The preview reflects the chosen quality.
-                </p>
-              </div>
-            )}
-          </div>
-
           <div className="space-y-2 pt-2 border-t border-slate-200">
             <div className="rounded-md bg-slate-50 ring-1 ring-slate-200 px-3 py-2 text-[11px] text-slate-600 leading-relaxed">
               <div className="flex items-center justify-between">
@@ -518,6 +475,49 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               </div>
             )}
           </div>
+
+          <div className="pt-2 border-t border-slate-200">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Format</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {(['image/jpeg', 'image/webp', 'image/png'] as OutputFormat[]).map((f) => {
+                const isActive = target.format === f
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setTarget({ format: f })}
+                    className={[
+                      'py-2 rounded-lg border text-xs font-medium transition-colors',
+                      isActive
+                        ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
+                        : 'border-slate-200 text-slate-600 hover:border-orange-400'
+                    ].join(' ')}
+                  >
+                    {FORMAT_LABEL[f]}
+                  </button>
+                )
+              })}
+            </div>
+            {showQuality && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                  <span>Quality</span>
+                  <span>{Math.round(target.quality * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  value={Math.round(target.quality * 100)}
+                  onChange={(e) => setTarget({ quality: Number(e.target.value) / 100 })}
+                  className="w-full accent-orange-600"
+                />
+                <p className="mt-1 text-[10px] text-slate-400 leading-snug">
+                  The preview reflects the chosen quality.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -545,10 +545,14 @@ function useEncodedPreview(
   enabled: boolean
 ): Estimate {
   const [estimate, setEstimate] = useState<Estimate>({ state: 'idle' })
-  const sourceRef = useRef<{ id: string; image: HTMLImageElement } | null>(null)
+  const sourceRef = useRef<{ url: string; image: HTMLImageElement } | null>(null)
   const previewUrlRef = useRef<string | null>(null)
 
-  const sid = selected?.id ?? null
+  // Cache the decoded source by objectUrl, not id: cropping replaces the
+  // image's file/objectUrl in place while keeping the same id, so keying on id
+  // would re-encode the stale (pre-crop) bitmap and the preview would never
+  // update until the cropper was reopened.
+  const surl = selected?.objectUrl ?? null
   const tw = target?.width ?? 0
   const th = target?.height ?? 0
   const tf = target?.format ?? 'image/jpeg'
@@ -571,10 +575,10 @@ function useEncodedPreview(
     const tid = window.setTimeout(async () => {
       try {
         let source = sourceRef.current
-        if (!source || source.id !== selected.id) {
+        if (!source || source.url !== selected.objectUrl) {
           const { image } = await loadImage(selected.file)
           if (cancelled) return
-          sourceRef.current = { id: selected.id, image }
+          sourceRef.current = { url: selected.objectUrl, image }
           source = sourceRef.current
         }
         const blob = await processAndEncode(
@@ -602,7 +606,7 @@ function useEncodedPreview(
       window.clearTimeout(tid)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, sid, tw, th, tf, tq, cx, cy, cw, ch])
+  }, [enabled, surl, tw, th, tf, tq, cx, cy, cw, ch])
 
   useEffect(() => () => {
     if (previewUrlRef.current) {
