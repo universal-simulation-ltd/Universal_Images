@@ -185,7 +185,12 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-y-auto lg:grid lg:grid-cols-[1fr_360px] lg:overflow-hidden">
-      <div className="flex flex-col bg-slate-100 min-h-0">
+      {/* shrink-0 on mobile: this is a stacked section inside the scroll
+          container, so it must keep its natural height (the preview's 55vh min)
+          and let the column scroll — otherwise flexbox shrinks it and the
+          fixed-height preview overflows on top of the controls below.
+          min-h-0 is still needed for the lg grid layout. */}
+      <div className="flex flex-col bg-slate-100 shrink-0 lg:shrink lg:min-h-0">
         <div className="px-3 py-2 border-b border-slate-200 bg-white flex items-center gap-2 text-xs text-slate-500">
           {/* Mobile: tap to open image picker overlay */}
           {onShowGrid && (
@@ -234,7 +239,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
         />
       </div>
 
-      <div className="border-t lg:border-t-0 lg:border-l border-slate-200 bg-white lg:overflow-y-auto">
+      <div className="border-t lg:border-t-0 lg:border-l border-slate-200 bg-white shrink-0 lg:shrink lg:overflow-y-auto">
         <div className="p-5 space-y-6">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Crop</h2>
