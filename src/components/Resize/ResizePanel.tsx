@@ -476,9 +476,15 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
             )}
           </div>
 
-          <div className="pt-2 border-t border-slate-200">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Format</h2>
-            <div className="grid grid-cols-3 gap-2">
+          {/* Format + quality — collapsed by default. Most users want the
+              defaults (match the imported file's format, 85% quality); the
+              advanced choices are one click away. */}
+          <details className="pt-2 border-t border-slate-200 group">
+            <summary className="flex items-center justify-between cursor-pointer list-none py-1 select-none">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Format &amp; quality</h2>
+              <span className="text-slate-400 text-xs transition-transform group-open:rotate-90" aria-hidden>▸</span>
+            </summary>
+            <div className="mt-2 grid grid-cols-3 gap-2">
               {(['image/jpeg', 'image/webp', 'image/png'] as OutputFormat[]).map((f) => {
                 const isActive = target.format === f
                 return (
@@ -517,7 +523,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 </p>
               </div>
             )}
-          </div>
+          </details>
         </div>
       </div>
     </div>
