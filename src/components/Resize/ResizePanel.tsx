@@ -184,7 +184,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   })()
 
   return (
-    <div className="flex-1 min-h-0 grid lg:grid-cols-[1fr_360px]">
+    <div className="flex-1 min-h-0 flex flex-col overflow-y-auto lg:grid lg:grid-cols-[1fr_360px] lg:overflow-hidden">
       <div className="flex flex-col bg-slate-100 min-h-0">
         <div className="px-3 py-2 border-b border-slate-200 bg-white flex items-center gap-2 text-xs text-slate-500">
           {/* Mobile: tap to open image picker overlay */}
@@ -234,7 +234,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
         />
       </div>
 
-      <div className="border-l border-slate-200 bg-white overflow-y-auto">
+      <div className="border-t lg:border-t-0 lg:border-l border-slate-200 bg-white lg:overflow-y-auto">
         <div className="p-5 space-y-6">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Crop</h2>
@@ -668,19 +668,25 @@ function PreviewArea({
   const pct = Math.round(fitScale * 100)
 
   return (
-    <div ref={wrapperRef} className="relative flex-1 min-h-[55vh] lg:min-h-0 overflow-hidden checker-bg">
+    <div ref={wrapperRef} className="relative flex flex-1 min-h-[55vh] lg:min-h-0 overflow-hidden checker-bg">
       {cropMode ? (
         <CropOverlay image={image} onCommit={onCommitCrop} onCancel={onCancelCrop} />
       ) : socialCrop ? (
         <SocialCropOverlay image={image} crop={socialCrop} onMove={onMoveSocialCrop} />
       ) : (
         <>
+          {/* In-flow (not absolute) so the image area contributes real height
+              and the transparent checker background can't overlap the nav bar
+              when the page scrolls on mobile. */}
           <div
-            className="absolute inset-0 flex items-center justify-center p-6"
+            className="relative flex flex-1 min-h-0 items-center justify-center p-6"
             onPointerDown={(e) => {
               // No tool active and the user starts dragging on the image →
               // auto-engage the crop tool so they can draw a selection
               // without first hunting for the "Crop image" button.
+              // Mouse only: on touch a drag means "scroll the panel", so we
+              // don't hijack it — touch users tap the "Crop image…" button.
+              if (e.pointerType !== 'mouse') return
               if (e.button !== 0) return
               const startX = e.clientX
               const startY = e.clientY

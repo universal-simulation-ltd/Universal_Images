@@ -20,13 +20,19 @@ interface Props {
  * dimensions match what the user actually gets, regardless of zoom.
  *
  * Keyboard:  Enter → commit · Esc → cancel
- * Pointer:   click + drag to select, drag again to redo.
+ * Pointer:   click + drag to select. Once a selection exists, drawing is
+ *            deactivated until the user accepts (✓) or rejects (✕) it — so a
+ *            press on those controls can't accidentally start a fresh crop.
  */
 export default function CropOverlay({ image, onCommit, onCancel }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
   const [start, setStart] = useState<{ x: number; y: number } | null>(null)
   const [rect, setRect] = useState<SourceRect | null>(null)
+  // Once a usable selection is drawn we lock drawing until the user accepts or
+  // rejects. This is what makes the ✓/✕ buttons clickable: without it, the
+  // pointer-down on a button would bubble to the wrapper and begin a new crop.
+  const [locked, setLocked] = useState(false)
 
   useLayoutEffect(() => {
     const el = wrapperRef.current
@@ -60,6 +66,9 @@ export default function CropOverlay({ image, onCommit, onCancel }: Props) {
   }
 
   function onPointerDown(e: React.PointerEvent) {
+    // Selection is locked awaiting accept/reject — ignore presses so the user
+    // can reach the ✓/✕ controls without redrawing.
+    if (locked) return
     e.preventDefault()
     const target = e.currentTarget
     target.setPointerCapture(e.pointerId)
@@ -68,7 +77,7 @@ export default function CropOverlay({ image, onCommit, onCancel }: Props) {
     setRect({ x: p.x, y: p.y, w: 0, h: 0 })
   }
   function onPointerMove(e: React.PointerEvent) {
-    if (!start) return
+    if (locked || !start) return
     const p = clientToSource(e.clientX, e.clientY)
     setRect({
       x: Math.min(start.x, p.x),
@@ -79,6 +88,9 @@ export default function CropOverlay({ image, onCommit, onCancel }: Props) {
   }
   function onPointerUp() {
     setStart(null)
+    // A usable selection finishes the drawing step — deactivate the cropper so
+    // the next interaction must be accept or reject.
+    if (rect && rect.w >= 4 && rect.h >= 4) setLocked(true)
   }
 
   const canCommit = !!(rect && rect.w >= 4 && rect.h >= 4)
@@ -86,6 +98,14 @@ export default function CropOverlay({ image, onCommit, onCancel }: Props) {
   function tryCommit() {
     if (!canCommit || !rect) return
     onCommit({ x: rect.x, y: rect.y, width: rect.w, height: rect.h })
+  }
+
+  // Reject the current selection and re-activate drawing so the user can try
+  // again (full crop-mode exit stays on Esc / the side-panel "Cancel crop").
+  function rejectSelection() {
+    setRect(null)
+    setStart(null)
+    setLocked(false)
   }
 
   useEffect(() => {
@@ -186,6 +206,9 @@ export default function CropOverlay({ image, onCommit, onCancel }: Props) {
           {canCommit && (
             <div
               className="absolute flex gap-1.5"
+              // Keep button presses from reaching the wrapper's pointer-down,
+              // which would otherwise start a brand-new crop selection.
+              onPointerDown={(e) => e.stopPropagation()}
               style={{
                 left: Math.max(drawnLeft, render.left + render.width - 80),
                 top: render.top + render.height + 6
@@ -193,8 +216,8 @@ export default function CropOverlay({ image, onCommit, onCancel }: Props) {
             >
               <button
                 type="button"
-                onClick={onCancel}
-                title="Cancel (Esc)"
+                onClick={rejectSelection}
+                title="Reject selection — draw again"
                 className="w-8 h-8 rounded-full bg-white text-slate-700 hover:bg-slate-100 shadow-md ring-1 ring-slate-300 flex items-center justify-center text-base"
               >
                 ✕
