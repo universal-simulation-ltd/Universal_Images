@@ -54,7 +54,8 @@ function makeDefaultTarget(img: SourceImage): ResizeTarget {
     height: img.height,
     aspectLocked: true,
     quality: 0.85,
-    format: chooseDefaultFormat(img.file)
+    format: chooseDefaultFormat(img.file),
+    allowTransparency: true
   }
 }
 

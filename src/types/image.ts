@@ -23,6 +23,12 @@ export interface ResizeTarget {
   /** 0..1 — used for jpeg/webp, ignored for png. */
   quality: number
   format: OutputFormat
+  /**
+   * When false, a transparent (PNG) image is flattened onto a white background
+   * on both preview and export. Only meaningful for PNG output — JPEG has no
+   * alpha channel. Defaults to true so transparency is preserved.
+   */
+  allowTransparency: boolean
 }
 
 export type PresetSize = 'S' | 'M' | 'L'

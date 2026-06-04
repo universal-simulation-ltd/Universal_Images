@@ -113,7 +113,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
     try {
       const { image, objectUrl } = await loadImage(selected.file)
       try {
-        const blob = await processAndEncode(image, socialCrop, target.width, target.height, target.format, target.quality)
+        const blob = await processAndEncode(image, socialCrop, target.width, target.height, target.format, target.quality, target.allowTransparency)
         downloadBlob(blob, formatFilename(selected.name, target.width, target.height, target.format))
         setLastResult({ bytes: blob.size, width: target.width, height: target.height })
       } finally {
@@ -152,7 +152,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
             w = Math.max(1, Math.round(img.width * ratio))
             h = Math.max(1, Math.round(img.height * ratio))
           }
-          const blob = await processAndEncode(image, crop, w, h, target.format, target.quality)
+          const blob = await processAndEncode(image, crop, w, h, target.format, target.quality, target.allowTransparency)
           zip.file(formatFilename(img.name, w, h, target.format), blob)
         } finally {
           URL.revokeObjectURL(objectUrl)
@@ -508,6 +508,33 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 )
               })}
             </div>
+            {target.format === 'image/png' && (
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[11px] font-medium text-slate-600">Allow transparency</div>
+                  <p className="text-[10px] text-slate-400 leading-snug">
+                    Off fills the background white behind the image.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={target.allowTransparency}
+                  onClick={() => setTarget({ allowTransparency: !target.allowTransparency })}
+                  className={[
+                    'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
+                    target.allowTransparency ? 'bg-orange-600' : 'bg-slate-300'
+                  ].join(' ')}
+                >
+                  <span
+                    className={[
+                      'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                      target.allowTransparency ? 'translate-x-4' : 'translate-x-0.5'
+                    ].join(' ')}
+                  />
+                </button>
+              </div>
+            )}
             {showQuality && (
               <div className="mt-3">
                 <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
@@ -567,6 +594,7 @@ function useEncodedPreview(
   const th = target?.height ?? 0
   const tf = target?.format ?? 'image/jpeg'
   const tq = target?.quality ?? 1
+  const ta = target?.allowTransparency ?? true
   const cx = socialCrop?.x ?? null
   const cy = socialCrop?.y ?? null
   const cw = socialCrop?.width ?? null
@@ -616,7 +644,8 @@ function useEncodedPreview(
           target.width,
           target.height,
           target.format,
-          target.quality
+          target.quality,
+          target.allowTransparency
         )
         if (cancelled) return
         const url = URL.createObjectURL(blob)
@@ -635,7 +664,7 @@ function useEncodedPreview(
       window.clearTimeout(tid)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, surl, tw, th, tf, tq, cx, cy, cw, ch])
+  }, [enabled, surl, tw, th, tf, tq, ta, cx, cy, cw, ch])
 
   useEffect(() => () => {
     if (previewUrlRef.current) {
