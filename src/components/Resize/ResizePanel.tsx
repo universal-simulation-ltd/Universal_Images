@@ -12,6 +12,7 @@ import { downloadBlob } from '../../lib/download'
 import { groupedPresets } from '../../lib/socialPresets'
 import CropOverlay from './CropOverlay'
 import SocialCropOverlay from './SocialCropOverlay'
+import SaveToAccount from '../SaveToAccount'
 import type { OutputFormat, PresetSize, ResizeTarget, SourceCrop, SourceImage } from '../../types/image'
 
 const FORMAT_LABEL: Record<OutputFormat, string> = {
@@ -462,6 +463,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 {batchExporting ? `Zipping ${images.length}…` : `Download all as .zip (${images.length})`}
               </button>
             )}
+            {/* Discreet — renders only for signed-in Universal ID users
+                (returns null otherwise), keeping the core app free + local. */}
+            <SaveToAccount />
             <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
               <span aria-hidden="true">🔒</span>
               EXIF and location metadata are stripped on export.
@@ -567,6 +571,25 @@ function useEncodedPreview(
   const cy = socialCrop?.y ?? null
   const cw = socialCrop?.width ?? null
   const ch = socialCrop?.height ?? null
+
+  // When the underlying image changes identity — most importantly after a crop,
+  // which swaps the file + objectUrl while keeping the same id — drop BOTH caches
+  // synchronously. Without this, the debounced encode below could still hold the
+  // pre-crop decoded bitmap (sourceRef) or the pre-crop encoded blob
+  // (previewUrlRef) for a frame, and the preview would flash the full,
+  // un-cropped image before the new encode lands. Revoking the stale preview
+  // here also forces PreviewArea to fall back to the fresh (cropped)
+  // `image.objectUrl` instead of a now-wrong encoded blob. This was the
+  // mobile-visible "crop shows briefly, then reverts to the full image" bug —
+  // the slower the device, the longer the stale frame was on screen.
+  useEffect(() => {
+    sourceRef.current = null
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
+    setEstimate((prev) => (prev.state === 'idle' ? prev : { state: 'computing' }))
+  }, [surl])
 
   useEffect(() => {
     if (!enabled || !selected || !target) {
