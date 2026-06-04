@@ -148,13 +148,35 @@ export async function resizeAndEncode(
   targetW: number,
   targetH: number,
   format: OutputFormat,
-  quality: number
+  quality: number,
+  allowTransparency = true
 ): Promise<Blob> {
   const canvas = drawDownscaled(source, Math.max(1, Math.round(targetW)), Math.max(1, Math.round(targetH)))
-  return encodeCanvas(canvas, format, quality)
+  return encodeCanvas(canvas, format, quality, allowTransparency)
 }
 
-function encodeCanvas(canvas: HTMLCanvasElement, format: OutputFormat, quality: number): Promise<Blob> {
+/**
+ * Paint an opaque white background behind whatever the canvas already holds,
+ * flattening any transparent pixels. `destination-over` draws the fill beneath
+ * the existing content, so the image itself is untouched.
+ */
+function flattenOntoWhite(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext('2d')!
+  ctx.globalCompositeOperation = 'destination-over'
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.globalCompositeOperation = 'source-over'
+}
+
+function encodeCanvas(
+  canvas: HTMLCanvasElement,
+  format: OutputFormat,
+  quality: number,
+  allowTransparency = true
+): Promise<Blob> {
+  // Only PNG carries an alpha channel here; flatten it onto white when the
+  // user has opted out of transparency.
+  if (!allowTransparency && format === 'image/png') flattenOntoWhite(canvas)
   const useQuality = format === 'image/png' ? undefined : Math.min(1, Math.max(0, quality))
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -230,14 +252,15 @@ export async function processAndEncode(
   targetW: number,
   targetH: number,
   format: OutputFormat,
-  quality: number
+  quality: number,
+  allowTransparency = true
 ): Promise<Blob> {
   const tw = Math.max(1, Math.round(targetW))
   const th = Math.max(1, Math.round(targetH))
   const canvas = crop
     ? drawCropAndDownscale(source, crop, tw, th)
     : drawDownscaled(source, tw, th)
-  return encodeCanvas(canvas, format, quality)
+  return encodeCanvas(canvas, format, quality, allowTransparency)
 }
 
 /**
