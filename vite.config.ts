@@ -5,7 +5,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
 
 // Universal Images is served at opensource.unisim.co.uk/images in production.
-// `base` + PWA scope derive from Vite's `mode`; local dev stays `/`.
+// `base` + PWA scope derive from Vite's `mode`; local dev stays `/`. The
+// `desktop` mode targets the Electron build, which loads index.html over
+// `file://`, so assets must resolve relative to it (`./`) and the PWA service
+// worker is skipped (it cannot register under a `file://` origin).
 export default defineConfig(({ mode }) => {
   // Merge .env files with process.env (Cloudflare Pages injects vars into
   // process.env at build time without the VITE_ prefix requirement).
@@ -13,7 +16,8 @@ export default defineConfig(({ mode }) => {
   const fileEnv = loadEnv(mode, process.cwd(), '')
   const env = { ...process.env, ...fileEnv }
 
-  const BASE_PATH = mode === 'production' ? '/images/' : '/'
+  const isDesktop = mode === 'desktop'
+  const BASE_PATH = isDesktop ? './' : mode === 'production' ? '/images/' : '/'
   return {
     base: BASE_PATH,
     define: {
@@ -34,7 +38,9 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      VitePWA({
+      // The PWA service worker is for the hosted web app only — under Electron's
+      // `file://` origin it cannot register and is unnecessary, so skip it.
+      ...(isDesktop ? [] : [VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg'],
         manifest: {
@@ -55,7 +61,7 @@ export default defineConfig(({ mode }) => {
           navigateFallback: `${BASE_PATH}index.html`,
         },
         devOptions: { enabled: false }
-      })
+      })]),
     ],
     worker: {
       format: 'es'
