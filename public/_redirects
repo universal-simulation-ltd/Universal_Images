@@ -16,6 +16,7 @@
 
 # Static files referenced from index.html / app code (BASE_URL-prefixed).
 /images/favicon.svg          /favicon.svg          200
+/images/og-image.png         /og-image.png         200
 /images/unisim-icon.png      /unisim-icon.png      200
 /images/Example_Image.jpg    /Example_Image.jpg    200
 
