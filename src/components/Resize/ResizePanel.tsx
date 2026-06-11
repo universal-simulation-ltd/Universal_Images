@@ -30,13 +30,18 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const target = useImageStore((s) => s.target)
   const setTarget = useImageStore((s) => s.setTarget)
   const resetTargetToSelected = useImageStore((s) => s.resetTargetToSelected)
-  const cropMode = useImageStore((s) => s.cropMode)
-  const setCropMode = useImageStore((s) => s.setCropMode)
-  const applyCrop = useImageStore((s) => s.applyCrop)
+  const crop = useImageStore((s) => s.crop)
+  const setCrop = useImageStore((s) => s.setCrop)
+  const addCenteredCrop = useImageStore((s) => s.addCenteredCrop)
+  const clearCrop = useImageStore((s) => s.clearCrop)
   const socialCrop = useImageStore((s) => s.socialCrop)
   const applySocialPreset = useImageStore((s) => s.applySocialPreset)
   const moveSocialCrop = useImageStore((s) => s.moveSocialCrop)
   const clearSocialCrop = useImageStore((s) => s.clearSocialCrop)
+
+  // The free-form crop and the social crop are mutually exclusive; either one
+  // (if set) is the region the export pipeline should cut.
+  const effectiveCrop = crop ?? socialCrop
 
   const selected = useMemo(
     () => images.find((i) => i.id === selectedId) ?? null,
@@ -45,12 +50,11 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
 
   const [exporting, setExporting] = useState(false)
   const [batchExporting, setBatchExporting] = useState(false)
-  const [cropApplying, setCropApplying] = useState(false)
   const [lastResult, setLastResult] = useState<{ bytes: number; width: number; height: number } | null>(null)
   const [socialOpen, setSocialOpen] = useState(false)
 
   // Hooks always run — the actual encode work is gated on having a real target.
-  const estimate = useEncodedPreview(selected, target, socialCrop, !!selected && !!target && !cropMode)
+  const estimate = useEncodedPreview(selected, target, effectiveCrop, !!selected && !!target)
 
   if (!selected || !target) {
     return (
@@ -69,8 +73,13 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
     )
   }
 
-  const presets = computePresets(selected.width, selected.height)
-  const aspect = selected.width / selected.height
+  // When a free-form crop is active the size presets (and the aspect lock)
+  // follow the crop's dimensions, so picking S/M/L re-exports the cropped
+  // region at that size instead of resizing the whole image.
+  const basisW = crop ? crop.width : selected.width
+  const basisH = crop ? crop.height : selected.height
+  const presets = computePresets(basisW, basisH)
+  const aspect = basisW / basisH
 
   function setPreset(p: PresetSize) {
     const dim = presets[p]
@@ -94,17 +103,6 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
     }
   }
 
-  async function commitCrop(rect: { x: number; y: number; width: number; height: number }) {
-    setCropApplying(true)
-    try {
-      await applyCrop(rect)
-    } catch (err) {
-      console.error(err)
-      alert(`Crop failed: ${(err as Error).message}`)
-    } finally {
-      setCropApplying(false)
-    }
-  }
 
   async function exportSelected() {
     if (exporting || !selected || !target) return
@@ -112,7 +110,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
     try {
       const { image, objectUrl } = await loadImage(selected.file)
       try {
-        const blob = await processAndEncode(image, socialCrop, target.width, target.height, target.format, target.quality, target.allowTransparency)
+        const blob = await processAndEncode(image, effectiveCrop, target.width, target.height, target.format, target.quality, target.allowTransparency)
         downloadBlob(blob, formatFilename(selected.name, target.width, target.height, target.format))
         setLastResult({ bytes: blob.size, width: target.width, height: target.height })
       } finally {
@@ -137,13 +135,16 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
         try {
           let w = target.width
           let h = target.height
-          let crop: SourceCrop | null = null
+          let cropForImage: SourceCrop | null = null
           if (socialCrop) {
             // Per-image centered cover crop at the preset aspect — the user's
             // hand-positioned crop only applies to the currently-selected image.
-            crop = img.id === selected!.id
+            cropForImage = img.id === selected!.id
               ? socialCrop
               : computeCenteredCoverCrop(img.width, img.height, target.width, target.height)
+          } else if (crop && img.id === selected!.id) {
+            // A free-form crop only applies to the image it was drawn on.
+            cropForImage = crop
           } else if (target.aspectLocked) {
             const longTarget = Math.max(target.width, target.height)
             const longSrc = Math.max(img.width, img.height)
@@ -151,7 +152,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
             w = Math.max(1, Math.round(img.width * ratio))
             h = Math.max(1, Math.round(img.height * ratio))
           }
-          const blob = await processAndEncode(image, crop, w, h, target.format, target.quality, target.allowTransparency)
+          const blob = await processAndEncode(image, cropForImage, w, h, target.format, target.quality, target.allowTransparency)
           zip.file(formatFilename(img.name, w, h, target.format), blob)
         } finally {
           URL.revokeObjectURL(objectUrl)
@@ -214,12 +215,12 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
           <span className="hidden sm:inline shrink-0">{selected.width} × {selected.height} px</span>
           <span className="hidden sm:inline shrink-0">·</span>
           <span className="hidden sm:inline shrink-0">{formatBytes(selected.bytes)}</span>
-          {cropMode && (
+          {crop && (
             <span className="ml-auto inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0">
-              <span aria-hidden="true">✂</span> Cropping
+              <span aria-hidden="true">✂</span> {Math.round(crop.width)} × {Math.round(crop.height)} crop
             </span>
           )}
-          {!cropMode && socialCrop && activeSocialLabel && (
+          {!crop && socialCrop && activeSocialLabel && (
             <span className="ml-auto inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0">
               <span aria-hidden="true">📐</span> {activeSocialLabel}
             </span>
@@ -228,14 +229,11 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
         <PreviewArea
           image={selected}
           target={target}
+          crop={crop}
           socialCrop={socialCrop}
-          cropMode={cropMode}
-          cropApplying={cropApplying}
           previewUrl={estimate.state === 'ready' ? estimate.previewUrl : null}
-          onCommitCrop={commitCrop}
-          onCancelCrop={() => setCropMode(false)}
+          onSetCrop={setCrop}
           onMoveSocialCrop={moveSocialCrop}
-          setCropMode={setCropMode}
         />
       </div>
 
@@ -243,29 +241,30 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
         <div className="p-5 space-y-6">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Crop</h2>
-            {!cropMode ? (
+            {!crop ? (
               <button
                 type="button"
-                onClick={() => setCropMode(true)}
+                onClick={addCenteredCrop}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
               >
                 <span aria-hidden="true">✂</span>
-                <span className="flex-1 text-left">Crop image…</span>
-                <span className="text-[10px] uppercase tracking-wide text-slate-400">drag</span>
+                <span className="flex-1 text-left">Add crop</span>
+                <span className="text-[10px] uppercase tracking-wide text-slate-400">or drag</span>
               </button>
             ) : (
               <button
                 type="button"
-                onClick={() => setCropMode(false)}
+                onClick={clearCrop}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 transition-colors"
               >
                 <span aria-hidden="true">✕</span>
-                <span className="flex-1 text-left">Cancel crop</span>
+                <span className="flex-1 text-left">Remove crop</span>
                 <span className="text-[10px] uppercase tracking-wide text-orange-500">Esc</span>
               </button>
             )}
             <p className="mt-1.5 text-[11px] text-slate-400 leading-snug">
-              Drag on the image to pick an area. Enter to apply, Esc to cancel.
+              Drag on the image to draw a crop, then drag inside to move it or pull
+              a handle to resize. The size presets keep the same area.
             </p>
           </div>
 
@@ -675,33 +674,28 @@ function useEncodedPreview(
 interface PreviewAreaProps {
   image: SourceImage
   target: ResizeTarget
+  crop: SourceCrop | null
   socialCrop: SourceCrop | null
-  cropMode: boolean
-  cropApplying: boolean
   previewUrl: string | null
-  onCommitCrop: (rect: { x: number; y: number; width: number; height: number }) => void
-  onCancelCrop: () => void
+  onSetCrop: (rect: { x: number; y: number; width: number; height: number } | null) => void
   onMoveSocialCrop: (x: number, y: number) => void
-  setCropMode: (next: boolean) => void
 }
 
 /**
- * Preview pane. Three display modes:
- *   - cropMode → manual cropper (CropOverlay)
- *   - socialCrop → pannable crop window (SocialCropOverlay)
- *   - otherwise → encoded-output preview (reflects quality + format)
+ * Preview pane.
+ *   - socialCrop active → pannable crop window (SocialCropOverlay)
+ *   - otherwise → encoded-output preview with the live free-form CropOverlay
+ *     layered on top (transparent until the user draws a crop, then it shows
+ *     the source so the selection can be moved/resized).
  */
 function PreviewArea({
   image,
   target,
+  crop,
   socialCrop,
-  cropMode,
-  cropApplying,
   previewUrl,
-  onCommitCrop,
-  onCancelCrop,
-  onMoveSocialCrop,
-  setCropMode
+  onSetCrop,
+  onMoveSocialCrop
 }: PreviewAreaProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
@@ -732,74 +726,39 @@ function PreviewArea({
 
   return (
     <div ref={wrapperRef} className="relative flex flex-1 min-h-[55vh] lg:min-h-0 overflow-hidden checker-bg">
-      {cropMode ? (
-        <CropOverlay image={image} onCommit={onCommitCrop} onCancel={onCancelCrop} />
-      ) : socialCrop ? (
+      {socialCrop ? (
         <SocialCropOverlay image={image} crop={socialCrop} onMove={onMoveSocialCrop} />
       ) : (
         <>
-          {/* In-flow (not absolute) so the image area contributes real height
-              and the transparent checker background can't overlap the nav bar
-              when the page scrolls on mobile. */}
-          <div
-            className="relative flex flex-1 min-h-0 items-center justify-center p-6"
-            onPointerDown={(e) => {
-              // No tool active and the user starts dragging on the image →
-              // auto-engage the crop tool so they can draw a selection
-              // without first hunting for the "Crop image" button.
-              // Mouse only: on touch a drag means "scroll the panel", so we
-              // don't hijack it — touch users tap the "Crop image…" button.
-              if (e.pointerType !== 'mouse') return
-              if (e.button !== 0) return
-              const startX = e.clientX
-              const startY = e.clientY
-              const THRESHOLD = 5
-              function onMove(ev: PointerEvent) {
-                if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > THRESHOLD) {
-                  cleanup()
-                  setCropMode(true)
-                }
-              }
-              function cleanup() {
-                document.removeEventListener('pointermove', onMove)
-                document.removeEventListener('pointerup', cleanup)
-                document.removeEventListener('pointercancel', cleanup)
-              }
-              document.addEventListener('pointermove', onMove)
-              document.addEventListener('pointerup', cleanup)
-              document.addEventListener('pointercancel', cleanup)
-            }}
-          >
+          {/* Encoded-output preview. Hidden under the source while a crop is
+              active (the CropOverlay paints the source on top). */}
+          <div className="relative flex flex-1 min-h-0 items-center justify-center p-6">
             <img
               src={previewUrl ?? image.objectUrl}
               alt={image.name}
               draggable={false}
               style={{ width: displayW, height: displayH }}
-              className="block object-fill shadow-lg ring-1 ring-slate-200 bg-white cursor-crosshair"
+              className="block object-fill shadow-lg ring-1 ring-slate-200 bg-white"
             />
           </div>
-          <div className="absolute bottom-3 right-3 pointer-events-none flex items-center gap-2">
-            <span className="bg-slate-900/85 text-white text-[11px] font-medium tabular-nums px-2 py-1 rounded-md">
-              {target.width} × {target.height}
-            </span>
-            <span
-              className={[
-                'text-[11px] font-medium tabular-nums px-2 py-1 rounded-md',
-                pct >= 100
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-slate-900/85 text-white'
-              ].join(' ')}
-              title={pct >= 100 ? 'Showing at actual pixel size' : 'Scaled to fit the preview area'}
-            >
-              {pct >= 100 ? '1:1' : `${pct}%`}
-            </span>
-          </div>
+          {!crop && (
+            <div className="absolute bottom-3 right-3 pointer-events-none flex items-center gap-2">
+              <span className="bg-slate-900/85 text-white text-[11px] font-medium tabular-nums px-2 py-1 rounded-md">
+                {target.width} × {target.height}
+              </span>
+              <span
+                className={[
+                  'text-[11px] font-medium tabular-nums px-2 py-1 rounded-md',
+                  pct >= 100 ? 'bg-orange-600 text-white' : 'bg-slate-900/85 text-white'
+                ].join(' ')}
+                title={pct >= 100 ? 'Showing at actual pixel size' : 'Scaled to fit the preview area'}
+              >
+                {pct >= 100 ? '1:1' : `${pct}%`}
+              </span>
+            </div>
+          )}
+          <CropOverlay image={image} crop={crop} onChange={onSetCrop} />
         </>
-      )}
-      {cropApplying && (
-        <div className="absolute inset-0 bg-white/70 flex items-center justify-center text-sm text-slate-600">
-          Cropping…
-        </div>
       )}
     </div>
   )

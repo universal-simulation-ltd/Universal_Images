@@ -18,7 +18,13 @@ interface ImageStore {
   selectedId: string | null
   target: ResizeTarget | null
   loading: boolean
-  cropMode: boolean
+  /**
+   * Free-form, non-destructive crop on the selected image (any aspect ratio).
+   * Lives only in memory and is consumed by the export pipeline — the source
+   * image is never rewritten, so changing the size preset just re-exports the
+   * same region at a new resolution. Mutually exclusive with `socialCrop`.
+   */
+  crop: SourceCrop | null
   /**
    * Non-destructive crop applied when a social-media preset is active.
    * Lives only in memory and is consumed by the export pipeline — the source
@@ -33,10 +39,12 @@ interface ImageStore {
   setTarget: (partial: Partial<ResizeTarget>) => void
   /** Recompute target defaults (size + format) from the currently selected image. */
   resetTargetToSelected: () => void
-  setCropMode: (on: boolean) => void
-  /** Replace the currently-selected image with a cropped version. Coords are
-   *  in source pixels. After commit, future resize ops work on the cropped data. */
-  applyCrop: (rect: { x: number; y: number; width: number; height: number }) => Promise<void>
+  /** Set / replace the free-form crop (clamped to the image). null clears it. */
+  setCrop: (rect: { x: number; y: number; width: number; height: number } | null) => void
+  /** Drop a default centered crop (~60%) so touch users get an editable box. */
+  addCenteredCrop: () => void
+  /** Forget the free-form crop — the whole image exports again. */
+  clearCrop: () => void
   /**
    * Pick a social-media preset: set the output dimensions and initialise a
    * centered, max-size crop at that aspect ratio so the source isn't squished.
@@ -59,6 +67,19 @@ function makeDefaultTarget(img: SourceImage): ResizeTarget {
   }
 }
 
+/** Clamp a crop rect to the image bounds, keeping at least 1px. */
+function clampCrop(
+  rect: { x: number; y: number; width: number; height: number },
+  imgW: number,
+  imgH: number
+): SourceCrop {
+  const width = Math.max(1, Math.min(imgW, Math.round(rect.width)))
+  const height = Math.max(1, Math.min(imgH, Math.round(rect.height)))
+  const x = Math.max(0, Math.min(imgW - width, Math.round(rect.x)))
+  const y = Math.max(0, Math.min(imgH - height, Math.round(rect.y)))
+  return { x, y, width, height }
+}
+
 // Filenames like 'photo.heic' have no MIME type in some browsers, so we accept
 // any file that *looks* like an image by name even when File.type is empty.
 const NAME_IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff?|avif|heic|heif)$/i
@@ -72,7 +93,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   selectedId: null,
   target: null,
   loading: false,
-  cropMode: false,
+  crop: null,
   socialCrop: null,
 
   async addFiles(input) {
@@ -116,7 +137,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   selectImage(id) {
     const img = get().images.find((i) => i.id === id)
     if (!img) return
-    set({ selectedId: id, target: makeDefaultTarget(img), socialCrop: null })
+    set({ selectedId: id, target: makeDefaultTarget(img), crop: null, socialCrop: null })
   },
 
   removeImage(id) {
@@ -125,7 +146,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     if (removed) URL.revokeObjectURL(removed.objectUrl)
     const remaining = images.filter((i) => i.id !== id)
     if (remaining.length === 0) {
-      set({ images: [], selectedId: null, target: null, socialCrop: null })
+      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null })
       return
     }
     if (selectedId === id) {
@@ -134,6 +155,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         images: remaining,
         selectedId: nextSelected.id,
         target: makeDefaultTarget(nextSelected),
+        crop: null,
         socialCrop: null
       })
     } else {
@@ -143,14 +165,15 @@ export const useImageStore = create<ImageStore>((set, get) => ({
 
   clearAll() {
     for (const img of get().images) URL.revokeObjectURL(img.objectUrl)
-    set({ images: [], selectedId: null, target: null, socialCrop: null })
+    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null })
   },
 
   setTarget(partial) {
     const current = get().target
     if (!current) return
     // Editing dimensions manually drops any social-preset crop — the user is
-    // back in "literal width × height" mode.
+    // back in "literal width × height" mode. A free-form crop is kept: the user
+    // is just changing the export resolution of the region they chose.
     const sizeChanged = partial.width !== undefined || partial.height !== undefined
     const next: Partial<ImageStore> = { target: { ...current, ...partial } }
     if (sizeChanged) next.socialCrop = null
@@ -161,13 +184,44 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     const { images, selectedId } = get()
     const img = images.find((i) => i.id === selectedId)
     if (!img) return
-    set({ target: makeDefaultTarget(img), socialCrop: null })
+    set({ target: makeDefaultTarget(img), crop: null, socialCrop: null })
   },
 
-  setCropMode(on) {
-    // Entering the manual cropper supersedes the social crop overlay.
-    if (on) set({ cropMode: true, socialCrop: null })
-    else set({ cropMode: false })
+  setCrop(rect) {
+    const { images, selectedId, target } = get()
+    const img = images.find((i) => i.id === selectedId)
+    if (!img) return
+    if (!rect) {
+      set({ crop: null })
+      return
+    }
+    const c = clampCrop(rect, img.width, img.height)
+    // Keep the output target matched to the crop's native size so a crop never
+    // squishes on export. Picking an S/M/L preset afterwards rescales from here;
+    // moving the crop (same size) leaves the target untouched.
+    const next: Partial<ImageStore> = { crop: c, socialCrop: null }
+    if (target && (target.width !== c.width || target.height !== c.height)) {
+      next.target = { ...target, width: c.width, height: c.height }
+    }
+    set(next as ImageStore)
+  },
+
+  addCenteredCrop() {
+    const { images, selectedId, crop, target } = get()
+    const img = images.find((i) => i.id === selectedId)
+    if (!img || crop) return
+    const width = Math.round(img.width * 0.6)
+    const height = Math.round(img.height * 0.6)
+    const c = clampCrop({ x: (img.width - width) / 2, y: (img.height - height) / 2, width, height }, img.width, img.height)
+    set({
+      crop: c,
+      socialCrop: null,
+      target: target ? { ...target, width: c.width, height: c.height } : target
+    })
+  },
+
+  clearCrop() {
+    set({ crop: null })
   },
 
   applySocialPreset(width, height) {
@@ -177,6 +231,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     const crop = computeCenteredCoverCrop(img.width, img.height, width, height)
     set({
       target: { ...target, width, height, aspectLocked: false },
+      crop: null,
       socialCrop: crop
     })
   },
@@ -198,52 +253,5 @@ export const useImageStore = create<ImageStore>((set, get) => ({
 
   clearSocialCrop() {
     set({ socialCrop: null })
-  },
-
-  async applyCrop(rect) {
-    const { images, selectedId } = get()
-    const img = images.find((i) => i.id === selectedId)
-    if (!img) return
-    const { image, objectUrl } = await loadImage(img.file)
-    try {
-      const cw = Math.max(1, Math.round(rect.width))
-      const ch = Math.max(1, Math.round(rect.height))
-      const canvas = document.createElement('canvas')
-      canvas.width = cw
-      canvas.height = ch
-      const ctx = canvas.getContext('2d')!
-      ctx.imageSmoothingEnabled = true
-      ctx.imageSmoothingQuality = 'high'
-      ctx.drawImage(image, rect.x, rect.y, rect.width, rect.height, 0, 0, cw, ch)
-      const sourceType = img.file.type === 'image/png' ? 'image/png' : 'image/jpeg'
-      const quality = sourceType === 'image/png' ? undefined : 0.95
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Crop encoding failed'))), sourceType, quality)
-      })
-      const ext = sourceType === 'image/png' ? 'png' : 'jpg'
-      const dot = img.name.lastIndexOf('.')
-      const stem = dot === -1 ? img.name : img.name.slice(0, dot)
-      const newName = `${stem}_cropped.${ext}`
-      const newFile = new File([blob], newName, { type: sourceType })
-      const newObjectUrl = URL.createObjectURL(newFile)
-      URL.revokeObjectURL(img.objectUrl)
-      const updated: SourceImage = {
-        ...img,
-        name: newName,
-        file: newFile,
-        width: cw,
-        height: ch,
-        objectUrl: newObjectUrl,
-        bytes: newFile.size
-      }
-      set({
-        images: images.map((i) => (i.id === img.id ? updated : i)),
-        target: makeDefaultTarget(updated),
-        cropMode: false,
-        socialCrop: null
-      })
-    } finally {
-      URL.revokeObjectURL(objectUrl)
-    }
   }
 }))
