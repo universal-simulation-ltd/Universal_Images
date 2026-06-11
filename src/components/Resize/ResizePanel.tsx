@@ -12,7 +12,6 @@ import { downloadBlob } from '../../lib/download'
 import { groupedPresets } from '../../lib/socialPresets'
 import CropOverlay from './CropOverlay'
 import SocialCropOverlay from './SocialCropOverlay'
-import SaveToAccount from '../SaveToAccount'
 import type { OutputFormat, PresetSize, ResizeTarget, SourceCrop, SourceImage } from '../../types/image'
 
 const FORMAT_LABEL: Record<OutputFormat, string> = {
@@ -463,9 +462,6 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 {batchExporting ? `Zipping ${images.length}…` : `Download all as .zip (${images.length})`}
               </button>
             )}
-            {/* Discreet — renders only for signed-in Universal ID users
-                (returns null otherwise), keeping the core app free + local. */}
-            <SaveToAccount />
             <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
               <span aria-hidden="true">🔒</span>
               EXIF and location metadata are stripped on export.
