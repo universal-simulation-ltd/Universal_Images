@@ -1,0 +1,61 @@
+name: Build Windows installer
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build Windows installer
+        run: npm run dist:win
+        env:
+          # The Supabase URL + anon key wire up the SDK's auth client. Both
+          # are public (the anon key is designed for client exposure), but we
+          # route them via secrets to match how Cloudflare Pages injects them
+          # for the web build rather than committing them. Unlike the PDF
+          # app, main.tsx falls back to placeholders, so the build still
+          # succeeds without them — auth is simply unavailable.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # No code-signing cert configured. CSC_IDENTITY_AUTO_DISCOVERY=false
+          # stops electron-builder from probing the keychain on hosted runners.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-images-windows-installer
+          path: |
+            release/*.exe
+            release/*.exe.blockmap
+            release/latest.yml
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach installer to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*.exe
+            release/*.exe.blockmap
+            release/latest.yml
+          generate_release_notes: true

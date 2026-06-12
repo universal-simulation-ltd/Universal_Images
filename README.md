@@ -1,0 +1,93 @@
+# Universal Images
+
+> Universal Images — drag, drop, resize and optimise images entirely in your browser.
+
+> Open source — self-host free or hosted by UNI SIM.
+
+A clean Progressive Web App for resizing, cropping, converting, and optimising images — works on Windows, macOS, iOS, and Android in any modern browser, with no upload to a server. Files stay on your device.
+
+**[Try the live app →](https://opensource.unisim.co.uk/images/)**
+
+## Features
+
+- **Drag & drop** JPEG, PNG, WebP, HEIC, and GIF — multiple files at once, decoded locally
+- **Crop** with a live, mode-less crop region — move and resize handles, no separate crop mode
+- **Social presets** for Instagram, X / Twitter, LinkedIn, YouTube, and Facebook at each platform's current pixel specs
+- **Resize** to preset or custom dimensions with a live preview
+- **Convert** between JPEG, PNG, and WebP with a quality slider; HEIC input is decoded automatically
+- **Batch export** — download images individually or all at once as a ZIP
+- **Installable** PWA — add to home screen on phone or install on desktop, works offline after first load
+
+## Install on your device
+
+Open the [app URL](https://opensource.unisim.co.uk/images/), then:
+
+- **iOS Safari**: Share → *Add to Home Screen*
+- **Android Chrome**: menu → *Install app*
+- **Desktop Chrome / Edge**: install icon in the address bar
+
+## How to use
+
+1. **Add images** — click to browse or drag-and-drop files anywhere on the page
+2. **Pick an image** from the thumbnail sidebar
+3. **Crop, resize, or pick a social preset** in the editor panel
+4. **Choose the output format and quality** — the size estimate updates live
+5. **Download** the result, or export everything as a ZIP
+
+## Development
+
+Requires Node 22+ and npm.
+
+```sh
+git clone https://github.com/universal-simulation-ltd/Universal_Images.git
+cd Universal_Images
+npm install
+npm run dev
+```
+
+The dev server runs at <http://localhost:5173>. Build for production with `npm run build`.
+
+Pushes to `main` auto-deploy via Cloudflare Pages, which serves the app at <https://opensource.unisim.co.uk/images>. The production build sets Vite `base: '/images/'` and ships a `public/_redirects` file that rewrites `/images/*` onto the flat `dist/` output.
+
+## Desktop app (Windows)
+
+The same client-side app can be packaged as a native desktop app with
+[Electron](https://www.electronjs.org/). The Electron main process lives in
+[`electron/main.cjs`](electron/main.cjs) and loads the built bundle; the
+`desktop` Vite mode builds with a relative `base` (`./`) and without the PWA
+service worker so assets resolve over `file://`.
+
+```sh
+npm run build:desktop   # build the web bundle for Electron (dist/)
+npm run electron        # run the packaged-style app against that build
+npm run dist:win        # build + produce a Windows installer in release/
+```
+
+`npm run dist:win` emits an NSIS `.exe` installer under `release/`. **It must
+run on Windows** (or Linux/macOS with Wine) because electron-builder packages a
+platform-native binary; cross-building from a plain Linux host won't produce a
+working Windows `.exe`. The first run downloads the Electron binary (~100 MB).
+
+To cut a release, push a `v*` tag — the
+[`build-windows`](.github/workflows/build-windows.yml) workflow builds the
+installer on `windows-latest` and attaches it to the matching GitHub Release.
+Manual `workflow_dispatch` also works for ad-hoc builds; the installer is
+uploaded as a workflow artifact in that case.
+
+## Stack
+
+- **Vite 6 + React 18 + TypeScript** — app shell
+- **Canvas API** — client-side decode, crop, resize, and re-encode
+- **heic2any** — HEIC → JPEG decoding in the browser
+- **JSZip** — batch ZIP export
+- **Zustand** — state management
+- **Tailwind CSS v4** — styling
+- **vite-plugin-pwa** — service worker + manifest
+
+## Contributing
+
+Issues and pull requests welcome. The project is intentionally small and dependency-light; please open an issue before adding a large feature.
+
+## License
+
+[MIT](./LICENSE).
