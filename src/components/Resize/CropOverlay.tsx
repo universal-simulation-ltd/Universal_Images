@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { SourceCrop, SourceImage } from '../../types/image'
 
 interface Props {
@@ -34,6 +34,16 @@ export default function CropOverlay({ image, crop, onChange }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
   const gesture = useRef<{ mode: Mode; startPt: { x: number; y: number }; startRect: SourceCrop } | null>(null)
+  // "Committed" = the user accepted the crop (tick / Enter): the editing chrome
+  // (source image, mask, dashed box, handles) is hidden so the cropped result
+  // preview underneath shows through. The crop itself stays in the store and is
+  // still applied to the export — accepting only collapses the editor. Clicking
+  // the result (or the Edit pill) re-opens editing. Reset whenever the crop is
+  // removed so the next freshly-drawn crop opens in the editor.
+  const [committed, setCommitted] = useState(false)
+  useEffect(() => {
+    if (!crop) setCommitted(false)
+  }, [crop])
 
   useLayoutEffect(() => {
     const el = wrapperRef.current
@@ -66,6 +76,15 @@ export default function CropOverlay({ image, crop, onChange }: Props) {
   function onPointerDown(e: React.PointerEvent) {
     // Touch on empty space (no crop) = scroll the panel, don't hijack it.
     if (e.pointerType !== 'mouse' && !crop) return
+    // While committed the box/handles aren't drawn — a press just re-opens the
+    // editor rather than starting a fresh draw (which would clobber the crop
+    // with a 0×0 box if the click landed outside the region).
+    if (committed) {
+      e.preventDefault()
+      setCommitted(false)
+      wrapperRef.current?.focus({ preventScroll: true })
+      return
+    }
     const dataHandle = (e.target as HTMLElement).dataset.handle as Mode | undefined
     const pt = clientToSource(e.clientX, e.clientY)
     let mode: Mode
@@ -77,6 +96,9 @@ export default function CropOverlay({ image, crop, onChange }: Props) {
       mode = 'draw'
     }
     e.preventDefault()
+    // Take focus so Enter (accept) / Esc (remove) are captured by the overlay
+    // rather than landing on whatever was focused before the drag.
+    wrapperRef.current?.focus({ preventScroll: true })
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* no active pointer (e.g. synthetic) */ }
     gesture.current = { mode, startPt: pt, startRect: crop ?? { x: pt.x, y: pt.y, width: 0, height: 0 } }
     if (mode === 'draw') onChange({ x: pt.x, y: pt.y, width: 0, height: 0 })
@@ -131,9 +153,16 @@ export default function CropOverlay({ image, crop, onChange }: Props) {
     if (g?.mode === 'draw' && crop && (crop.width < MIN || crop.height < MIN)) onChange(null)
   }
 
-  // Esc clears the crop.
+  // Enter accepts (commits) the crop; Esc removes it. Previously only Esc was
+  // handled, so pressing Enter fell through to whatever element had focus (e.g.
+  // the remove "✕" button → the crop was deleted) — surprising. Now Enter is
+  // the explicit "accept" action and matches the tick button.
   function onKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape' && crop) {
+    if (!crop) return
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (crop.width >= MIN && crop.height >= MIN) setCommitted(true)
+    } else if (e.key === 'Escape') {
       e.preventDefault()
       onChange(null)
     }
@@ -163,15 +192,15 @@ export default function CropOverlay({ image, crop, onChange }: Props) {
       ref={wrapperRef}
       tabIndex={-1}
       onKeyDown={onKeyDown}
-      className={`absolute inset-0 select-none outline-none ${crop ? 'touch-none cursor-crosshair' : 'cursor-crosshair'}`}
+      className={`absolute inset-0 select-none outline-none ${crop ? 'touch-none' : ''} ${crop && committed ? 'cursor-pointer' : 'cursor-crosshair'}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
     >
-      {/* Source image is only shown while a crop is active, so the rest of the
-          time the underlying encoded-output preview stays visible. */}
-      {render && (
+      {/* Source image is only shown while a crop is being EDITED. Once accepted
+          (committed) it's hidden so the cropped encoded-output preview shows. */}
+      {render && !committed && (
         <img
           src={image.objectUrl}
           alt=""
@@ -181,7 +210,7 @@ export default function CropOverlay({ image, crop, onChange }: Props) {
         />
       )}
 
-      {render && (
+      {render && !committed && (
         <>
           {/* dim mask — four rects around the crop */}
           <div className="pointer-events-none absolute bg-slate-900/55" style={{ left: drawnLeft, top: drawnTop, width: drawnW, height: render.top - drawnTop }} />
@@ -216,17 +245,54 @@ export default function CropOverlay({ image, crop, onChange }: Props) {
           >
             {Math.round(crop.width)} × {Math.round(crop.height)} px
           </div>
+          {/* Accept crop (tick) — collapses the editor and shows the cropped
+              result. Keyboard activation is suppressed so a focused button
+              doesn't swallow Enter; Enter is handled by the wrapper (accept). */}
           <button
             type="button"
             onPointerDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.preventDefault() }}
+            onClick={() => { if (crop.width >= MIN && crop.height >= MIN) setCommitted(true) }}
+            title="Apply crop (Enter)"
+            aria-label="Apply crop"
+            className="absolute w-7 h-7 rounded-full bg-orange-600 text-white hover:bg-orange-700 shadow-md ring-1 ring-orange-700/40 flex items-center justify-center"
+            style={{ left: render.left + render.width - 48, top: render.top - 14 }}
+          >
+            <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 10.5l4 4 8-9" />
+            </svg>
+          </button>
+          {/* Remove crop (✕) */}
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.preventDefault() }}
             onClick={() => onChange(null)}
-            title="Remove crop"
+            title="Remove crop (Esc)"
+            aria-label="Remove crop"
             className="absolute w-7 h-7 rounded-full bg-white text-slate-700 hover:bg-slate-100 shadow-md ring-1 ring-slate-300 flex items-center justify-center text-sm"
             style={{ left: render.left + render.width - 14, top: render.top - 14 }}
           >
             ✕
           </button>
         </>
+      )}
+
+      {/* Committed: the cropped result preview shows through; offer a way back
+          into editing (click anywhere, or this pill). */}
+      {render && committed && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => setCommitted(false)}
+          title="Edit crop"
+          className="absolute top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[11px] font-medium px-3 py-1.5 rounded-full shadow-md"
+        >
+          <svg viewBox="0 0 20 20" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M13 4l3 3-8 8H5v-3z" />
+          </svg>
+          Edit crop
+        </button>
       )}
 
       {!render && (
