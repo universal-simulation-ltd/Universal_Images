@@ -17,12 +17,15 @@ if (import.meta.env.DEV) {
 // 'production') still rides the shared .unisim.co.uk cookie.
 const isDesktop = import.meta.env.MODE === 'desktop'
 
-// Fall back to a non-empty placeholder so createClient() never throws when
-// the env vars aren't set. Auth calls will fail gracefully; the local-first
-// image tool still renders and works without authentication.
+// Fall back to the REAL public suite project when the build define is empty
+// (publishable anon key — safe to ship; RLS is the security boundary). A
+// placeholder fallback left the SDK on a dead project when the build lacked the
+// VITE_SUPABASE_*/SUPABASE_* env vars, so the suite session never resolved and
+// the navbar showed no profile/avatar. The local-first image tool still works
+// without auth; env vars (via the vite define) still override.
 const universalConfig = {
-  supabaseUrl: __SUPABASE_URL__ || 'https://placeholder.supabase.co',
-  supabaseAnonKey: __SUPABASE_ANON_KEY__ || 'placeholder-anon-key',
+  supabaseUrl: __SUPABASE_URL__ || 'https://rygfxgalojojppxmhddo.supabase.co',
+  supabaseAnonKey: __SUPABASE_ANON_KEY__ || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5Z2Z4Z2Fsb2pvanBweG1oZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTY4MjUsImV4cCI6MjA5NDMzMjgyNX0.hLy_vt9vY_rdPKF3nL32yAuMCD604E3CH5VM7D7CaNE',
   product: 'images' as const,
   cookieDomain: !isDesktop && import.meta.env.PROD ? '.unisim.co.uk' : undefined,
 }
