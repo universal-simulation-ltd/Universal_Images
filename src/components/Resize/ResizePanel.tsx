@@ -461,6 +461,13 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 {batchExporting ? `Zipping ${images.length}…` : `Download all as .zip (${images.length})`}
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => useImageStore.setState({ hostedStoreOpen: true })}
+              className="w-full h-10 rounded-lg bg-white border border-orange-300 hover:bg-orange-50 text-orange-700 text-sm font-medium transition-colors"
+            >
+              Back up online (Hosted by UNI·SIM)
+            </button>
             <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
               <span aria-hidden="true">🔒</span>
               EXIF and location metadata are stripped on export.

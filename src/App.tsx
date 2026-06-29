@@ -5,6 +5,7 @@ import ProductLogo from './components/Header/ProductLogo'
 import LandingPage from './components/Landing/LandingPage'
 import ImageGrid from './components/Grid/ImageGrid'
 import ResizePanel from './components/Resize/ResizePanel'
+import HostedStoreDialog from './components/HostedStoreDialog'
 import { useImageStore } from './stores/imageStore'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_Images'
@@ -145,6 +146,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <HostedStoreDialog />
     </div>
   )
 }

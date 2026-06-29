@@ -54,6 +54,9 @@ interface ImageStore {
   moveSocialCrop: (x: number, y: number) => void
   /** Forget the social crop — the source aspect controls again. */
   clearSocialCrop: () => void
+  /** "Hosted by UNI·SIM" cloud-store dialog open state. */
+  hostedStoreOpen: boolean
+  setHostedStoreOpen: (open: boolean) => void
 }
 
 function makeDefaultTarget(img: SourceImage): ResizeTarget {
@@ -93,6 +96,8 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   selectedId: null,
   target: null,
   loading: false,
+  hostedStoreOpen: false,
+  setHostedStoreOpen: (hostedStoreOpen) => set({ hostedStoreOpen }),
   crop: null,
   socialCrop: null,
 
