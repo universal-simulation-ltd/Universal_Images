@@ -443,14 +443,29 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 )}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={exportSelected}
-              disabled={exporting}
-              className="w-full h-10 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium shadow-sm disabled:opacity-60 disabled:cursor-wait transition-colors"
-            >
-              {exporting ? 'Exporting…' : `Download ${target.width}×${target.height}`}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={exportSelected}
+                disabled={exporting}
+                className="flex-1 h-10 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium shadow-sm disabled:opacity-60 disabled:cursor-wait transition-colors"
+              >
+                {exporting ? 'Exporting…' : `Download ${target.width}×${target.height}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => useImageStore.setState({ hostedStoreOpen: true })}
+                title="Back up — keep online with Hosted by UNI·SIM"
+                aria-label="Back up"
+                className="shrink-0 inline-flex h-10 items-center justify-center px-3 rounded-lg border border-slate-300 text-slate-500 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                  <path d="M17 21v-8H7v8" />
+                  <path d="M7 3v5h8" />
+                </svg>
+              </button>
+            </div>
             {images.length > 1 && (
               <button
                 type="button"
@@ -461,13 +476,6 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 {batchExporting ? `Zipping ${images.length}…` : `Download all as .zip (${images.length})`}
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => useImageStore.setState({ hostedStoreOpen: true })}
-              className="w-full h-10 rounded-lg bg-white border border-orange-300 hover:bg-orange-50 text-orange-700 text-sm font-medium transition-colors"
-            >
-              Back up online (Hosted by UNI·SIM)
-            </button>
             <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
               <span aria-hidden="true">🔒</span>
               EXIF and location metadata are stripped on export.
