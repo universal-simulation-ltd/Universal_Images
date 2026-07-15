@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useImageStore } from '../../stores/imageStore'
 import ImageIllustration from './ImageIllustration'
+import { CONTAINER } from '../../lib/layout'
 
 export default function LandingPage() {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -36,7 +37,7 @@ export default function LandingPage() {
   return (
     <div className="h-full overflow-auto">
       <div className="min-h-full flex items-center">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-14">
+        <div className={`${CONTAINER} py-8 lg:py-14`}>
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             <div className="flex flex-col items-center lg:items-start gap-4 order-2 lg:order-1">
               <ImageIllustration />
