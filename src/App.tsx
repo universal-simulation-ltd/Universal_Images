@@ -7,6 +7,7 @@ import ImageGrid from './components/Grid/ImageGrid'
 import ResizePanel from './components/Resize/ResizePanel'
 import HostedStoreDialog from './components/HostedStoreDialog'
 import { useImageStore } from './stores/imageStore'
+import { CONTAINER } from './lib/layout'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_Images'
 
@@ -69,6 +70,7 @@ export default function App() {
         productHomeHref={import.meta.env.BASE_URL}
         fileMenu={hasImages ? <AppMenu /> : undefined}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
+        contentClassName={CONTAINER}
       />
 
       <main className="flex-1 min-h-0 flex relative">
@@ -105,7 +107,7 @@ export default function App() {
 
       {!hasImages && !loading && (
         <footer className="border-t border-slate-200 bg-white">
-          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500">
+          <div className={`${CONTAINER} py-4 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500`}>
             <span>
               100% Open source and free. Hosted by{' '}
               <a
