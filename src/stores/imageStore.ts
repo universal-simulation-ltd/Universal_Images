@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import type { OutputFormat, ResizeTarget, SourceCrop, SourceImage } from '../types/image'
-import { computeCenteredCoverCrop, loadImage } from '../lib/imageResize'
+import {
+  computeCenteredCoverCrop,
+  computeContentBounds,
+  contentCropForMode,
+  loadImage,
+  type AutoCropMode
+} from '../lib/imageResize'
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10)
@@ -43,6 +49,15 @@ interface ImageStore {
   setCrop: (rect: { x: number; y: number; width: number; height: number } | null) => void
   /** Drop a default centered crop (~60%) so touch users get an editable box. */
   addCenteredCrop: () => void
+  /**
+   * Trim the whitespace around the selected image and set the result as the
+   * free-form crop. `max` gives the tightest box, `square` a centred 1:1, and
+   * `ratio` keeps the source aspect. Async — it decodes the image to inspect
+   * its pixels.
+   */
+  autoCrop: (mode: AutoCropMode) => Promise<void>
+  /** True while `autoCrop` is decoding + scanning the image. */
+  autoCropping: boolean
   /** Forget the free-form crop — the whole image exports again. */
   clearCrop: () => void
   /**
@@ -57,6 +72,13 @@ interface ImageStore {
   /** "Hosted by UNI·SIM" cloud-store dialog open state. */
   hostedStoreOpen: boolean
   setHostedStoreOpen: (open: boolean) => void
+  /**
+   * Set when the user enters via the homepage "Convert" action — the editor
+   * opens with the Format & quality section expanded and highlighted. Cleared
+   * once the user has seen / dismissed it.
+   */
+  convertMode: boolean
+  setConvertMode: (on: boolean) => void
 }
 
 function makeDefaultTarget(img: SourceImage): ResizeTarget {
@@ -98,8 +120,11 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   loading: false,
   hostedStoreOpen: false,
   setHostedStoreOpen: (hostedStoreOpen) => set({ hostedStoreOpen }),
+  convertMode: false,
+  setConvertMode: (convertMode) => set({ convertMode }),
   crop: null,
   socialCrop: null,
+  autoCropping: false,
 
   async addFiles(input) {
     const files = Array.from(input).filter(looksLikeImage)
@@ -170,7 +195,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
 
   clearAll() {
     for (const img of get().images) URL.revokeObjectURL(img.objectUrl)
-    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null })
+    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, convertMode: false })
   },
 
   setTarget(partial) {
@@ -223,6 +248,34 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       socialCrop: null,
       target: target ? { ...target, width: c.width, height: c.height } : target
     })
+  },
+
+  async autoCrop(mode) {
+    const { images, selectedId, target, autoCropping } = get()
+    if (autoCropping) return
+    const img = images.find((i) => i.id === selectedId)
+    if (!img) return
+    set({ autoCropping: true })
+    try {
+      const { image, objectUrl } = await loadImage(img.file)
+      try {
+        const bounds =
+          computeContentBounds(image) ?? { x: 0, y: 0, width: img.width, height: img.height }
+        const rect = contentCropForMode(bounds, mode, img.width, img.height)
+        const c = clampCrop(rect, img.width, img.height)
+        set({
+          crop: c,
+          socialCrop: null,
+          target: target ? { ...target, width: c.width, height: c.height } : target
+        })
+      } finally {
+        URL.revokeObjectURL(objectUrl)
+      }
+    } catch (err) {
+      console.error('Autocrop failed', err)
+    } finally {
+      set({ autoCropping: false })
+    }
   },
 
   clearCrop() {

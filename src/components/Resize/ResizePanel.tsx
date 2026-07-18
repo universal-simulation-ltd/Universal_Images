@@ -33,7 +33,11 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const crop = useImageStore((s) => s.crop)
   const setCrop = useImageStore((s) => s.setCrop)
   const addCenteredCrop = useImageStore((s) => s.addCenteredCrop)
+  const autoCrop = useImageStore((s) => s.autoCrop)
+  const autoCropping = useImageStore((s) => s.autoCropping)
   const clearCrop = useImageStore((s) => s.clearCrop)
+  const convertMode = useImageStore((s) => s.convertMode)
+  const setConvertMode = useImageStore((s) => s.setConvertMode)
   const socialCrop = useImageStore((s) => s.socialCrop)
   const applySocialPreset = useImageStore((s) => s.applySocialPreset)
   const moveSocialCrop = useImageStore((s) => s.moveSocialCrop)
@@ -52,9 +56,19 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const [batchExporting, setBatchExporting] = useState(false)
   const [lastResult, setLastResult] = useState<{ bytes: number; width: number; height: number } | null>(null)
   const [socialOpen, setSocialOpen] = useState(false)
+  const [autocropOpen, setAutocropOpen] = useState(false)
+  // Format & quality is a controlled disclosure so the homepage "Convert" entry
+  // can open + highlight it. It starts open (and highlighted) in convert mode.
+  const [formatOpen, setFormatOpen] = useState(convertMode)
 
   // Hooks always run — the actual encode work is gated on having a real target.
   const estimate = useEncodedPreview(selected, target, effectiveCrop, !!selected && !!target)
+
+  // Convert-mode entry: reveal the Format & quality section when the flag flips
+  // on (e.g. the editor mounts after the homepage "Convert" click).
+  useEffect(() => {
+    if (convertMode) setFormatOpen(true)
+  }, [convertMode])
 
   if (!selected || !target) {
     return (
@@ -241,17 +255,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
         <div className="p-5 space-y-6">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Crop</h2>
-            {!crop ? (
-              <button
-                type="button"
-                onClick={addCenteredCrop}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
-              >
-                <span aria-hidden="true">✂</span>
-                <span className="flex-1 text-left">Add crop</span>
-                <span className="text-[10px] uppercase tracking-wide text-slate-400">or drag</span>
-              </button>
-            ) : (
+            {crop ? (
               <button
                 type="button"
                 onClick={clearCrop}
@@ -261,10 +265,66 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 <span className="flex-1 text-left">Remove crop</span>
                 <span className="text-[10px] uppercase tracking-wide text-orange-500">Esc</span>
               </button>
+            ) : (
+              <button
+                type="button"
+                onClick={addCenteredCrop}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
+              >
+                <span aria-hidden="true">✂</span>
+                <span className="flex-1 text-left">Manual crop</span>
+                <span className="text-[10px] uppercase tracking-wide text-slate-400">or drag</span>
+              </button>
             )}
+
+            {/* Autocrop — trims the whitespace/border around the content. */}
+            <button
+              type="button"
+              onClick={() => setAutocropOpen((v) => !v)}
+              aria-expanded={autocropOpen}
+              className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
+            >
+              <span aria-hidden="true">🪄</span>
+              <span className="flex-1 text-left">Autocrop</span>
+              <span
+                aria-hidden="true"
+                className={['text-slate-400 text-xs transition-transform', autocropOpen ? 'rotate-90' : ''].join(' ')}
+              >
+                ▸
+              </span>
+            </button>
+            {autocropOpen && (
+              <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
+                <p className="text-[11px] text-slate-500 leading-snug mb-2">
+                  Trim the blank border around your image.
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { mode: 'max' as const, label: 'Max', hint: 'Tightest' },
+                    { mode: 'square' as const, label: '1:1', hint: 'Square' },
+                    { mode: 'ratio' as const, label: 'Keep ratio', hint: 'Same shape' }
+                  ]).map(({ mode, label, hint }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => autoCrop(mode)}
+                      disabled={autoCropping}
+                      className="flex flex-col items-center gap-0.5 px-2 py-2 rounded-md border border-slate-200 bg-white hover:border-orange-400 hover:bg-orange-50/40 text-slate-700 text-xs font-medium disabled:opacity-60 disabled:cursor-wait transition-colors"
+                    >
+                      <span>{label}</span>
+                      <span className="text-[9px] uppercase tracking-wide text-slate-400">{hint}</span>
+                    </button>
+                  ))}
+                </div>
+                {autoCropping && (
+                  <p className="mt-2 text-[11px] text-orange-600">Scanning for whitespace…</p>
+                )}
+              </div>
+            )}
+
             <p className="mt-1.5 text-[11px] text-slate-400 leading-snug">
               Drag on the image to draw a crop, then drag inside to move it or pull
-              a handle to resize. The size presets keep the same area.
+              a handle to resize. Autocrop trims the blank border automatically.
             </p>
           </div>
 
@@ -424,7 +484,116 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
             </div>
           </div>
 
+          {/* Format & quality — collapsed by default (most users want the
+              imported file's format at 85%). Sits directly above Export so the
+              output settings live next to the download button. The homepage
+              "Convert" entry opens + highlights this section. */}
+          <div
+            className={[
+              'pt-2 border-t border-slate-200 transition-colors',
+              convertMode ? 'rounded-lg ring-2 ring-orange-500/60 bg-orange-50/50 -mx-1.5 px-1.5' : ''
+            ].join(' ')}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setFormatOpen((v) => !v)
+                if (convertMode) setConvertMode(false)
+              }}
+              aria-expanded={formatOpen}
+              className="w-full flex items-center justify-between gap-2 py-1 group"
+            >
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">
+                Format &amp; quality
+              </span>
+              <span className="flex items-center gap-1.5">
+                {convertMode && (
+                  <span className="text-[10px] uppercase tracking-wide bg-orange-100 text-orange-700 ring-1 ring-orange-300 rounded-full px-2 py-0.5">
+                    Convert
+                  </span>
+                )}
+                <span
+                  aria-hidden="true"
+                  className={['text-slate-400 group-hover:text-slate-600 text-xs transition-transform', formatOpen ? 'rotate-90' : ''].join(' ')}
+                >
+                  ▸
+                </span>
+              </span>
+            </button>
+            {formatOpen && (
+              <div className="mt-2">
+                <div className="grid grid-cols-3 gap-2">
+                  {(['image/jpeg', 'image/webp', 'image/png'] as OutputFormat[]).map((f) => {
+                    const isActive = target.format === f
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => setTarget({ format: f })}
+                        className={[
+                          'py-2 rounded-lg border text-xs font-medium transition-colors',
+                          isActive
+                            ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
+                            : 'border-slate-200 text-slate-600 hover:border-orange-400'
+                        ].join(' ')}
+                      >
+                        {FORMAT_LABEL[f]}
+                      </button>
+                    )
+                  })}
+                </div>
+                {target.format === 'image/png' && (
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[11px] font-medium text-slate-600">Allow transparency</div>
+                      <p className="text-[10px] text-slate-400 leading-snug">
+                        Off fills the background white behind the image.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={target.allowTransparency}
+                      onClick={() => setTarget({ allowTransparency: !target.allowTransparency })}
+                      className={[
+                        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
+                        target.allowTransparency ? 'bg-orange-600' : 'bg-slate-300'
+                      ].join(' ')}
+                    >
+                      <span
+                        className={[
+                          'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                          target.allowTransparency ? 'translate-x-4' : 'translate-x-0.5'
+                        ].join(' ')}
+                      />
+                    </button>
+                  </div>
+                )}
+                {showQuality && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                      <span>Quality</span>
+                      <span>{Math.round(target.quality * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={10}
+                      max={100}
+                      value={Math.round(target.quality * 100)}
+                      onChange={(e) => setTarget({ quality: Number(e.target.value) / 100 })}
+                      className="w-full accent-orange-600"
+                    />
+                    <p className="mt-1 text-[10px] text-slate-400 leading-snug">
+                      The preview reflects the chosen quality.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2 pt-2 border-t border-slate-200">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Export</h2>
             <div className="rounded-md bg-slate-50 ring-1 ring-slate-200 px-3 py-2 text-[11px] text-slate-600 leading-relaxed">
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Estimated output</span>
@@ -489,82 +658,6 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               </div>
             )}
           </div>
-
-          {/* Format + quality — collapsed by default. Most users want the
-              defaults (match the imported file's format, 85% quality); the
-              advanced choices are one click away. */}
-          <details className="pt-2 border-t border-slate-200 group">
-            <summary className="flex items-center justify-between cursor-pointer list-none py-1 select-none">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Format &amp; quality</h2>
-              <span className="text-slate-400 text-xs transition-transform group-open:rotate-90" aria-hidden>▸</span>
-            </summary>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {(['image/jpeg', 'image/webp', 'image/png'] as OutputFormat[]).map((f) => {
-                const isActive = target.format === f
-                return (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() => setTarget({ format: f })}
-                    className={[
-                      'py-2 rounded-lg border text-xs font-medium transition-colors',
-                      isActive
-                        ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
-                        : 'border-slate-200 text-slate-600 hover:border-orange-400'
-                    ].join(' ')}
-                  >
-                    {FORMAT_LABEL[f]}
-                  </button>
-                )
-              })}
-            </div>
-            {target.format === 'image/png' && (
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[11px] font-medium text-slate-600">Allow transparency</div>
-                  <p className="text-[10px] text-slate-400 leading-snug">
-                    Off fills the background white behind the image.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={target.allowTransparency}
-                  onClick={() => setTarget({ allowTransparency: !target.allowTransparency })}
-                  className={[
-                    'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
-                    target.allowTransparency ? 'bg-orange-600' : 'bg-slate-300'
-                  ].join(' ')}
-                >
-                  <span
-                    className={[
-                      'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-                      target.allowTransparency ? 'translate-x-4' : 'translate-x-0.5'
-                    ].join(' ')}
-                  />
-                </button>
-              </div>
-            )}
-            {showQuality && (
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
-                  <span>Quality</span>
-                  <span>{Math.round(target.quality * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min={10}
-                  max={100}
-                  value={Math.round(target.quality * 100)}
-                  onChange={(e) => setTarget({ quality: Number(e.target.value) / 100 })}
-                  className="w-full accent-orange-600"
-                />
-                <p className="mt-1 text-[10px] text-slate-400 leading-snug">
-                  The preview reflects the chosen quality.
-                </p>
-              </div>
-            )}
-          </details>
         </div>
       </div>
     </div>
