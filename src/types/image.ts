@@ -1,4 +1,4 @@
-export type OutputFormat = 'image/jpeg' | 'image/png' | 'image/webp'
+export type OutputFormat = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/avif'
 
 export interface SourceImage {
   id: string

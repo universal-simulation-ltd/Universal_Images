@@ -6,7 +6,8 @@ import {
   formatFilename,
   loadImage,
   processAndEncode,
-  computeCenteredCoverCrop
+  computeCenteredCoverCrop,
+  supportsAvifEncode
 } from '../../lib/imageResize'
 import { downloadBlob } from '../../lib/download'
 import { groupedPresets } from '../../lib/socialPresets'
@@ -17,7 +18,8 @@ import type { OutputFormat, PresetSize, ResizeTarget, SourceCrop, SourceImage } 
 const FORMAT_LABEL: Record<OutputFormat, string> = {
   'image/jpeg': 'JPEG',
   'image/png': 'PNG',
-  'image/webp': 'WebP'
+  'image/webp': 'WebP',
+  'image/avif': 'AVIF'
 }
 
 interface ResizePanelProps {
@@ -57,6 +59,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const [lastResult, setLastResult] = useState<{ bytes: number; width: number; height: number } | null>(null)
   const [socialOpen, setSocialOpen] = useState(false)
   const [autocropOpen, setAutocropOpen] = useState(false)
+  // AVIF encoding only works in Chromium browsers; probe once so we only offer
+  // the format where it genuinely encodes (elsewhere it silently yields PNG).
+  const [avifOk, setAvifOk] = useState(false)
   // Format & quality is a controlled disclosure so the homepage "Convert" entry
   // can open + highlight it. It starts open (and highlighted) in convert mode.
   const [formatOpen, setFormatOpen] = useState(convertMode)
@@ -69,6 +74,12 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   useEffect(() => {
     if (convertMode) setFormatOpen(true)
   }, [convertMode])
+
+  useEffect(() => {
+    let alive = true
+    supportsAvifEncode().then((ok) => { if (alive) setAvifOk(ok) })
+    return () => { alive = false }
+  }, [])
 
   if (!selected || !target) {
     return (
@@ -522,8 +533,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
             </button>
             {formatOpen && (
               <div className="mt-2">
-                <div className="grid grid-cols-3 gap-2">
-                  {(['image/jpeg', 'image/webp', 'image/png'] as OutputFormat[]).map((f) => {
+                {/* AVIF only appears where the browser can actually encode it. */}
+                <div className={['grid gap-2', avifOk ? 'grid-cols-2' : 'grid-cols-3'].join(' ')}>
+                  {(['image/jpeg', 'image/webp', 'image/png', ...(avifOk ? ['image/avif'] : [])] as OutputFormat[]).map((f) => {
                     const isActive = target.format === f
                     return (
                       <button
@@ -542,6 +554,11 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     )
                   })}
                 </div>
+                {avifOk && target.format === 'image/avif' && (
+                  <p className="mt-2 text-[10px] text-slate-400 leading-snug">
+                    AVIF gives the smallest files, but isn't supported everywhere for viewing yet.
+                  </p>
+                )}
                 {target.format === 'image/png' && (
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div>

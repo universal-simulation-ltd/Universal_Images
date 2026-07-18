@@ -441,8 +441,38 @@ function clampRect(rect: SourceCrop, imgW: number, imgH: number): SourceCrop {
 export function formatFilename(originalName: string, width: number, height: number, format: OutputFormat) {
   const dot = originalName.lastIndexOf('.')
   const stem = dot === -1 ? originalName : originalName.slice(0, dot)
-  const ext = format === 'image/jpeg' ? 'jpg' : format === 'image/png' ? 'png' : 'webp'
+  const ext =
+    format === 'image/jpeg' ? 'jpg'
+      : format === 'image/png' ? 'png'
+        : format === 'image/avif' ? 'avif'
+          : 'webp'
   return `${stem}_${width}x${height}.${ext}`
+}
+
+/**
+ * Whether this browser can *encode* AVIF from a canvas. Chrome/Edge can;
+ * Firefox and Safari silently fall back to PNG when asked for `image/avif`, so
+ * we probe once by encoding a tiny canvas and checking the MIME type we get
+ * back. Memoised — the answer never changes within a session.
+ */
+let avifEncodeSupport: Promise<boolean> | null = null
+export function supportsAvifEncode(): Promise<boolean> {
+  if (avifEncodeSupport) return avifEncodeSupport
+  avifEncodeSupport = new Promise<boolean>((resolve) => {
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = 2
+      canvas.height = 2
+      canvas.toBlob(
+        (blob) => resolve(!!blob && blob.type === 'image/avif'),
+        'image/avif',
+        0.5
+      )
+    } catch {
+      resolve(false)
+    }
+  })
+  return avifEncodeSupport
 }
 
 export function formatBytes(n: number): string {
