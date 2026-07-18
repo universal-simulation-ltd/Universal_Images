@@ -87,7 +87,7 @@ export default function LandingPage() {
                 <input
                   ref={inputRef}
                   type="file"
-                  accept="image/*,.heic,.heif"
+                  accept="image/*,.heic,.heif,.svg"
                   multiple
                   hidden
                   onChange={onPick}

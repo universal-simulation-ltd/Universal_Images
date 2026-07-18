@@ -21,15 +21,102 @@ export async function decodeHeicIfNeeded(file: File): Promise<File> {
   return new File([blob], newName, { type: 'image/jpeg', lastModified: file.lastModified })
 }
 
+const SVG_EXT_RE = /\.svg$/i
+
+function isSvg(file: File) {
+  return file.type === 'image/svg+xml' || SVG_EXT_RE.test(file.name)
+}
+
+// An icon-sized SVG (e.g. 24×24) would rasterise to a tiny, un-resizable PNG,
+// so we render vectors up to at least this long edge — but never past the cap,
+// which keeps a viewBox-less or huge SVG from allocating an enormous canvas.
+const SVG_MIN_LONG_EDGE = 1024
+const SVG_MAX_LONG_EDGE = 4096
+
+function parseSvgLength(v: string | null): number | null {
+  if (!v) return null
+  const m = /^\s*(-?[\d.]+)\s*(px)?\s*$/i.exec(v) // absolute px / unitless only
+  if (!m) return null
+  const n = parseFloat(m[1]!)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+/**
+ * Rasterise an SVG to a PNG File so the rest of the pipeline can treat it as
+ * any other bitmap. Vectors have no inherent pixel size, so we derive one from
+ * the width/height attributes or the viewBox (falling back to a square), scale
+ * it up to a crisp minimum, and inject an explicit size + viewBox so the
+ * browser rasterises the whole drawing rather than a 300×150 default box.
+ */
+export async function rasterizeSvgIfNeeded(file: File): Promise<File> {
+  if (!isSvg(file)) return file
+
+  const text = await file.text()
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml')
+  const svg = doc.documentElement
+  if (doc.getElementsByTagName('parsererror').length > 0 || svg.tagName.toLowerCase() !== 'svg') {
+    throw new Error(`Could not parse SVG ${file.name}`)
+  }
+
+  const viewBox = (svg.getAttribute('viewBox') ?? '').split(/[\s,]+/).map(Number).filter((n) => !Number.isNaN(n))
+  const attrW = parseSvgLength(svg.getAttribute('width'))
+  const attrH = parseSvgLength(svg.getAttribute('height'))
+  let baseW = attrW ?? (viewBox.length === 4 ? viewBox[2]! : null)
+  let baseH = attrH ?? (viewBox.length === 4 ? viewBox[3]! : null)
+  if (!baseW || !baseH) { baseW = SVG_MIN_LONG_EDGE; baseH = SVG_MIN_LONG_EDGE }
+
+  const long = Math.max(baseW, baseH)
+  const scale = Math.min(SVG_MAX_LONG_EDGE / long, Math.max(1, SVG_MIN_LONG_EDGE / long))
+  const renderW = Math.max(1, Math.round(baseW * scale))
+  const renderH = Math.max(1, Math.round(baseH * scale))
+
+  // Guarantee the drawing scales to the render box: a viewBox maps the content
+  // coordinate space onto the sized canvas; without one, a bare width/height
+  // would clip instead of scale.
+  if (viewBox.length !== 4) svg.setAttribute('viewBox', `0 0 ${baseW} ${baseH}`)
+  svg.setAttribute('width', String(renderW))
+  svg.setAttribute('height', String(renderH))
+
+  const markup = new XMLSerializer().serializeToString(svg)
+  const svgUrl = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml' }))
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image()
+      i.onload = () => resolve(i)
+      i.onerror = () => reject(new Error(`Could not render SVG ${file.name}`))
+      i.src = svgUrl
+    })
+    const canvas = document.createElement('canvas')
+    canvas.width = renderW
+    canvas.height = renderH
+    const ctx = canvas.getContext('2d')!
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(img, 0, 0, renderW, renderH)
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      // toBlob throws/returns null on a tainted canvas — an SVG that pulls in an
+      // external image. Surface it so the file is skipped with a clear reason.
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error(`Could not rasterise SVG ${file.name}`))), 'image/png')
+    })
+    const newName = file.name.replace(SVG_EXT_RE, '.png')
+    return new File([blob], newName.endsWith('.png') ? newName : `${newName}.png`, {
+      type: 'image/png',
+      lastModified: file.lastModified
+    })
+  } finally {
+    URL.revokeObjectURL(svgUrl)
+  }
+}
+
 /**
  * Decode a File into an HTMLImageElement and its natural dimensions.
  * Resolves once the image has loaded — caller is responsible for revoking
  * the returned object URL when the image is no longer needed.
  *
- * Transparently handles HEIC/HEIF input by converting to JPEG first.
+ * Transparently handles HEIC/HEIF input (→ JPEG) and SVG input (→ PNG) first.
  */
 export async function loadImage(file: File): Promise<{ image: HTMLImageElement; objectUrl: string; width: number; height: number; file: File }> {
-  const usableFile = await decodeHeicIfNeeded(file)
+  const usableFile = await rasterizeSvgIfNeeded(await decodeHeicIfNeeded(file))
   return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(usableFile)
     const image = new Image()

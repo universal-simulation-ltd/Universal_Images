@@ -10,11 +10,11 @@ A clean Progressive Web App for resizing, cropping, converting, and optimising i
 
 ## Features
 
-- **Drag & drop** JPEG, PNG, WebP, HEIC, and GIF — multiple files at once, decoded locally
+- **Drag & drop** JPEG, PNG, WebP, HEIC, GIF, AVIF, and SVG — multiple files at once, decoded locally (SVG is rasterised, HEIC decoded automatically)
 - **Crop** with a live, mode-less crop region — move and resize handles, no separate crop mode
 - **Social presets** for Instagram, X / Twitter, LinkedIn, YouTube, and Facebook at each platform's current pixel specs
 - **Resize** to preset or custom dimensions with a live preview
-- **Convert** between JPEG, PNG, and WebP with a quality slider; HEIC input is decoded automatically
+- **Convert** between JPEG, PNG, WebP, and AVIF (AVIF where the browser can encode it) with a quality slider; HEIC input is decoded automatically
 - **Batch export** — download images individually or all at once as a ZIP
 - **Installable** PWA — add to home screen on phone or install on desktop, works offline after first load
 

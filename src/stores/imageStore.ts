@@ -107,7 +107,7 @@ function clampCrop(
 
 // Filenames like 'photo.heic' have no MIME type in some browsers, so we accept
 // any file that *looks* like an image by name even when File.type is empty.
-const NAME_IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff?|avif|heic|heif)$/i
+const NAME_IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff?|avif|heic|heif|svg)$/i
 
 function looksLikeImage(file: File) {
   return file.type.startsWith('image/') || NAME_IMAGE_RE.test(file.name)
