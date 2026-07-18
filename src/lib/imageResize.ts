@@ -290,6 +290,154 @@ export function computeCenteredCoverCrop(
   }
 }
 
+/** Autocrop modes — how the trimmed content box is turned into a crop. */
+export type AutoCropMode = 'max' | 'square' | 'ratio'
+
+/**
+ * Find the tight bounding box of the image's real content by trimming uniform
+ * (near-solid-colour or transparent) borders — the "whitespace" around a logo,
+ * scan, or screenshot. The background colour is sampled from the four corners,
+ * so a photo on a black card trims just as well as a logo on white.
+ *
+ * Returns the box in source-pixel space, or `null` when the whole image is a
+ * single flat colour (nothing to trim) — callers should fall back to the full
+ * image in that case.
+ */
+export function computeContentBounds(
+  image: HTMLImageElement,
+  tolerance = 24
+): SourceCrop | null {
+  const iw = image.naturalWidth
+  const ih = image.naturalHeight
+  if (!iw || !ih) return null
+
+  // Scan at a capped resolution — a tight bounding box doesn't need every pixel,
+  // and reading a 40MP buffer would stall the main thread. Coordinates are
+  // scaled back up to source space at the end.
+  const MAX_SCAN = 1400
+  const scale = Math.min(1, MAX_SCAN / Math.max(iw, ih))
+  const sw = Math.max(1, Math.round(iw * scale))
+  const sh = Math.max(1, Math.round(ih * scale))
+
+  const canvas = document.createElement('canvas')
+  canvas.width = sw
+  canvas.height = sh
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return null
+  ctx.drawImage(image, 0, 0, sw, sh)
+
+  let data: Uint8ClampedArray
+  try {
+    data = ctx.getImageData(0, 0, sw, sh).data
+  } catch {
+    // Tainted canvas (should never happen for same-origin object URLs).
+    return null
+  }
+
+  // Background = average of the four corner pixels. Robust to a logo that
+  // happens to touch one edge.
+  const corners = [
+    0,
+    (sw - 1) * 4,
+    (sh - 1) * sw * 4,
+    ((sh - 1) * sw + (sw - 1)) * 4
+  ]
+  let bgR = 0, bgG = 0, bgB = 0
+  for (const c of corners) {
+    bgR += data[c]!
+    bgG += data[c + 1]!
+    bgB += data[c + 2]!
+  }
+  bgR /= 4; bgG /= 4; bgB /= 4
+  const tol2 = 3 * tolerance * tolerance
+
+  let minX = sw, minY = sh, maxX = -1, maxY = -1
+  for (let y = 0; y < sh; y++) {
+    for (let x = 0; x < sw; x++) {
+      const i = (y * sw + x) * 4
+      const a = data[i + 3]!
+      let isContent: boolean
+      if (a < 16) {
+        isContent = false // transparent → background
+      } else {
+        const dr = data[i]! - bgR
+        const dg = data[i + 1]! - bgG
+        const db = data[i + 2]! - bgB
+        isContent = dr * dr + dg * dg + db * db > tol2
+      }
+      if (isContent) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+      }
+    }
+  }
+
+  if (maxX < minX || maxY < minY) return null // flat colour — nothing to trim
+
+  // Back to source space, growing the box outward by the scan step so a 1px
+  // rounding never clips a hair of real content.
+  const inv = 1 / scale
+  const x = Math.max(0, Math.floor(minX * inv))
+  const y = Math.max(0, Math.floor(minY * inv))
+  const right = Math.min(iw, Math.ceil((maxX + 1) * inv))
+  const bottom = Math.min(ih, Math.ceil((maxY + 1) * inv))
+  return { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) }
+}
+
+/**
+ * Turn a trimmed content box into the crop rectangle for an Autocrop mode,
+ * clamped to the image:
+ *   - `max`    → the content box verbatim (tightest trim, any ratio)
+ *   - `square` → a centred 1:1 crop big enough to hold all the content
+ *   - `ratio`  → the smallest crop with the source's aspect ratio that holds
+ *                all the content (trims whitespace while keeping the shape)
+ */
+export function contentCropForMode(
+  bounds: SourceCrop,
+  mode: AutoCropMode,
+  imgW: number,
+  imgH: number
+): SourceCrop {
+  if (mode === 'max') {
+    return clampRect(bounds, imgW, imgH)
+  }
+
+  const cx = bounds.x + bounds.width / 2
+  const cy = bounds.y + bounds.height / 2
+
+  let w: number
+  let h: number
+  if (mode === 'square') {
+    w = h = Math.min(Math.max(bounds.width, bounds.height), imgW, imgH)
+  } else {
+    // Grow the content box to the source aspect ratio. Since the source ratio
+    // is imgW/imgH, the result always fits inside the image.
+    const aspect = imgW / imgH
+    if (bounds.width / bounds.height > aspect) {
+      w = bounds.width
+      h = w / aspect
+    } else {
+      h = bounds.height
+      w = h * aspect
+    }
+    w = Math.min(w, imgW)
+    h = Math.min(h, imgH)
+  }
+
+  return clampRect({ x: cx - w / 2, y: cy - h / 2, width: w, height: h }, imgW, imgH)
+}
+
+/** Clamp a rect to the image bounds, keeping at least 1px on each axis. */
+function clampRect(rect: SourceCrop, imgW: number, imgH: number): SourceCrop {
+  const width = Math.max(1, Math.min(imgW, Math.round(rect.width)))
+  const height = Math.max(1, Math.min(imgH, Math.round(rect.height)))
+  const x = Math.max(0, Math.min(imgW - width, Math.round(rect.x)))
+  const y = Math.max(0, Math.min(imgH - height, Math.round(rect.y)))
+  return { x, y, width, height }
+}
+
 export function formatFilename(originalName: string, width: number, height: number, format: OutputFormat) {
   const dot = originalName.lastIndexOf('.')
   const stem = dot === -1 ? originalName : originalName.slice(0, dot)
