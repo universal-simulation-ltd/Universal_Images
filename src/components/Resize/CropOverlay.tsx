@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { SourceCrop, SourceImage } from '../../types/image'
 
 interface Props {
@@ -7,6 +7,14 @@ interface Props {
   crop: SourceCrop | null
   /** Live update — pass null to clear the crop. */
   onChange: (rect: { x: number; y: number; width: number; height: number } | null) => void
+  /**
+   * "Committed" = the user accepted the crop (tick / Enter). Owned by the parent
+   * so the preview underneath can hide the encoded-output image while the crop
+   * is still being EDITED (otherwise the full-size source drawn here and the
+   * target-size encoded preview show at once — the "two overlapping images" bug).
+   */
+  committed: boolean
+  onCommittedChange: (v: boolean) => void
 }
 
 type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
@@ -30,20 +38,16 @@ const HANDLE_CURSOR: Record<Handle, string> = {
  * the source image is never rewritten and changing the size preset just
  * re-exports the same region. Esc clears the crop.
  */
-export default function CropOverlay({ image, crop, onChange }: Props) {
+export default function CropOverlay({ image, crop, onChange, committed, onCommittedChange }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
   const gesture = useRef<{ mode: Mode; startPt: { x: number; y: number }; startRect: SourceCrop } | null>(null)
-  // "Committed" = the user accepted the crop (tick / Enter): the editing chrome
-  // (source image, mask, dashed box, handles) is hidden so the cropped result
-  // preview underneath shows through. The crop itself stays in the store and is
-  // still applied to the export — accepting only collapses the editor. Clicking
-  // the result (or the Edit pill) re-opens editing. Reset whenever the crop is
-  // removed so the next freshly-drawn crop opens in the editor.
-  const [committed, setCommitted] = useState(false)
-  useEffect(() => {
-    if (!crop) setCommitted(false)
-  }, [crop])
+  // "Committed" (parent-owned): the user accepted the crop (tick / Enter), so
+  // the editing chrome (source image, mask, dashed box, handles) is hidden and
+  // the cropped result preview underneath shows through. The crop itself stays
+  // in the store and is still applied to the export — accepting only collapses
+  // the editor. Clicking the result (or the Edit pill) re-opens editing.
+  const setCommitted = onCommittedChange
 
   useLayoutEffect(() => {
     const el = wrapperRef.current

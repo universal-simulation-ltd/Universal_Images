@@ -824,6 +824,13 @@ function PreviewArea({
 }: PreviewAreaProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
+  // Whether the active crop has been accepted. While a crop is being edited
+  // (set but not committed) the encoded-output preview below is hidden, so it
+  // can't peek out from behind the full-size source the CropOverlay draws.
+  const [committed, setCommitted] = useState(false)
+  useEffect(() => {
+    if (!crop) setCommitted(false)
+  }, [crop])
 
   useLayoutEffect(() => {
     const el = wrapperRef.current
@@ -855,17 +862,22 @@ function PreviewArea({
         <SocialCropOverlay image={image} crop={socialCrop} onMove={onMoveSocialCrop} />
       ) : (
         <>
-          {/* Encoded-output preview. Hidden under the source while a crop is
-              active (the CropOverlay paints the source on top). */}
-          <div className="relative flex flex-1 min-h-0 items-center justify-center p-6">
-            <img
-              src={previewUrl ?? image.objectUrl}
-              alt={image.name}
-              draggable={false}
-              style={{ width: displayW, height: displayH }}
-              className="block object-fill shadow-lg ring-1 ring-slate-200 bg-white"
-            />
-          </div>
+          {/* Encoded-output preview at the TARGET size. Hidden while a crop is
+              being edited — the CropOverlay draws the full-size source then, and
+              showing both at once made the target-size preview peek out behind
+              it ("two overlapping images"). Shown again once the crop is
+              committed, so the cropped result previews through. */}
+          {(!crop || committed) && (
+            <div className="relative flex flex-1 min-h-0 items-center justify-center p-6">
+              <img
+                src={previewUrl ?? image.objectUrl}
+                alt={image.name}
+                draggable={false}
+                style={{ width: displayW, height: displayH }}
+                className="block object-fill shadow-lg ring-1 ring-slate-200 bg-white"
+              />
+            </div>
+          )}
           {!crop && (
             <div className="absolute bottom-3 right-3 pointer-events-none flex items-center gap-2">
               <span className="bg-slate-900/85 text-white text-[11px] font-medium tabular-nums px-2 py-1 rounded-md">
@@ -882,7 +894,13 @@ function PreviewArea({
               </span>
             </div>
           )}
-          <CropOverlay image={image} crop={crop} onChange={onSetCrop} />
+          <CropOverlay
+            image={image}
+            crop={crop}
+            onChange={onSetCrop}
+            committed={committed}
+            onCommittedChange={setCommitted}
+          />
         </>
       )}
     </div>
