@@ -243,14 +243,14 @@ export async function resizeAndEncode(
 }
 
 /**
- * Paint an opaque white background behind whatever the canvas already holds,
- * flattening any transparent pixels. `destination-over` draws the fill beneath
- * the existing content, so the image itself is untouched.
+ * Paint an opaque background of `color` behind whatever the canvas already
+ * holds, flattening any transparent pixels. `destination-over` draws the fill
+ * beneath the existing content, so the image itself is untouched.
  */
-function flattenOntoWhite(canvas: HTMLCanvasElement) {
+function flattenOnto(canvas: HTMLCanvasElement, color: string) {
   const ctx = canvas.getContext('2d')!
   ctx.globalCompositeOperation = 'destination-over'
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = color
   ctx.fillRect(0, 0, canvas.width, canvas.height)
   ctx.globalCompositeOperation = 'source-over'
 }
@@ -259,11 +259,20 @@ function encodeCanvas(
   canvas: HTMLCanvasElement,
   format: OutputFormat,
   quality: number,
-  allowTransparency = true
+  allowTransparency = true,
+  // Explicit background fill (a CSS colour) composited behind the image. When
+  // set it wins over `allowTransparency` and applies to every format — this is
+  // the "replace the transparent background with a colour" control. Null/omitted
+  // leaves the existing behaviour (transparent, or white when transparency off).
+  bgFill?: string | null
 ): Promise<Blob> {
-  // Only PNG carries an alpha channel here; flatten it onto white when the
-  // user has opted out of transparency.
-  if (!allowTransparency && format === 'image/png') flattenOntoWhite(canvas)
+  if (bgFill) {
+    flattenOnto(canvas, bgFill)
+  } else if (!allowTransparency && format === 'image/png') {
+    // Only PNG carries an alpha channel here; flatten it onto white when the
+    // user has opted out of transparency.
+    flattenOnto(canvas, '#ffffff')
+  }
   const useQuality = format === 'image/png' ? undefined : Math.min(1, Math.max(0, quality))
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -340,14 +349,15 @@ export async function processAndEncode(
   targetH: number,
   format: OutputFormat,
   quality: number,
-  allowTransparency = true
+  allowTransparency = true,
+  bgFill?: string | null
 ): Promise<Blob> {
   const tw = Math.max(1, Math.round(targetW))
   const th = Math.max(1, Math.round(targetH))
   const canvas = crop
     ? drawCropAndDownscale(source, crop, tw, th)
     : drawDownscaled(source, tw, th)
-  return encodeCanvas(canvas, format, quality, allowTransparency)
+  return encodeCanvas(canvas, format, quality, allowTransparency, bgFill)
 }
 
 /**
@@ -392,26 +402,38 @@ export type AutoCropMode = 'max' | 'square' | 'ratio'
  */
 export function computeContentBounds(
   image: HTMLImageElement,
-  tolerance = 24
+  tolerance = 24,
+  // When given, only this sub-rectangle (source pixels) is scanned and the
+  // background colour is sampled from ITS corners — so Autocrop trims whitespace
+  // *inside the current crop* rather than across the whole image. Returned bounds
+  // are still in full-image space.
+  region?: SourceCrop
 ): SourceCrop | null {
   const iw = image.naturalWidth
   const ih = image.naturalHeight
   if (!iw || !ih) return null
 
+  // Source rectangle to scan — the region (clamped to the image) or the whole image.
+  const rx = region ? Math.max(0, Math.min(iw - 1, Math.floor(region.x))) : 0
+  const ry = region ? Math.max(0, Math.min(ih - 1, Math.floor(region.y))) : 0
+  const rw = region ? Math.max(1, Math.min(iw - rx, Math.round(region.width))) : iw
+  const rh = region ? Math.max(1, Math.min(ih - ry, Math.round(region.height))) : ih
+
   // Scan at a capped resolution — a tight bounding box doesn't need every pixel,
   // and reading a 40MP buffer would stall the main thread. Coordinates are
   // scaled back up to source space at the end.
   const MAX_SCAN = 1400
-  const scale = Math.min(1, MAX_SCAN / Math.max(iw, ih))
-  const sw = Math.max(1, Math.round(iw * scale))
-  const sh = Math.max(1, Math.round(ih * scale))
+  const scale = Math.min(1, MAX_SCAN / Math.max(rw, rh))
+  const sw = Math.max(1, Math.round(rw * scale))
+  const sh = Math.max(1, Math.round(rh * scale))
 
   const canvas = document.createElement('canvas')
   canvas.width = sw
   canvas.height = sh
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) return null
-  ctx.drawImage(image, 0, 0, sw, sh)
+  // Draw just the scanned region into the canvas.
+  ctx.drawImage(image, rx, ry, rw, rh, 0, 0, sw, sh)
 
   let data: Uint8ClampedArray
   try {
@@ -463,14 +485,46 @@ export function computeContentBounds(
 
   if (maxX < minX || maxY < minY) return null // flat colour — nothing to trim
 
-  // Back to source space, growing the box outward by the scan step so a 1px
-  // rounding never clips a hair of real content.
+  // Back to source space (offset by the scanned region's origin), growing the
+  // box outward by the scan step so a 1px rounding never clips a hair of real
+  // content.
   const inv = 1 / scale
-  const x = Math.max(0, Math.floor(minX * inv))
-  const y = Math.max(0, Math.floor(minY * inv))
-  const right = Math.min(iw, Math.ceil((maxX + 1) * inv))
-  const bottom = Math.min(ih, Math.ceil((maxY + 1) * inv))
+  const x = Math.max(rx, rx + Math.floor(minX * inv))
+  const y = Math.max(ry, ry + Math.floor(minY * inv))
+  const right = Math.min(rx + rw, rx + Math.ceil((maxX + 1) * inv))
+  const bottom = Math.min(ry + rh, ry + Math.ceil((maxY + 1) * inv))
   return { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) }
+}
+
+/**
+ * True when the image has real transparency — any pixel materially below full
+ * opacity. Scans a downscaled copy (a fully-opaque image downscales to alpha
+ * 255 everywhere, so this only fires on genuine alpha). Used to enable the
+ * background-fill swatches, which only make sense on a transparent image.
+ */
+export function imageHasAlpha(image: HTMLImageElement, sampleMax = 256): boolean {
+  const iw = image.naturalWidth
+  const ih = image.naturalHeight
+  if (!iw || !ih) return false
+  const scale = Math.min(1, sampleMax / Math.max(iw, ih))
+  const sw = Math.max(1, Math.round(iw * scale))
+  const sh = Math.max(1, Math.round(ih * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = sw
+  canvas.height = sh
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  if (!ctx) return false
+  ctx.drawImage(image, 0, 0, sw, sh)
+  let data: Uint8ClampedArray
+  try {
+    data = ctx.getImageData(0, 0, sw, sh).data
+  } catch {
+    return false
+  }
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i]! < 250) return true
+  }
+  return false
 }
 
 /**
@@ -484,11 +538,13 @@ export function computeContentBounds(
 export function contentCropForMode(
   bounds: SourceCrop,
   mode: AutoCropMode,
-  imgW: number,
-  imgH: number
+  // Bounding region the result is clamped to. Pass the whole image
+  // ({x:0,y:0,width:imgW,height:imgH}) for a full-image autocrop, or the current
+  // crop to trim within it. `square`/`ratio` are sized relative to this region.
+  region: SourceCrop
 ): SourceCrop {
   if (mode === 'max') {
-    return clampRect(bounds, imgW, imgH)
+    return clampRect(bounds, region)
   }
 
   const cx = bounds.x + bounds.width / 2
@@ -497,11 +553,11 @@ export function contentCropForMode(
   let w: number
   let h: number
   if (mode === 'square') {
-    w = h = Math.min(Math.max(bounds.width, bounds.height), imgW, imgH)
+    w = h = Math.min(Math.max(bounds.width, bounds.height), region.width, region.height)
   } else {
-    // Grow the content box to the source aspect ratio. Since the source ratio
-    // is imgW/imgH, the result always fits inside the image.
-    const aspect = imgW / imgH
+    // Grow the content box to the region's aspect ratio. Since that ratio is
+    // region.width/region.height, the result always fits inside the region.
+    const aspect = region.width / region.height
     if (bounds.width / bounds.height > aspect) {
       w = bounds.width
       h = w / aspect
@@ -509,19 +565,19 @@ export function contentCropForMode(
       h = bounds.height
       w = h * aspect
     }
-    w = Math.min(w, imgW)
-    h = Math.min(h, imgH)
+    w = Math.min(w, region.width)
+    h = Math.min(h, region.height)
   }
 
-  return clampRect({ x: cx - w / 2, y: cy - h / 2, width: w, height: h }, imgW, imgH)
+  return clampRect({ x: cx - w / 2, y: cy - h / 2, width: w, height: h }, region)
 }
 
-/** Clamp a rect to the image bounds, keeping at least 1px on each axis. */
-function clampRect(rect: SourceCrop, imgW: number, imgH: number): SourceCrop {
-  const width = Math.max(1, Math.min(imgW, Math.round(rect.width)))
-  const height = Math.max(1, Math.min(imgH, Math.round(rect.height)))
-  const x = Math.max(0, Math.min(imgW - width, Math.round(rect.x)))
-  const y = Math.max(0, Math.min(imgH - height, Math.round(rect.y)))
+/** Clamp a rect to a bounding region, keeping at least 1px on each axis. */
+function clampRect(rect: SourceCrop, region: SourceCrop): SourceCrop {
+  const width = Math.max(1, Math.min(region.width, Math.round(rect.width)))
+  const height = Math.max(1, Math.min(region.height, Math.round(rect.height)))
+  const x = Math.max(region.x, Math.min(region.x + region.width - width, Math.round(rect.x)))
+  const y = Math.max(region.y, Math.min(region.y + region.height - height, Math.round(rect.y)))
   return { x, y, width, height }
 }
 

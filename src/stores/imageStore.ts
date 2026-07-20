@@ -13,6 +13,27 @@ function makeId() {
   return Math.random().toString(36).slice(2, 10)
 }
 
+/**
+ * Per-image editing state, stashed when the user switches away so each image
+ * keeps its own custom size, crop, background fill and background-removal
+ * snapshots. The `edits` map only ever holds the NON-selected images — the
+ * selected image's working state lives in the top-level active fields.
+ */
+interface ImageEdit {
+  target: ResizeTarget
+  crop: SourceCrop | null
+  socialCrop: SourceCrop | null
+  bgFill: string | null
+  bgOriginal: SourceImage | null
+  bgCutout: SourceImage | null
+}
+
+function revokeEditUrls(edit: ImageEdit | undefined) {
+  if (!edit) return
+  if (edit.bgOriginal) URL.revokeObjectURL(edit.bgOriginal.objectUrl)
+  if (edit.bgCutout) URL.revokeObjectURL(edit.bgCutout.objectUrl)
+}
+
 function chooseDefaultFormat(file: File): OutputFormat {
   const t = file.type
   if (t === 'image/png') return 'image/png'
@@ -87,8 +108,33 @@ interface ImageStore {
    * its background removed (or the snapshot was cleared on select/remove).
    */
   bgOriginal: SourceImage | null
-  /** Put the pre-removal image back, discarding the cut-out. */
+  /**
+   * Cached cut-out for the selected image, kept after a "Restore background" so
+   * that clicking "Remove background" again swaps it straight back in without
+   * re-running the model. Held only while that image stays selected (revoked on
+   * select-away / remove / clear). Mutually exclusive with `bgOriginal`: whichever
+   * version isn't currently shown is the one cached.
+   */
+  bgCutout: SourceImage | null
+  /**
+   * Put the pre-removal image back. The cut-out is kept in `bgCutout` (not
+   * discarded) so re-removing is instant.
+   */
   restoreBackground: () => void
+  /**
+   * Solid background fill (a CSS colour) composited behind the selected image on
+   * preview + export — the "replace the transparent background with a colour"
+   * control. Null = leave transparent. Only meaningful when the image has
+   * transparency; reset whenever the selected image / its version changes.
+   */
+  bgFill: string | null
+  setBgFill: (color: string | null) => void
+  /**
+   * Saved editing state for every image that ISN'T currently selected, so
+   * switching images preserves each one's size/crop/fill/background edits.
+   * Keyed by image id; the selected image's state lives in the active fields.
+   */
+  edits: Record<string, ImageEdit>
   /** "Hosted by UNI·SIM" cloud-store dialog open state. */
   hostedStoreOpen: boolean
   setHostedStoreOpen: (open: boolean) => void
@@ -148,6 +194,10 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   removingBg: false,
   bgProgress: 0,
   bgOriginal: null,
+  bgCutout: null,
+  bgFill: null,
+  setBgFill: (bgFill) => set({ bgFill }),
+  edits: {},
 
   async addFiles(input) {
     const files = Array.from(input).filter(looksLikeImage)
@@ -188,52 +238,83 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   },
 
   selectImage(id) {
-    const img = get().images.find((i) => i.id === id)
-    if (!img) return
-    const prevSnap = get().bgOriginal
-    if (prevSnap && prevSnap.id !== id) URL.revokeObjectURL(prevSnap.objectUrl)
+    const cur = get()
+    const img = cur.images.find((i) => i.id === id)
+    if (!img || cur.selectedId === id) return
+    const edits = { ...cur.edits }
+    // Stash the outgoing image's working state so it's restored when re-selected.
+    if (cur.selectedId && cur.target) {
+      edits[cur.selectedId] = {
+        target: cur.target,
+        crop: cur.crop,
+        socialCrop: cur.socialCrop,
+        bgFill: cur.bgFill,
+        bgOriginal: cur.bgOriginal,
+        bgCutout: cur.bgCutout
+      }
+    }
+    // Load the incoming image's saved state (or fresh defaults) and remove it
+    // from the map — it's the active image now.
+    const saved = edits[id]
+    delete edits[id]
     set({
+      edits,
       selectedId: id,
-      target: makeDefaultTarget(img),
-      crop: null,
-      socialCrop: null,
-      // Keep the snapshot only if it belongs to the image being selected.
-      bgOriginal: prevSnap && prevSnap.id === id ? prevSnap : null
+      target: saved?.target ?? makeDefaultTarget(img),
+      crop: saved?.crop ?? null,
+      socialCrop: saved?.socialCrop ?? null,
+      bgFill: saved?.bgFill ?? null,
+      bgOriginal: saved?.bgOriginal ?? null,
+      bgCutout: saved?.bgCutout ?? null
     })
   },
 
   removeImage(id) {
-    const { images, selectedId, bgOriginal } = get()
-    const removed = images.find((i) => i.id === id)
+    const cur = get()
+    const removed = cur.images.find((i) => i.id === id)
     if (removed) URL.revokeObjectURL(removed.objectUrl)
-    if (bgOriginal && bgOriginal.id === id) {
-      URL.revokeObjectURL(bgOriginal.objectUrl)
-      set({ bgOriginal: null })
+    const edits = { ...cur.edits }
+    // Free the removed image's background snapshots — the active ones if it's the
+    // selected image, otherwise its stashed edit.
+    if (cur.selectedId === id) {
+      if (cur.bgOriginal) URL.revokeObjectURL(cur.bgOriginal.objectUrl)
+      if (cur.bgCutout) URL.revokeObjectURL(cur.bgCutout.objectUrl)
     }
-    const remaining = images.filter((i) => i.id !== id)
+    revokeEditUrls(edits[id])
+    delete edits[id]
+
+    const remaining = cur.images.filter((i) => i.id !== id)
     if (remaining.length === 0) {
-      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null })
+      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, bgFill: null, bgOriginal: null, bgCutout: null, edits: {} })
       return
     }
-    if (selectedId === id) {
-      const nextSelected = remaining[0]!
+    if (cur.selectedId === id) {
+      const next = remaining[0]!
+      const saved = edits[next.id]
+      delete edits[next.id]
       set({
         images: remaining,
-        selectedId: nextSelected.id,
-        target: makeDefaultTarget(nextSelected),
-        crop: null,
-        socialCrop: null
+        edits,
+        selectedId: next.id,
+        target: saved?.target ?? makeDefaultTarget(next),
+        crop: saved?.crop ?? null,
+        socialCrop: saved?.socialCrop ?? null,
+        bgFill: saved?.bgFill ?? null,
+        bgOriginal: saved?.bgOriginal ?? null,
+        bgCutout: saved?.bgCutout ?? null
       })
     } else {
-      set({ images: remaining })
+      set({ images: remaining, edits })
     }
   },
 
   clearAll() {
-    for (const img of get().images) URL.revokeObjectURL(img.objectUrl)
-    const snap = get().bgOriginal
-    if (snap) URL.revokeObjectURL(snap.objectUrl)
-    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, convertMode: false, bgOriginal: null })
+    const cur = get()
+    for (const img of cur.images) URL.revokeObjectURL(img.objectUrl)
+    if (cur.bgOriginal) URL.revokeObjectURL(cur.bgOriginal.objectUrl)
+    if (cur.bgCutout) URL.revokeObjectURL(cur.bgCutout.objectUrl)
+    for (const e of Object.values(cur.edits)) revokeEditUrls(e)
+    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, edits: {} })
   },
 
   setTarget(partial) {
@@ -260,7 +341,9 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     const img = images.find((i) => i.id === selectedId)
     if (!img) return
     if (!rect) {
-      set({ crop: null })
+      // Removing the crop reverts the export target to the image's original
+      // size (format/quality/lock are kept — only the dimensions revert).
+      set({ crop: null, target: target ? { ...target, width: img.width, height: img.height } : target })
       return
     }
     const c = clampCrop(rect, img.width, img.height)
@@ -289,7 +372,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   },
 
   async autoCrop(mode) {
-    const { images, selectedId, target, autoCropping } = get()
+    const { images, selectedId, target, autoCropping, crop } = get()
     if (autoCropping) return
     const img = images.find((i) => i.id === selectedId)
     if (!img) return
@@ -297,9 +380,12 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     try {
       const { image, objectUrl } = await loadImage(img.file)
       try {
-        const bounds =
-          computeContentBounds(image) ?? { x: 0, y: 0, width: img.width, height: img.height }
-        const rect = contentCropForMode(bounds, mode, img.width, img.height)
+        // When a crop is already active, trim WITHIN it (scan + size relative to
+        // the crop) rather than across the whole image. Otherwise use the whole
+        // image as the region.
+        const region: SourceCrop = crop ?? { x: 0, y: 0, width: img.width, height: img.height }
+        const bounds = computeContentBounds(image, 24, crop ?? undefined) ?? region
+        const rect = contentCropForMode(bounds, mode, region)
         const c = clampCrop(rect, img.width, img.height)
         set({
           crop: c,
@@ -317,7 +403,10 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   },
 
   clearCrop() {
-    set({ crop: null })
+    // Match setCrop(null): reverting the crop restores the original export size.
+    const { images, selectedId, target } = get()
+    const img = images.find((i) => i.id === selectedId)
+    set({ crop: null, target: img && target ? { ...target, width: img.width, height: img.height } : target })
   },
 
   applySocialPreset(width, height) {
@@ -352,10 +441,27 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   },
 
   async removeBackground(onProgress) {
-    const { images, selectedId, removingBg, bgOriginal } = get()
+    const { images, selectedId, removingBg, bgOriginal, bgCutout } = get()
     if (removingBg) return
     const img = images.find((i) => i.id === selectedId)
     if (!img) return
+
+    // Cache hit: the cut-out for this image is already computed (the user
+    // restored it earlier). Swap it straight back in — no reprocessing.
+    if (bgCutout && bgCutout.id === img.id) {
+      const nextImages = images.map((i) => (i.id === img.id ? bgCutout : i))
+      const isSelected = selectedId === img.id
+      const t = get().target
+      set({
+        images: nextImages,
+        bgOriginal: img, // the original we just replaced — enables Restore again
+        bgCutout: null,
+        target: isSelected && t ? { ...t, format: 'image/png', allowTransparency: true } : t,
+        ...(isSelected ? { crop: null, socialCrop: null, bgFill: null } : {})
+      })
+      onProgress?.(1)
+      return
+    }
 
     set({ removingBg: true, bgProgress: 0 })
     try {
@@ -375,22 +481,40 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       const cutout: SourceImage = { id: img.id, name, file, width, height, objectUrl, bytes: file.size }
 
       // Stash the pre-removal image for "Restore background". If a stale snapshot
-      // for this same image already exists (a second removal), drop it first.
+      // or cached cut-out for this same image exists, drop it first.
       if (bgOriginal && bgOriginal.id === img.id) URL.revokeObjectURL(bgOriginal.objectUrl)
+      if (current.bgCutout && current.bgCutout.id === img.id) URL.revokeObjectURL(current.bgCutout.objectUrl)
 
       const nextImages = current.images.map((i) => (i.id === img.id ? cutout : i))
-      const isSelected = current.selectedId === img.id
-      set({
-        images: nextImages,
-        bgOriginal: img,
-        // The cut-out has transparency, so force PNG output so it isn't
-        // flattened onto white on export. Only retarget the currently-open image.
-        target: isSelected && current.target
-          ? { ...current.target, format: 'image/png', allowTransparency: true }
-          : current.target,
-        // Crops referenced the old bitmap coordinates; clear them for clarity.
-        ...(isSelected ? { crop: null, socialCrop: null } : {})
-      })
+      if (current.selectedId === img.id) {
+        set({
+          images: nextImages,
+          bgOriginal: img,
+          bgCutout: null,
+          // The cut-out has transparency, so force PNG output so it isn't
+          // flattened onto white on export.
+          target: current.target ? { ...current.target, format: 'image/png', allowTransparency: true } : current.target,
+          // Crops referenced the old bitmap coordinates; clear them for clarity.
+          crop: null,
+          socialCrop: null,
+          bgFill: null
+        })
+      } else {
+        // The user switched away during the run — persist the result into the
+        // image's saved edit rather than clobbering the now-different active image.
+        const edits = { ...current.edits }
+        revokeEditUrls(edits[img.id])
+        const base = edits[img.id]?.target ?? makeDefaultTarget(img)
+        edits[img.id] = {
+          target: { ...base, format: 'image/png', allowTransparency: true },
+          crop: null,
+          socialCrop: null,
+          bgFill: null,
+          bgOriginal: img,
+          bgCutout: null
+        }
+        set({ images: nextImages, edits })
+      }
     } catch (err) {
       console.error('Background removal failed', err)
       throw err
@@ -400,17 +524,22 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   },
 
   restoreBackground() {
-    const { images, selectedId, bgOriginal, target } = get()
+    const { images, selectedId, bgOriginal, bgCutout, target } = get()
     if (!bgOriginal) return
-    const cutout = images.find((i) => i.id === bgOriginal.id)
-    if (cutout) URL.revokeObjectURL(cutout.objectUrl)
+    // Keep the cut-out currently in the list as the cache so re-removing is instant.
+    const cutout = images.find((i) => i.id === bgOriginal.id) ?? null
+    // Drop any older cached cut-out we're about to replace (shouldn't normally exist).
+    if (bgCutout && cutout && bgCutout.id === cutout.id && bgCutout !== cutout) {
+      URL.revokeObjectURL(bgCutout.objectUrl)
+    }
     const nextImages = images.map((i) => (i.id === bgOriginal.id ? bgOriginal : i))
     const isSelected = selectedId === bgOriginal.id
     set({
       images: nextImages,
       bgOriginal: null,
+      bgCutout: cutout,
       target: isSelected && target ? makeDefaultTarget(bgOriginal) : target,
-      ...(isSelected ? { crop: null, socialCrop: null } : {})
+      ...(isSelected ? { crop: null, socialCrop: null, bgFill: null } : {})
     })
   }
 }))

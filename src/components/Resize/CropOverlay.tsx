@@ -41,7 +41,11 @@ const HANDLE_CURSOR: Record<Handle, string> = {
 export default function CropOverlay({ image, crop, onChange, committed, onCommittedChange }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
-  const gesture = useRef<{ mode: Mode; startPt: { x: number; y: number }; startRect: SourceCrop } | null>(null)
+  // `started` guards the draw gesture: a fresh draw doesn't emit a crop until
+  // the pointer has actually moved past MIN, so a plain click never creates a
+  // degenerate (1×1) crop — which the store would otherwise clamp up from 0×0
+  // and then lock the export target to.
+  const gesture = useRef<{ mode: Mode; startPt: { x: number; y: number }; startRect: SourceCrop; started: boolean } | null>(null)
   // "Committed" (parent-owned): the user accepted the crop (tick / Enter), so
   // the editing chrome (source image, mask, dashed box, handles) is hidden and
   // the cropped result preview underneath shows through. The crop itself stays
@@ -104,8 +108,10 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
     // rather than landing on whatever was focused before the drag.
     wrapperRef.current?.focus({ preventScroll: true })
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* no active pointer (e.g. synthetic) */ }
-    gesture.current = { mode, startPt: pt, startRect: crop ?? { x: pt.x, y: pt.y, width: 0, height: 0 } }
-    if (mode === 'draw') onChange({ x: pt.x, y: pt.y, width: 0, height: 0 })
+    // A move/resize gesture is "started" immediately (it edits an existing crop);
+    // a draw only starts once the pointer moves past MIN (see onPointerMove), so
+    // a click never spawns a crop.
+    gesture.current = { mode, startPt: pt, startRect: crop ?? { x: pt.x, y: pt.y, width: 0, height: 0 }, started: mode !== 'draw' }
   }
 
   function onPointerMove(e: React.PointerEvent) {
@@ -114,11 +120,17 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
     const pt = clientToSource(e.clientX, e.clientY)
 
     if (g.mode === 'draw') {
+      const w = Math.abs(pt.x - g.startPt.x)
+      const h = Math.abs(pt.y - g.startPt.y)
+      // Ignore the sub-threshold jitter of a click/tap so no crop is created
+      // until the pointer has genuinely dragged.
+      if (!g.started && w < MIN && h < MIN) return
+      g.started = true
       onChange({
         x: Math.min(g.startPt.x, pt.x),
         y: Math.min(g.startPt.y, pt.y),
-        width: Math.abs(pt.x - g.startPt.x),
-        height: Math.abs(pt.y - g.startPt.y)
+        width: w,
+        height: h
       })
       return
     }
@@ -152,9 +164,9 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
   function onPointerUp() {
     const g = gesture.current
     gesture.current = null
-    // A draw that never grew into a usable box clears the crop instead of
-    // leaving a 0×0 sliver behind.
-    if (g?.mode === 'draw' && crop && (crop.width < MIN || crop.height < MIN)) onChange(null)
+    // A draw that started but never grew into a usable box clears the sliver.
+    // A draw that never started (a plain click) leaves any existing crop alone.
+    if (g?.mode === 'draw' && g.started && crop && (crop.width < MIN || crop.height < MIN)) onChange(null)
   }
 
   // Enter accepts (commits) the crop; Esc removes it. Previously only Esc was

@@ -25,6 +25,14 @@ build), set `VITE_BG_REMOVAL_PATH` at build time to a folder of self-hosted
 `@imgly/background-removal-data` assets and the library loads models locally
 instead of the CDN.
 
+Related, non-destructive controls on the same cut-out: **Restore background**
+undoes a removal (the cut-out is cached in `bgCutout` so a re-remove is instant),
+and **Fill background** composites a solid colour behind a transparent image on
+preview + export (`bgFill` in the store, threaded through `processAndEncode`; the
+swatches are gated on `imageHasAlpha`). Per-image editing state (size, crop,
+fill, background snapshots) is preserved when switching images via the `edits`
+map in the store.
+
 - **Live:** [opensource.unisim.co.uk/images](https://opensource.unisim.co.uk/images/)
   — served by path via the `opensource-portal` Worker, which proxies `/images`
   to its Cloudflare Pages project.
