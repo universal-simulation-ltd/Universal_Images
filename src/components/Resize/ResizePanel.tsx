@@ -7,7 +7,8 @@ import {
   loadImage,
   processAndEncode,
   computeCenteredCoverCrop,
-  supportsAvifEncode
+  supportsAvifEncode,
+  imageHasAlpha
 } from '../../lib/imageResize'
 import { downloadBlob } from '../../lib/download'
 import { groupedPresets } from '../../lib/socialPresets'
@@ -21,6 +22,15 @@ const FORMAT_LABEL: Record<OutputFormat, string> = {
   'image/webp': 'WebP',
   'image/avif': 'AVIF'
 }
+
+// Preset background-fill swatches. `value: null` = keep transparent. The custom
+// "+" swatch (a native colour picker) covers everything else.
+const BG_SWATCHES: { value: string | null; label: string; swatchClass: string }[] = [
+  { value: null, label: 'Transparent', swatchClass: 'checker-bg' },
+  { value: '#000000', label: 'Black', swatchClass: 'bg-black' },
+  { value: '#ffffff', label: 'White', swatchClass: 'bg-white' },
+  { value: '#ea580c', label: 'Orange', swatchClass: 'bg-orange-600' }
+]
 
 interface ResizePanelProps {
   onShowGrid?: () => void
@@ -44,6 +54,13 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const applySocialPreset = useImageStore((s) => s.applySocialPreset)
   const moveSocialCrop = useImageStore((s) => s.moveSocialCrop)
   const clearSocialCrop = useImageStore((s) => s.clearSocialCrop)
+  const removeBackground = useImageStore((s) => s.removeBackground)
+  const restoreBackground = useImageStore((s) => s.restoreBackground)
+  const removingBg = useImageStore((s) => s.removingBg)
+  const bgProgress = useImageStore((s) => s.bgProgress)
+  const bgOriginal = useImageStore((s) => s.bgOriginal)
+  const bgFill = useImageStore((s) => s.bgFill)
+  const setBgFill = useImageStore((s) => s.setBgFill)
 
   // The free-form crop and the social crop are mutually exclusive; either one
   // (if set) is the region the export pipeline should cut.
@@ -59,6 +76,17 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const [lastResult, setLastResult] = useState<{ bytes: number; width: number; height: number } | null>(null)
   const [socialOpen, setSocialOpen] = useState(false)
   const [autocropOpen, setAutocropOpen] = useState(false)
+  // Crop, Background and the custom-size inputs are collapsed by default — Size
+  // presets sit at the top of the column as the primary control.
+  const [cropOpen, setCropOpen] = useState(false)
+  const [bgOpen, setBgOpen] = useState(false)
+  const [customSizeOpen, setCustomSizeOpen] = useState(false)
+  const [bgError, setBgError] = useState<string | null>(null)
+  // Hidden native colour picker backing the "+" custom background-fill swatch.
+  const customColorRef = useRef<HTMLInputElement>(null)
+  // Whether the selected image has real transparency — gates the background-fill
+  // swatches (which only make sense on a transparent image).
+  const [hasAlpha, setHasAlpha] = useState(false)
   // AVIF encoding only works in Chromium browsers; probe once so we only offer
   // the format where it genuinely encodes (elsewhere it silently yields PNG).
   const [avifOk, setAvifOk] = useState(false)
@@ -67,7 +95,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const [formatOpen, setFormatOpen] = useState(convertMode)
 
   // Hooks always run — the actual encode work is gated on having a real target.
-  const estimate = useEncodedPreview(selected, target, effectiveCrop, !!selected && !!target)
+  const estimate = useEncodedPreview(selected, target, effectiveCrop, bgFill, !!selected && !!target)
 
   // Convert-mode entry: reveal the Format & quality section when the flag flips
   // on (e.g. the editor mounts after the homepage "Convert" click).
@@ -80,6 +108,25 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
     supportsAvifEncode().then((ok) => { if (alive) setAvifOk(ok) })
     return () => { alive = false }
   }, [])
+
+  // Detect transparency of the selected image (re-runs on any transform that
+  // swaps its objectUrl — crop, background removal, restore).
+  const selectedUrl = selected?.objectUrl ?? null
+  const selectedFile = selected?.file ?? null
+  useEffect(() => {
+    let alive = true
+    setHasAlpha(false)
+    if (!selectedFile) return
+    loadImage(selectedFile)
+      .then(({ image, objectUrl }) => {
+        if (!alive) { URL.revokeObjectURL(objectUrl); return }
+        setHasAlpha(imageHasAlpha(image))
+        URL.revokeObjectURL(objectUrl)
+      })
+      .catch(() => { /* undecodable — leave swatches locked */ })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUrl])
 
   if (!selected || !target) {
     return (
@@ -129,13 +176,25 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   }
 
 
+  const bgRemoved = !!bgOriginal && !!selected && bgOriginal.id === selected.id
+
+  async function onRemoveBackground() {
+    if (removingBg) return
+    setBgError(null)
+    try {
+      await removeBackground()
+    } catch (err) {
+      setBgError((err as Error)?.message || 'Background removal failed. Please try again.')
+    }
+  }
+
   async function exportSelected() {
     if (exporting || !selected || !target) return
     setExporting(true)
     try {
       const { image, objectUrl } = await loadImage(selected.file)
       try {
-        const blob = await processAndEncode(image, effectiveCrop, target.width, target.height, target.format, target.quality, target.allowTransparency)
+        const blob = await processAndEncode(image, effectiveCrop, target.width, target.height, target.format, target.quality, target.allowTransparency, bgFill)
         downloadBlob(blob, formatFilename(selected.name, target.width, target.height, target.format))
         setLastResult({ bytes: blob.size, width: target.width, height: target.height })
       } finally {
@@ -177,7 +236,10 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
             w = Math.max(1, Math.round(img.width * ratio))
             h = Math.max(1, Math.round(img.height * ratio))
           }
-          const blob = await processAndEncode(image, cropForImage, w, h, target.format, target.quality, target.allowTransparency)
+          // The bg fill is a property of the selected image's cut-out; only apply
+          // it to that image in a batch, not to every image in the ZIP.
+          const fillForImage = img.id === selected!.id ? bgFill : null
+          const blob = await processAndEncode(image, cropForImage, w, h, target.format, target.quality, target.allowTransparency, fillForImage)
           zip.file(formatFilename(img.name, w, h, target.format), blob)
         } finally {
           URL.revokeObjectURL(objectUrl)
@@ -256,7 +318,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
           target={target}
           crop={crop}
           socialCrop={socialCrop}
-          previewUrl={estimate.state === 'ready' ? estimate.previewUrl : null}
+          previewUrl={estimate.state === 'ready' || estimate.state === 'computing' ? estimate.previewUrl : null}
           onSetCrop={setCrop}
           onMoveSocialCrop={moveSocialCrop}
         />
@@ -264,84 +326,11 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
 
       <div className="border-t lg:border-t-0 lg:border-l border-slate-200 bg-white shrink-0 lg:shrink lg:overflow-y-auto">
         <div className="p-5 space-y-6">
-          <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Crop</h2>
-            {crop ? (
-              <button
-                type="button"
-                onClick={clearCrop}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 transition-colors"
-              >
-                <span aria-hidden="true">✕</span>
-                <span className="flex-1 text-left">Remove crop</span>
-                <span className="text-[10px] uppercase tracking-wide text-orange-500">Esc</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={addCenteredCrop}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
-              >
-                <span aria-hidden="true">✂</span>
-                <span className="flex-1 text-left">Manual crop</span>
-                <span className="text-[10px] uppercase tracking-wide text-slate-400">or drag</span>
-              </button>
-            )}
-
-            {/* Autocrop — trims the whitespace/border around the content. */}
-            <button
-              type="button"
-              onClick={() => setAutocropOpen((v) => !v)}
-              aria-expanded={autocropOpen}
-              className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
-            >
-              <span aria-hidden="true">🪄</span>
-              <span className="flex-1 text-left">Autocrop</span>
-              <span
-                aria-hidden="true"
-                className={['text-slate-400 text-xs transition-transform', autocropOpen ? 'rotate-90' : ''].join(' ')}
-              >
-                ▸
-              </span>
-            </button>
-            {autocropOpen && (
-              <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
-                <p className="text-[11px] text-slate-500 leading-snug mb-2">
-                  Trim the blank border around your image.
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {([
-                    { mode: 'max' as const, label: 'Max', hint: 'Tightest' },
-                    { mode: 'square' as const, label: '1:1', hint: 'Square' },
-                    { mode: 'ratio' as const, label: 'Keep ratio', hint: 'Same shape' }
-                  ]).map(({ mode, label, hint }) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => autoCrop(mode)}
-                      disabled={autoCropping}
-                      className="flex flex-col items-center gap-0.5 px-2 py-2 rounded-md border border-slate-200 bg-white hover:border-orange-400 hover:bg-orange-50/40 text-slate-700 text-xs font-medium disabled:opacity-60 disabled:cursor-wait transition-colors"
-                    >
-                      <span>{label}</span>
-                      <span className="text-[9px] uppercase tracking-wide text-slate-400">{hint}</span>
-                    </button>
-                  ))}
-                </div>
-                {autoCropping && (
-                  <p className="mt-2 text-[11px] text-orange-600">Scanning for whitespace…</p>
-                )}
-              </div>
-            )}
-
-            <p className="mt-1.5 text-[11px] text-slate-400 leading-snug">
-              Drag on the image to draw a crop, then drag inside to move it or pull
-              a handle to resize. Autocrop trims the blank border automatically.
-            </p>
-          </div>
-
+          {/* Size — presets + custom dimensions, the primary control, pinned to
+              the top of the column. Custom width/height is a collapsed disclosure. */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Size preset</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Size</h2>
               <button
                 type="button"
                 onClick={resetTargetToSelected}
@@ -376,6 +365,321 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 )
               })}
             </div>
+
+            {/* Custom width/height — collapsed by default */}
+            <button
+              type="button"
+              onClick={() => setCustomSizeOpen((v) => !v)}
+              aria-expanded={customSizeOpen}
+              className="mt-2 w-full flex items-center justify-between gap-2 py-1 group"
+            >
+              <span className="text-[11px] font-medium text-slate-500 group-hover:text-slate-700">Custom size (px)</span>
+              <span
+                aria-hidden="true"
+                className={['text-slate-400 group-hover:text-slate-600 text-xs transition-transform', customSizeOpen ? 'rotate-90' : ''].join(' ')}
+              >
+                ▸
+              </span>
+            </button>
+            {customSizeOpen && (
+              <div className="mt-1.5">
+                <div className="flex justify-end mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setTarget({ aspectLocked: !target.aspectLocked })}
+                    title={target.aspectLocked ? 'Unlink aspect ratio' : 'Link aspect ratio'}
+                    className={[
+                      'inline-flex items-center gap-1 text-xs px-2 py-1 rounded ring-1 transition-colors',
+                      target.aspectLocked
+                        ? 'bg-orange-50 text-orange-700 ring-orange-300'
+                        : 'bg-slate-100 text-slate-500 ring-slate-300'
+                    ].join(' ')}
+                    aria-pressed={target.aspectLocked}
+                  >
+                    <span aria-hidden="true">{target.aspectLocked ? '🔗' : '🔓'}</span>
+                    <span>{target.aspectLocked ? 'Linked' : 'Unlinked'}</span>
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="block text-[11px] text-slate-500 mb-1">Width</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={target.width}
+                      onChange={(e) => onWidth(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none text-sm"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-[11px] text-slate-500 mb-1">Height</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={target.height}
+                      onChange={(e) => onHeight(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none text-sm"
+                    />
+                  </label>
+                </div>
+                <div className="mt-2 text-[11px] text-slate-400">
+                  Source aspect {aspect.toFixed(3)} · scaling to {(target.width / selected.width * 100).toFixed(0)}%
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Crop — collapsed by default */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setCropOpen((v) => !v)}
+              aria-expanded={cropOpen}
+              className="w-full flex items-center justify-between gap-2 py-1 group"
+            >
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">Crop</span>
+              <span className="flex items-center gap-1.5">
+                {crop && (
+                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 tabular-nums">
+                    {Math.round(crop.width)}×{Math.round(crop.height)}
+                  </span>
+                )}
+                <span
+                  aria-hidden="true"
+                  className={['text-slate-400 group-hover:text-slate-600 transition-transform', cropOpen ? 'rotate-90' : ''].join(' ')}
+                >
+                  ▶
+                </span>
+              </span>
+            </button>
+            {cropOpen && (
+              <div className="mt-2">
+                {crop ? (
+                  <button
+                    type="button"
+                    onClick={clearCrop}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 transition-colors"
+                  >
+                    <span aria-hidden="true">✕</span>
+                    <span className="flex-1 text-left">Remove crop</span>
+                    <span className="text-[10px] uppercase tracking-wide text-orange-500">Esc</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={addCenteredCrop}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
+                  >
+                    <span aria-hidden="true">✂</span>
+                    <span className="flex-1 text-left">Manual crop</span>
+                    <span className="text-[10px] uppercase tracking-wide text-slate-400">or drag</span>
+                  </button>
+                )}
+
+                {/* Autocrop — trims the whitespace/border around the content. */}
+                <button
+                  type="button"
+                  onClick={() => setAutocropOpen((v) => !v)}
+                  aria-expanded={autocropOpen}
+                  className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
+                >
+                  <span aria-hidden="true">🪄</span>
+                  <span className="flex-1 text-left">Autocrop</span>
+                  <span
+                    aria-hidden="true"
+                    className={['text-slate-400 text-xs transition-transform', autocropOpen ? 'rotate-90' : ''].join(' ')}
+                  >
+                    ▸
+                  </span>
+                </button>
+                {autocropOpen && (
+                  <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
+                    <p className="text-[11px] text-slate-500 leading-snug mb-2">
+                      {crop ? 'Trim the blank border inside your crop.' : 'Trim the blank border around your image.'}
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { mode: 'max' as const, label: 'Max', hint: 'Tightest' },
+                        { mode: 'square' as const, label: '1:1', hint: 'Square' },
+                        { mode: 'ratio' as const, label: 'Keep ratio', hint: 'Same shape' }
+                      ]).map(({ mode, label, hint }) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => autoCrop(mode)}
+                          disabled={autoCropping}
+                          className="flex flex-col items-center gap-0.5 px-2 py-2 rounded-md border border-slate-200 bg-white hover:border-orange-400 hover:bg-orange-50/40 text-slate-700 text-xs font-medium disabled:opacity-60 disabled:cursor-wait transition-colors"
+                        >
+                          <span>{label}</span>
+                          <span className="text-[9px] uppercase tracking-wide text-slate-400">{hint}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {autoCropping && (
+                      <p className="mt-2 text-[11px] text-orange-600">Scanning for whitespace…</p>
+                    )}
+                  </div>
+                )}
+
+                <p className="mt-1.5 text-[11px] text-slate-400 leading-snug">
+                  Drag on the image to draw a crop, then drag inside to move it or pull
+                  a handle to resize. Autocrop trims the blank border automatically.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Background — collapsed by default */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setBgOpen((v) => !v)}
+              aria-expanded={bgOpen}
+              className="w-full flex items-center justify-between gap-2 py-1 group"
+            >
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">Background</span>
+              <span className="flex items-center gap-1.5">
+                {bgRemoved && (
+                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5">Removed</span>
+                )}
+                <span
+                  aria-hidden="true"
+                  className={['text-slate-400 group-hover:text-slate-600 transition-transform', bgOpen ? 'rotate-90' : ''].join(' ')}
+                >
+                  ▶
+                </span>
+              </span>
+            </button>
+            {bgOpen && (
+              <div className="mt-2">
+                {bgRemoved ? (
+                  <button
+                    type="button"
+                    onClick={restoreBackground}
+                    disabled={removingBg}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 hover:bg-orange-100 disabled:opacity-60 transition-colors"
+                  >
+                    <span aria-hidden="true">↩</span>
+                    <span className="flex-1 text-left">Restore background</span>
+                    <span className="text-[10px] uppercase tracking-wide text-orange-500">Undo</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onRemoveBackground}
+                    disabled={removingBg}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
+                  >
+                    <span aria-hidden="true">🪄</span>
+                    <span className="flex-1 text-left">{removingBg ? 'Removing background…' : 'Remove background'}</span>
+                    {!removingBg && <span className="text-[10px] uppercase tracking-wide text-slate-400">AI</span>}
+                  </button>
+                )}
+
+                {removingBg && (
+                  <div className="mt-2">
+                    <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                      <div
+                        className="h-full bg-orange-500 transition-[width] duration-200"
+                        style={{ width: `${Math.round(bgProgress * 100)}%` }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-slate-500 leading-snug">
+                      {bgProgress > 0 && bgProgress < 1
+                        ? `Downloading model — ${Math.round(bgProgress * 100)}%`
+                        : 'Working on your device…'}
+                      <br />
+                      First use downloads a one-time model (~40 MB), then it's cached.
+                    </p>
+                  </div>
+                )}
+
+                {bgError && !removingBg && (
+                  <p className="mt-2 text-[11px] text-red-600 leading-snug">{bgError}</p>
+                )}
+
+                {!removingBg && !bgError && (
+                  <p className="mt-1.5 text-[11px] text-slate-400 leading-snug">
+                    {bgRemoved
+                      ? 'Cut-out ready — export as PNG to keep the transparency.'
+                      : 'One-click cut-out. Runs entirely on your device — your image is never uploaded.'}
+                  </p>
+                )}
+
+                {/* Background fill — replace a transparent background with a colour */}
+                <div className="mt-3">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="text-[11px] font-medium text-slate-600">Fill background</span>
+                    {!hasAlpha && (
+                      <span
+                        title="Requires a transparent background — remove the background first"
+                        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibold cursor-help select-none"
+                      >
+                        i
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {BG_SWATCHES.map((sw) => {
+                      const active = (sw.value === null && !bgFill) || bgFill === sw.value
+                      return (
+                        <button
+                          key={sw.label}
+                          type="button"
+                          disabled={!hasAlpha}
+                          onClick={() => setBgFill(sw.value)}
+                          title={sw.label}
+                          aria-label={sw.label}
+                          aria-pressed={active}
+                          className={[
+                            'w-7 h-7 rounded-full ring-1 ring-slate-300 transition-all',
+                            sw.swatchClass,
+                            active ? 'ring-2 ring-orange-500 ring-offset-1' : 'hover:ring-slate-400',
+                            !hasAlpha ? 'opacity-40 cursor-not-allowed' : ''
+                          ].join(' ')}
+                        />
+                      )
+                    })}
+                    {(() => {
+                      const isCustom = !!bgFill && !BG_SWATCHES.some((s) => s.value === bgFill)
+                      return (
+                        <button
+                          type="button"
+                          disabled={!hasAlpha}
+                          onClick={() => customColorRef.current?.click()}
+                          title="Custom colour"
+                          aria-label="Custom background colour"
+                          aria-pressed={isCustom}
+                          style={isCustom ? { backgroundColor: bgFill! } : undefined}
+                          className={[
+                            'w-7 h-7 rounded-full ring-1 ring-slate-300 flex items-center justify-center text-slate-500 transition-all',
+                            isCustom ? 'ring-2 ring-orange-500 ring-offset-1' : 'hover:ring-slate-400',
+                            !hasAlpha ? 'opacity-40 cursor-not-allowed' : ''
+                          ].join(' ')}
+                        >
+                          {!isCustom && <span aria-hidden="true" className="text-sm leading-none">+</span>}
+                        </button>
+                      )
+                    })()}
+                    <input
+                      ref={customColorRef}
+                      type="color"
+                      className="sr-only"
+                      value={bgFill && /^#[0-9a-fA-F]{6}$/.test(bgFill) ? bgFill : '#000000'}
+                      onChange={(e) => setBgFill(e.target.value)}
+                      disabled={!hasAlpha}
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-slate-400 leading-snug">
+                    {hasAlpha
+                      ? 'Replace the transparent background with a colour.'
+                      : 'Remove the background first to replace it with a colour.'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -447,52 +751,6 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 </p>
               </div>
             )}
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Custom size (px)</h2>
-              <button
-                type="button"
-                onClick={() => setTarget({ aspectLocked: !target.aspectLocked })}
-                title={target.aspectLocked ? 'Unlink aspect ratio' : 'Link aspect ratio'}
-                className={[
-                  'inline-flex items-center gap-1 text-xs px-2 py-1 rounded ring-1 transition-colors',
-                  target.aspectLocked
-                    ? 'bg-orange-50 text-orange-700 ring-orange-300'
-                    : 'bg-slate-100 text-slate-500 ring-slate-300'
-                ].join(' ')}
-                aria-pressed={target.aspectLocked}
-              >
-                <span aria-hidden="true">{target.aspectLocked ? '🔗' : '🔓'}</span>
-                <span>{target.aspectLocked ? 'Linked' : 'Unlinked'}</span>
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="block text-[11px] text-slate-500 mb-1">Width</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={target.width}
-                  onChange={(e) => onWidth(Number(e.target.value))}
-                  className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none text-sm"
-                />
-              </label>
-              <label className="block">
-                <span className="block text-[11px] text-slate-500 mb-1">Height</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={target.height}
-                  onChange={(e) => onHeight(Number(e.target.value))}
-                  className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none text-sm"
-                />
-              </label>
-            </div>
-            <div className="mt-2 text-[11px] text-slate-400">
-              Source aspect {aspect.toFixed(3)} · scaling to {(target.width / selected.width * 100).toFixed(0)}%
-            </div>
           </div>
 
           {/* Format & quality — collapsed by default (most users want the
@@ -683,7 +941,11 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
 
 type Estimate =
   | { state: 'idle' }
-  | { state: 'computing' }
+  // `previewUrl` carries the LAST good encoded preview through a recompute, so
+  // changing a setting (format, quality, size) on a committed crop keeps showing
+  // the cropped result instead of flashing the full source stretched to the crop
+  // size. Null when the source image itself changed (nothing valid to hold).
+  | { state: 'computing'; previewUrl: string | null }
   | { state: 'ready'; bytes: number; previewUrl: string }
   | { state: 'error' }
 
@@ -699,11 +961,19 @@ function useEncodedPreview(
   selected: SourceImage | null,
   target: ResizeTarget | null,
   socialCrop: SourceCrop | null,
+  bgFill: string | null,
   enabled: boolean
 ): Estimate {
   const [estimate, setEstimate] = useState<Estimate>({ state: 'idle' })
   const sourceRef = useRef<{ url: string; image: HTMLImageElement } | null>(null)
   const previewUrlRef = useRef<string | null>(null)
+  // Geometry (image + crop region) the held preview was encoded for. A held
+  // preview may only be shown through a recompute when the geometry is unchanged
+  // (a pure format/quality/resolution change). If the crop is added, removed or
+  // resized, the held preview is the WRONG shape for the new target, so we drop
+  // it and fall back to the true source — e.g. removing a crop must not briefly
+  // "zoom into" the old cropped preview stretched to full size.
+  const geomKeyRef = useRef<string | null>(null)
 
   // Cache the decoded source by objectUrl, not id: cropping replaces the
   // image's file/objectUrl in place while keeping the same id, so keying on id
@@ -719,6 +989,10 @@ function useEncodedPreview(
   const cy = socialCrop?.y ?? null
   const cw = socialCrop?.width ?? null
   const ch = socialCrop?.height ?? null
+  // Identity of the *shape* being previewed (source + crop region), independent
+  // of output resolution/format/quality. Only when this is unchanged is a held
+  // preview still valid to show during a recompute.
+  const geomKey = surl === null ? null : `${surl}|${cx},${cy},${cw},${ch}`
 
   // When the underlying image changes identity — most importantly after a crop,
   // which swaps the file + objectUrl while keeping the same id — drop BOTH caches
@@ -736,7 +1010,9 @@ function useEncodedPreview(
       URL.revokeObjectURL(previewUrlRef.current)
       previewUrlRef.current = null
     }
-    setEstimate((prev) => (prev.state === 'idle' ? prev : { state: 'computing' }))
+    geomKeyRef.current = null
+    // Source identity changed — no valid preview to hold, so computing carries null.
+    setEstimate((prev) => (prev.state === 'idle' ? prev : { state: 'computing', previewUrl: null }))
   }, [surl])
 
   useEffect(() => {
@@ -745,10 +1021,12 @@ function useEncodedPreview(
       return
     }
     let cancelled = false
-    setEstimate((prev) => {
-      if (prev.state === 'ready') return { state: 'computing' }
-      return prev.state === 'computing' ? prev : { state: 'computing' }
-    })
+    // Hold the last good preview through the recompute ONLY when the crop
+    // geometry is unchanged (a format/quality/resolution tweak) — so a committed
+    // crop doesn't blink to the full source, but adding/removing/resizing the
+    // crop drops the now-wrong-shape held preview instead of flashing it.
+    const held = geomKeyRef.current === geomKey ? previewUrlRef.current : null
+    setEstimate({ state: 'computing', previewUrl: held })
     const tid = window.setTimeout(async () => {
       try {
         let source = sourceRef.current
@@ -765,12 +1043,14 @@ function useEncodedPreview(
           target.height,
           target.format,
           target.quality,
-          target.allowTransparency
+          target.allowTransparency,
+          bgFill
         )
         if (cancelled) return
         const url = URL.createObjectURL(blob)
         if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
         previewUrlRef.current = url
+        geomKeyRef.current = geomKey
         setEstimate({ state: 'ready', bytes: blob.size, previewUrl: url })
       } catch (err) {
         if (!cancelled) {
@@ -784,7 +1064,7 @@ function useEncodedPreview(
       window.clearTimeout(tid)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, surl, tw, th, tf, tq, ta, cx, cy, cw, ch])
+  }, [enabled, surl, tw, th, tf, tq, ta, cx, cy, cw, ch, bgFill])
 
   useEffect(() => () => {
     if (previewUrlRef.current) {

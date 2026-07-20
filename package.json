@@ -20,6 +20,7 @@
     "cap:open:android": "npx cap open android"
   },
   "dependencies": {
+    "@imgly/background-removal": "^1.7.0",
     "@types/jszip": "^3.4.0",
     "@unisim/sdk": "^0.71.0",
     "heic2any": "^0.0.4",

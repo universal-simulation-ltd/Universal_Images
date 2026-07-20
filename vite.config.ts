@@ -62,6 +62,24 @@ export default defineConfig(({ mode }) => {
         workbox: {
           // SPA navigations under the base path fall back to the prefixed shell.
           navigateFallback: `${BASE_PATH}index.html`,
+          // The in-browser background-removal runtime (onnxruntime-web WASM) is
+          // large (~24 MB) and only loaded when the optional "Remove background"
+          // tool is used. Keep it OUT of the install-time precache — it would
+          // bloat the PWA install and blow past workbox's 2 MB file limit — and
+          // cache it at runtime on first use instead, so it still works offline
+          // once the user has run the tool once.
+          globIgnores: ['**/*.wasm'],
+          runtimeCaching: [
+            {
+              urlPattern: /\/assets\/ort[-.].*\.(?:js|wasm)$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'onnx-runtime',
+                expiration: { maxEntries: 8, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
         },
         devOptions: { enabled: false }
       })]),
