@@ -44,6 +44,11 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const applySocialPreset = useImageStore((s) => s.applySocialPreset)
   const moveSocialCrop = useImageStore((s) => s.moveSocialCrop)
   const clearSocialCrop = useImageStore((s) => s.clearSocialCrop)
+  const removeBackground = useImageStore((s) => s.removeBackground)
+  const restoreBackground = useImageStore((s) => s.restoreBackground)
+  const removingBg = useImageStore((s) => s.removingBg)
+  const bgProgress = useImageStore((s) => s.bgProgress)
+  const bgOriginal = useImageStore((s) => s.bgOriginal)
 
   // The free-form crop and the social crop are mutually exclusive; either one
   // (if set) is the region the export pipeline should cut.
@@ -59,6 +64,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const [lastResult, setLastResult] = useState<{ bytes: number; width: number; height: number } | null>(null)
   const [socialOpen, setSocialOpen] = useState(false)
   const [autocropOpen, setAutocropOpen] = useState(false)
+  const [bgError, setBgError] = useState<string | null>(null)
   // AVIF encoding only works in Chromium browsers; probe once so we only offer
   // the format where it genuinely encodes (elsewhere it silently yields PNG).
   const [avifOk, setAvifOk] = useState(false)
@@ -128,6 +134,18 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
     }
   }
 
+
+  const bgRemoved = !!bgOriginal && !!selected && bgOriginal.id === selected.id
+
+  async function onRemoveBackground() {
+    if (removingBg) return
+    setBgError(null)
+    try {
+      await removeBackground()
+    } catch (err) {
+      setBgError((err as Error)?.message || 'Background removal failed. Please try again.')
+    }
+  }
 
   async function exportSelected() {
     if (exporting || !selected || !target) return
@@ -337,6 +355,63 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               Drag on the image to draw a crop, then drag inside to move it or pull
               a handle to resize. Autocrop trims the blank border automatically.
             </p>
+          </div>
+
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Background</h2>
+            {bgRemoved ? (
+              <button
+                type="button"
+                onClick={restoreBackground}
+                disabled={removingBg}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 hover:bg-orange-100 disabled:opacity-60 transition-colors"
+              >
+                <span aria-hidden="true">↩</span>
+                <span className="flex-1 text-left">Restore background</span>
+                <span className="text-[10px] uppercase tracking-wide text-orange-500">Undo</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onRemoveBackground}
+                disabled={removingBg}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
+              >
+                <span aria-hidden="true">🪄</span>
+                <span className="flex-1 text-left">{removingBg ? 'Removing background…' : 'Remove background'}</span>
+                {!removingBg && <span className="text-[10px] uppercase tracking-wide text-slate-400">AI</span>}
+              </button>
+            )}
+
+            {removingBg && (
+              <div className="mt-2">
+                <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    className="h-full bg-orange-500 transition-[width] duration-200"
+                    style={{ width: `${Math.round(bgProgress * 100)}%` }}
+                  />
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-500 leading-snug">
+                  {bgProgress > 0 && bgProgress < 1
+                    ? `Downloading model — ${Math.round(bgProgress * 100)}%`
+                    : 'Working on your device…'}
+                  <br />
+                  First use downloads a one-time model (~40 MB), then it's cached.
+                </p>
+              </div>
+            )}
+
+            {bgError && !removingBg && (
+              <p className="mt-2 text-[11px] text-red-600 leading-snug">{bgError}</p>
+            )}
+
+            {!removingBg && !bgError && (
+              <p className="mt-1.5 text-[11px] text-slate-400 leading-snug">
+                {bgRemoved
+                  ? 'Cut-out ready — export as PNG to keep the transparency.'
+                  : 'One-click cut-out. Runs entirely on your device — your image is never uploaded.'}
+              </p>
+            )}
           </div>
 
           <div>

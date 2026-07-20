@@ -123,6 +123,8 @@ export default function LandingPage() {
                   <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> S / M / L presets</li>
                   <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> Custom width × height</li>
                   <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> Aspect-ratio locked</li>
+                  <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> Remove background (AI)</li>
+                  <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> Batch ZIP export</li>
                 </ul>
               </div>
             </div>

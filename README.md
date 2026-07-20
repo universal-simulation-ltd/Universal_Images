@@ -15,6 +15,7 @@ A clean Progressive Web App for resizing, cropping, converting, and optimising i
 - **Social presets** for Instagram, X / Twitter, LinkedIn, YouTube, and Facebook at each platform's current pixel specs
 - **Resize** to preset or custom dimensions with a live preview
 - **Convert** between JPEG, PNG, WebP, and AVIF (AVIF where the browser can encode it) with a quality slider; HEIC input is decoded automatically
+- **Remove background** — one-click AI cut-out to a transparent PNG, running entirely on-device (your image is never uploaded; a one-time model download is cached on first use). One tap to undo
 - **Batch export** — download images individually or all at once as a ZIP
 - **Installable** PWA — add to home screen on phone or install on desktop, works offline after first load
 
