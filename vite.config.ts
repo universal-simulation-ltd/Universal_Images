@@ -62,13 +62,14 @@ export default defineConfig(({ mode }) => {
         workbox: {
           // SPA navigations under the base path fall back to the prefixed shell.
           navigateFallback: `${BASE_PATH}index.html`,
-          // The in-browser background-removal runtime (onnxruntime-web WASM) is
-          // large (~24 MB) and only loaded when the optional "Remove background"
-          // tool is used. Keep it OUT of the install-time precache — it would
-          // bloat the PWA install and blow past workbox's 2 MB file limit — and
-          // cache it at runtime on first use instead, so it still works offline
-          // once the user has run the tool once.
-          globIgnores: ['**/*.wasm'],
+          // The in-browser AI runtimes are large and only loaded when their
+          // optional tool is used: onnxruntime-web WASM (~24 MB) for "Remove
+          // background", and the MediaPipe vision WASM + BlazeFace `.tflite`
+          // (~2 MB) for "Redact faces". Keep them OUT of the install-time
+          // precache — they would bloat the PWA install and blow past workbox's
+          // 2 MB file limit — and cache them at runtime on first use instead, so
+          // they still work offline once the user has run the tool once.
+          globIgnores: ['**/*.wasm', '**/*.tflite', '**/*.task'],
           runtimeCaching: [
             {
               urlPattern: /\/assets\/ort[-.].*\.(?:js|wasm)$/,
@@ -76,6 +77,28 @@ export default defineConfig(({ mode }) => {
               options: {
                 cacheName: 'onnx-runtime',
                 expiration: { maxEntries: 8, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              // MediaPipe tasks-vision WASM runtime (CDN or self-hosted) used by
+              // the on-device face detector.
+              urlPattern: /tasks-vision.*\/wasm\/.*\.(?:js|wasm)$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'mediapipe-vision',
+                expiration: { maxEntries: 8, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              // The BlazeFace face-detection model (Google model storage, or a
+              // self-hosted copy) — cached on first "Redact faces" use.
+              urlPattern: /blaze_face.*\.tflite$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'face-model',
+                expiration: { maxEntries: 4, maxAgeSeconds: 60 * 60 * 24 * 30 },
                 cacheableResponse: { statuses: [0, 200] },
               },
             },

@@ -8,6 +8,7 @@ import {
   type AutoCropMode
 } from '../lib/imageResize'
 import { removeImageBackground, deriveNobgName, type BgProgress } from '../lib/backgroundRemoval'
+import { detectFaces as runFaceDetection, renderRedactedFile, deriveBlurredName, type FaceBox, type FaceBlurStyle } from '../lib/faceBlur'
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10)
@@ -26,12 +27,15 @@ interface ImageEdit {
   bgFill: string | null
   bgOriginal: SourceImage | null
   bgCutout: SourceImage | null
+  faceOriginal: SourceImage | null
+  faceBoxes: FaceBox[] | null
 }
 
 function revokeEditUrls(edit: ImageEdit | undefined) {
   if (!edit) return
   if (edit.bgOriginal) URL.revokeObjectURL(edit.bgOriginal.objectUrl)
   if (edit.bgCutout) URL.revokeObjectURL(edit.bgCutout.objectUrl)
+  if (edit.faceOriginal) URL.revokeObjectURL(edit.faceOriginal.objectUrl)
 }
 
 function chooseDefaultFormat(file: File): OutputFormat {
@@ -130,6 +134,41 @@ interface ImageStore {
   bgFill: string | null
   setBgFill: (color: string | null) => void
   /**
+   * Detected face boxes for the selected image (source-pixel space), each with
+   * an `enabled` flag so individual faces can be kept un-redacted. Null until
+   * the user runs face detection; an empty array means "detected, none found".
+   */
+  faceBoxes: FaceBox[] | null
+  /** True while the on-device face detector is downloading / running. */
+  detectingFaces: boolean
+  /**
+   * Snapshot of the selected image *before* faces were blurred, kept so
+   * "Remove blur" can undo it in one tap. Non-null exactly when a redaction is
+   * currently applied to the selected image. Cleared on select/remove.
+   */
+  faceOriginal: SourceImage | null
+  /** Redaction strength 0..100 (higher = heavier blur / bigger pixels). */
+  faceBlurStrength: number
+  /** Redaction style — a soft blur or a blocky pixelate. */
+  faceBlurStyle: FaceBlurStyle
+  setFaceBlurStrength: (n: number) => void
+  setFaceBlurStyle: (style: FaceBlurStyle) => void
+  /**
+   * Detect faces in the selected image on-device (MediaPipe BlazeFace in a
+   * worker), then bake a blur over every detected face. The pre-blur image is
+   * stashed in `faceOriginal` for undo. The picture is never uploaded.
+   */
+  detectFaces: () => Promise<void>
+  /** Toggle a single face's redaction on/off, then re-render the blur. */
+  setFaceEnabled: (id: string, enabled: boolean) => void
+  /**
+   * Re-render the redaction from the clean original using the current boxes +
+   * strength + style. Called by the detect flow and whenever a control changes.
+   */
+  applyFaceBlur: () => Promise<void>
+  /** Put the un-blurred original back. Detected boxes are kept so re-blurring is instant. */
+  clearFaceBlur: () => void
+  /**
    * Saved editing state for every image that ISN'T currently selected, so
    * switching images preserves each one's size/crop/fill/background edits.
    * Keyed by image id; the selected image's state lives in the active fields.
@@ -197,6 +236,13 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   bgCutout: null,
   bgFill: null,
   setBgFill: (bgFill) => set({ bgFill }),
+  faceBoxes: null,
+  detectingFaces: false,
+  faceOriginal: null,
+  faceBlurStrength: 60,
+  faceBlurStyle: 'blur',
+  setFaceBlurStrength: (faceBlurStrength) => set({ faceBlurStrength }),
+  setFaceBlurStyle: (faceBlurStyle) => set({ faceBlurStyle }),
   edits: {},
 
   async addFiles(input) {
@@ -250,7 +296,9 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         socialCrop: cur.socialCrop,
         bgFill: cur.bgFill,
         bgOriginal: cur.bgOriginal,
-        bgCutout: cur.bgCutout
+        bgCutout: cur.bgCutout,
+        faceOriginal: cur.faceOriginal,
+        faceBoxes: cur.faceBoxes
       }
     }
     // Load the incoming image's saved state (or fresh defaults) and remove it
@@ -265,7 +313,9 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       socialCrop: saved?.socialCrop ?? null,
       bgFill: saved?.bgFill ?? null,
       bgOriginal: saved?.bgOriginal ?? null,
-      bgCutout: saved?.bgCutout ?? null
+      bgCutout: saved?.bgCutout ?? null,
+      faceOriginal: saved?.faceOriginal ?? null,
+      faceBoxes: saved?.faceBoxes ?? null
     })
   },
 
@@ -279,13 +329,14 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     if (cur.selectedId === id) {
       if (cur.bgOriginal) URL.revokeObjectURL(cur.bgOriginal.objectUrl)
       if (cur.bgCutout) URL.revokeObjectURL(cur.bgCutout.objectUrl)
+      if (cur.faceOriginal) URL.revokeObjectURL(cur.faceOriginal.objectUrl)
     }
     revokeEditUrls(edits[id])
     delete edits[id]
 
     const remaining = cur.images.filter((i) => i.id !== id)
     if (remaining.length === 0) {
-      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, bgFill: null, bgOriginal: null, bgCutout: null, edits: {} })
+      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, bgFill: null, bgOriginal: null, bgCutout: null, faceOriginal: null, faceBoxes: null, edits: {} })
       return
     }
     if (cur.selectedId === id) {
@@ -301,7 +352,9 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         socialCrop: saved?.socialCrop ?? null,
         bgFill: saved?.bgFill ?? null,
         bgOriginal: saved?.bgOriginal ?? null,
-        bgCutout: saved?.bgCutout ?? null
+        bgCutout: saved?.bgCutout ?? null,
+        faceOriginal: saved?.faceOriginal ?? null,
+        faceBoxes: saved?.faceBoxes ?? null
       })
     } else {
       set({ images: remaining, edits })
@@ -313,8 +366,9 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     for (const img of cur.images) URL.revokeObjectURL(img.objectUrl)
     if (cur.bgOriginal) URL.revokeObjectURL(cur.bgOriginal.objectUrl)
     if (cur.bgCutout) URL.revokeObjectURL(cur.bgCutout.objectUrl)
+    if (cur.faceOriginal) URL.revokeObjectURL(cur.faceOriginal.objectUrl)
     for (const e of Object.values(cur.edits)) revokeEditUrls(e)
-    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, edits: {} })
+    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, faceOriginal: null, faceBoxes: null, edits: {} })
   },
 
   setTarget(partial) {
@@ -452,12 +506,13 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       const nextImages = images.map((i) => (i.id === img.id ? bgCutout : i))
       const isSelected = selectedId === img.id
       const t = get().target
+      if (isSelected && get().faceOriginal) URL.revokeObjectURL(get().faceOriginal!.objectUrl)
       set({
         images: nextImages,
         bgOriginal: img, // the original we just replaced — enables Restore again
         bgCutout: null,
         target: isSelected && t ? { ...t, format: 'image/png', allowTransparency: true } : t,
-        ...(isSelected ? { crop: null, socialCrop: null, bgFill: null } : {})
+        ...(isSelected ? { crop: null, socialCrop: null, bgFill: null, faceOriginal: null, faceBoxes: null } : {})
       })
       onProgress?.(1)
       return
@@ -487,6 +542,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
 
       const nextImages = current.images.map((i) => (i.id === img.id ? cutout : i))
       if (current.selectedId === img.id) {
+        if (current.faceOriginal) URL.revokeObjectURL(current.faceOriginal.objectUrl)
         set({
           images: nextImages,
           bgOriginal: img,
@@ -497,7 +553,10 @@ export const useImageStore = create<ImageStore>((set, get) => ({
           // Crops referenced the old bitmap coordinates; clear them for clarity.
           crop: null,
           socialCrop: null,
-          bgFill: null
+          bgFill: null,
+          // A fresh cut-out supersedes any prior face redaction on this image.
+          faceOriginal: null,
+          faceBoxes: null
         })
       } else {
         // The user switched away during the run — persist the result into the
@@ -511,7 +570,10 @@ export const useImageStore = create<ImageStore>((set, get) => ({
           socialCrop: null,
           bgFill: null,
           bgOriginal: img,
-          bgCutout: null
+          bgCutout: null,
+          // The revoked edit's face snapshot is gone; a fresh cut-out supersedes it.
+          faceOriginal: null,
+          faceBoxes: null
         }
         set({ images: nextImages, edits })
       }
@@ -534,12 +596,88 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     }
     const nextImages = images.map((i) => (i.id === bgOriginal.id ? bgOriginal : i))
     const isSelected = selectedId === bgOriginal.id
+    if (isSelected && get().faceOriginal) URL.revokeObjectURL(get().faceOriginal!.objectUrl)
     set({
       images: nextImages,
       bgOriginal: null,
       bgCutout: cutout,
       target: isSelected && target ? makeDefaultTarget(bgOriginal) : target,
-      ...(isSelected ? { crop: null, socialCrop: null, bgFill: null } : {})
+      ...(isSelected ? { crop: null, socialCrop: null, bgFill: null, faceOriginal: null, faceBoxes: null } : {})
+    })
+  },
+
+  async detectFaces() {
+    const { images, selectedId, detectingFaces, faceOriginal } = get()
+    if (detectingFaces) return
+    const img = images.find((i) => i.id === selectedId)
+    if (!img) return
+    // Always detect on the CLEAN image (the pre-blur original when a redaction is
+    // already applied, otherwise the selected image itself).
+    const clean = faceOriginal && faceOriginal.id === img.id ? faceOriginal : img
+    set({ detectingFaces: true })
+    try {
+      const raw = await runFaceDetection(clean.file)
+      // The user may have switched away mid-detection — only apply to the image
+      // it was requested for.
+      const cur = get()
+      if (cur.selectedId !== img.id) return
+      const boxes: FaceBox[] = raw.map((b, i) => ({ id: `face-${i}`, ...b, enabled: true }))
+      set({ faceBoxes: boxes })
+      if (boxes.length > 0) await get().applyFaceBlur()
+    } catch (err) {
+      console.error('Face detection failed', err)
+      throw err
+    } finally {
+      set({ detectingFaces: false })
+    }
+  },
+
+  setFaceEnabled(id, enabled) {
+    const { faceBoxes } = get()
+    if (!faceBoxes) return
+    set({ faceBoxes: faceBoxes.map((f) => (f.id === id ? { ...f, enabled } : f)) })
+  },
+
+  async applyFaceBlur() {
+    const { images, selectedId, faceBoxes, faceOriginal, faceBlurStrength, faceBlurStyle } = get()
+    if (!faceBoxes || faceBoxes.length === 0) return
+    const img = images.find((i) => i.id === selectedId)
+    if (!img) return
+    // Bake from the clean base: the stashed original if a redaction is already
+    // shown, otherwise the selected image (which then BECOMES the stashed original).
+    const clean = faceOriginal && faceOriginal.id === img.id ? faceOriginal : img
+    const firstApply = clean === img
+
+    const { blob, width, height } = await renderRedactedFile(clean.file, faceBoxes, faceBlurStrength, faceBlurStyle)
+
+    const cur = get()
+    if (cur.selectedId !== img.id || !cur.images.some((i) => i.id === img.id)) return
+
+    const name = deriveBlurredName(clean.name)
+    const file = new File([blob], name, { type: 'image/png' })
+    const objectUrl = URL.createObjectURL(file)
+    const redacted: SourceImage = { id: img.id, name, file, width, height, objectUrl, bytes: file.size }
+
+    // Revoke the previous redaction's URL (but never the clean original — it's
+    // held for undo). On first apply the outgoing entry IS the clean original.
+    if (!firstApply) URL.revokeObjectURL(img.objectUrl)
+
+    set({
+      images: cur.images.map((i) => (i.id === img.id ? redacted : i)),
+      faceOriginal: firstApply ? clean : cur.faceOriginal
+    })
+  },
+
+  clearFaceBlur() {
+    const { images, faceOriginal } = get()
+    if (!faceOriginal) return
+    // Revoke the shown redaction, then restore the clean original in place. The
+    // detected boxes are kept so re-blurring is a single click.
+    const shown = images.find((i) => i.id === faceOriginal.id)
+    if (shown && shown.objectUrl !== faceOriginal.objectUrl) URL.revokeObjectURL(shown.objectUrl)
+    set({
+      images: images.map((i) => (i.id === faceOriginal.id ? faceOriginal : i)),
+      faceOriginal: null
     })
   }
 }))

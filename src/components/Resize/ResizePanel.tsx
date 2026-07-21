@@ -61,6 +61,17 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const bgOriginal = useImageStore((s) => s.bgOriginal)
   const bgFill = useImageStore((s) => s.bgFill)
   const setBgFill = useImageStore((s) => s.setBgFill)
+  const faceBoxes = useImageStore((s) => s.faceBoxes)
+  const detectingFaces = useImageStore((s) => s.detectingFaces)
+  const faceOriginal = useImageStore((s) => s.faceOriginal)
+  const faceBlurStrength = useImageStore((s) => s.faceBlurStrength)
+  const faceBlurStyle = useImageStore((s) => s.faceBlurStyle)
+  const setFaceBlurStrength = useImageStore((s) => s.setFaceBlurStrength)
+  const setFaceBlurStyle = useImageStore((s) => s.setFaceBlurStyle)
+  const detectFaces = useImageStore((s) => s.detectFaces)
+  const setFaceEnabled = useImageStore((s) => s.setFaceEnabled)
+  const applyFaceBlur = useImageStore((s) => s.applyFaceBlur)
+  const clearFaceBlur = useImageStore((s) => s.clearFaceBlur)
 
   // The free-form crop and the social crop are mutually exclusive; either one
   // (if set) is the region the export pipeline should cut.
@@ -80,8 +91,10 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   // presets sit at the top of the column as the primary control.
   const [cropOpen, setCropOpen] = useState(false)
   const [bgOpen, setBgOpen] = useState(false)
+  const [faceOpen, setFaceOpen] = useState(false)
   const [customSizeOpen, setCustomSizeOpen] = useState(false)
   const [bgError, setBgError] = useState<string | null>(null)
+  const [faceError, setFaceError] = useState<string | null>(null)
   // Hidden native colour picker backing the "+" custom background-fill swatch.
   const customColorRef = useRef<HTMLInputElement>(null)
   // Whether the selected image has real transparency — gates the background-fill
@@ -108,6 +121,18 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
     supportsAvifEncode().then((ok) => { if (alive) setAvifOk(ok) })
     return () => { alive = false }
   }, [])
+
+  // Live re-render of the face redaction when its controls change (strength,
+  // style, or a per-face toggle) — debounced so dragging the slider doesn't
+  // re-encode on every tick. Only runs while a redaction is applied.
+  const faceApplied = !!faceOriginal
+  const enabledSig = faceBoxes ? faceBoxes.map((f) => (f.enabled ? '1' : '0')).join('') : ''
+  useEffect(() => {
+    if (!faceApplied || detectingFaces || !faceBoxes || faceBoxes.length === 0) return
+    const tid = window.setTimeout(() => { applyFaceBlur().catch((e) => console.error(e)) }, 180)
+    return () => window.clearTimeout(tid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [faceBlurStrength, faceBlurStyle, enabledSig])
 
   // Detect transparency of the selected image (re-runs on any transform that
   // swaps its objectUrl — crop, background removal, restore).
@@ -185,6 +210,19 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
       await removeBackground()
     } catch (err) {
       setBgError((err as Error)?.message || 'Background removal failed. Please try again.')
+    }
+  }
+
+  const faceBlurred = !!faceOriginal && !!selected && faceOriginal.id === selected.id
+  const enabledFaceCount = faceBoxes ? faceBoxes.filter((f) => f.enabled).length : 0
+
+  async function onDetectFaces() {
+    if (detectingFaces) return
+    setFaceError(null)
+    try {
+      await detectFaces()
+    } catch (err) {
+      setFaceError((err as Error)?.message || 'Face detection failed. Please try again.')
     }
   }
 
@@ -678,6 +716,160 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                       : 'Remove the background first to replace it with a colour.'}
                   </p>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Redact faces — on-device face blur. Collapsed by default. */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setFaceOpen((v) => !v)}
+              aria-expanded={faceOpen}
+              className="w-full flex items-center justify-between gap-2 py-1 group"
+            >
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">Redact faces</span>
+              <span className="flex items-center gap-1.5">
+                {faceBlurred && enabledFaceCount > 0 && (
+                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 tabular-nums">
+                    {enabledFaceCount} blurred
+                  </span>
+                )}
+                <span
+                  aria-hidden="true"
+                  className={['text-slate-400 group-hover:text-slate-600 transition-transform', faceOpen ? 'rotate-90' : ''].join(' ')}
+                >
+                  ▶
+                </span>
+              </span>
+            </button>
+            {faceOpen && (
+              <div className="mt-2">
+                {!faceBoxes ? (
+                  <button
+                    type="button"
+                    onClick={onDetectFaces}
+                    disabled={detectingFaces}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
+                  >
+                    <span aria-hidden="true">🙈</span>
+                    <span className="flex-1 text-left">{detectingFaces ? 'Detecting faces…' : 'Detect & blur faces'}</span>
+                    {!detectingFaces && <span className="text-[10px] uppercase tracking-wide text-slate-400">AI</span>}
+                  </button>
+                ) : faceBoxes.length === 0 ? (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+                    <p className="text-[11px] text-slate-500 leading-snug">No faces detected in this image.</p>
+                    <button
+                      type="button"
+                      onClick={onDetectFaces}
+                      disabled={detectingFaces}
+                      className="mt-2 text-[11px] font-medium text-orange-700 hover:text-orange-900 disabled:opacity-60"
+                    >
+                      {detectingFaces ? 'Scanning…' : 'Scan again'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Redact / restore */}
+                    {faceBlurred ? (
+                      <button
+                        type="button"
+                        onClick={clearFaceBlur}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 hover:bg-orange-100 transition-colors"
+                      >
+                        <span aria-hidden="true">↩</span>
+                        <span className="flex-1 text-left">Remove blur</span>
+                        <span className="text-[10px] uppercase tracking-wide text-orange-500">Undo</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => applyFaceBlur()}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
+                      >
+                        <span aria-hidden="true">🙈</span>
+                        <span className="flex-1 text-left">Blur {faceBoxes.length} {faceBoxes.length === 1 ? 'face' : 'faces'}</span>
+                      </button>
+                    )}
+
+                    {/* Style — blur vs pixelate */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['blur', 'pixelate'] as const).map((style) => {
+                        const isActive = faceBlurStyle === style
+                        return (
+                          <button
+                            key={style}
+                            type="button"
+                            onClick={() => setFaceBlurStyle(style)}
+                            className={[
+                              'py-1.5 rounded-lg border text-xs font-medium capitalize transition-colors',
+                              isActive
+                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
+                                : 'border-slate-200 text-slate-600 hover:border-orange-400'
+                            ].join(' ')}
+                          >
+                            {style}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* Strength */}
+                    <div>
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                        <span>Strength</span>
+                        <span className="tabular-nums">{faceBlurStrength}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={10}
+                        max={100}
+                        value={faceBlurStrength}
+                        onChange={(e) => setFaceBlurStrength(Number(e.target.value))}
+                        className="w-full accent-orange-600"
+                      />
+                    </div>
+
+                    {/* Per-face toggles */}
+                    <div>
+                      <div className="text-[11px] font-medium text-slate-600 mb-1.5">
+                        Faces <span className="text-slate-400">— tap to keep one visible</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {faceBoxes.map((f, i) => (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => setFaceEnabled(f.id, !f.enabled)}
+                            aria-pressed={f.enabled}
+                            title={f.enabled ? 'Blurred — tap to keep visible' : 'Visible — tap to blur'}
+                            className={[
+                              'inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[11px] font-medium transition-colors',
+                              f.enabled
+                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
+                                : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                            ].join(' ')}
+                          >
+                            <span aria-hidden="true">{f.enabled ? '🙈' : '👁'}</span>
+                            Face {i + 1}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {faceError && !detectingFaces && (
+                  <p className="mt-2 text-[11px] text-red-600 leading-snug">{faceError}</p>
+                )}
+
+                {!faceError && (
+                  <p className="mt-2 text-[11px] text-slate-400 leading-snug">
+                    {detectingFaces
+                      ? 'First use downloads a one-time face model (~2 MB), then it’s cached.'
+                      : 'Detects and blurs faces entirely on your device — your image is never uploaded.'}
+                  </p>
+                )}
               </div>
             )}
           </div>
