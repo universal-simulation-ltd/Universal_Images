@@ -1,3 +1,4 @@
+import type { FaceDetector } from '@mediapipe/tasks-vision'
 import { loadImage } from './imageResize'
 
 /**
@@ -6,13 +7,23 @@ import { loadImage } from './imageResize'
  *
  * Detection uses Google MediaPipe's BlazeFace short-range model via
  * [`@mediapipe/tasks-vision`](https://www.npmjs.com/package/@mediapipe/tasks-vision),
- * a WASM face detector that runs in a web worker (`faceBlur.worker.ts`).
+ * a WASM face detector. It runs on the **main thread** (the library is
+ * dynamically imported the first time the tool is used, so it stays out of the
+ * base bundle). We deliberately do NOT run it in a Worker: MediaPipe loads its
+ * WASM glue with `importScripts()`, which only exists in *classic* workers —
+ * but a classic worker built by Vite can't be served with an ESM `import` in
+ * dev ("Cannot use import statement outside a module"), while a *module* worker
+ * has no `importScripts` (the glue's factory never registers → "ModuleFactory
+ * not set."). On the main thread the runtime loads via a `<script>` tag and
+ * just works across browsers and in both dev and build. A single still image is
+ * quick, so the brief on-thread detection doesn't jank the UI.
+ *
  * Mirroring the background-removal tool, **your image is never uploaded**: the
  * only thing that leaves the browser is a one-time download of the MediaPipe
  * WASM runtime (~2 MB) plus the tiny BlazeFace model (~230 KB), fetched from
  * their official CDNs on first use and then browser-cached (and served locally
  * instead when `VITE_FACE_MODEL_PATH` is set — see below). The blur itself is a
- * pure Canvas operation on the main thread; no pixels are sent anywhere.
+ * pure Canvas operation; no pixels are sent anywhere.
  *
  * `VITE_FACE_MODEL_PATH` (optional): when set at build time, the MediaPipe WASM
  * fileset and the model are loaded from this base path instead of the CDNs —
@@ -58,49 +69,61 @@ interface RawBox {
   height: number
 }
 
+// Build the MediaPipe detector once (dynamically importing the library on first
+// use so its ~126 KB JS stays out of the base bundle), then reuse it for every
+// image so the WASM runtime + model are only fetched/initialised once.
+let detectorPromise: Promise<FaceDetector> | null = null
+
+function getDetector(): Promise<FaceDetector> {
+  if (!detectorPromise) {
+    detectorPromise = (async () => {
+      const { FaceDetector, FilesetResolver } = await import('@mediapipe/tasks-vision')
+      const vision = await FilesetResolver.forVisionTasks(FACE_WASM_PATH)
+      return FaceDetector.createFromOptions(vision, {
+        // CPU delegate: reliable and dependency-free (no WebGL/WebGPU context
+        // needed). A single still image is quick on CPU.
+        baseOptions: { modelAssetPath: FACE_MODEL_PATH, delegate: 'CPU' },
+        runningMode: 'IMAGE',
+      })
+    })()
+    // Don't cache a failed init — a transient CDN hiccup shouldn't wedge the
+    // tool forever; let the next attempt rebuild the detector.
+    detectorPromise.catch(() => { detectorPromise = null })
+  }
+  return detectorPromise
+}
+
 /**
  * Detect faces in an image file, returning boxes in the image's pixel space.
- * Runs the MediaPipe detector in a one-shot worker (torn down afterwards so the
- * WASM runtime isn't held resident once the user is done).
+ * Runs the MediaPipe detector on the main thread (see the module doc for why a
+ * Worker isn't used); the detector is cached across calls.
  */
 export async function detectFaces(file: File): Promise<Omit<FaceBox, 'id' | 'enabled'>[]> {
   const { image, objectUrl } = await loadImage(file)
   try {
-    const bitmap = await createImageBitmap(image)
-    // Classic worker (NOT { type: 'module' }): MediaPipe's tasks-vision loads its
-    // WASM glue via importScripts(), which only exists in classic workers. In a
-    // module worker importScripts throws a TypeError that the loader swallows,
-    // leaving its factory unset — surfacing as "ModuleFactory not set." at detect
-    // time. Vite bundles this worker's imports inline, so no runtime ESM is needed.
-    const worker = new Worker(new URL('./faceBlur.worker.ts', import.meta.url))
-    try {
-      const boxes = await new Promise<RawBox[]>((resolve, reject) => {
-        worker.onmessage = (e: MessageEvent<{ ok: boolean; boxes?: RawBox[]; error?: string }>) => {
-          if (e.data.ok) resolve(e.data.boxes ?? [])
-          else reject(new Error(e.data.error || 'Face detection failed'))
+    const detector = await getDetector()
+    const result = detector.detect(image)
+    const boxes: RawBox[] = (result.detections ?? []).flatMap((d) => {
+      const b = d.boundingBox
+      if (!b) return []
+      return [{ x: b.originX, y: b.originY, width: b.width, height: b.height }]
+    })
+    // Clamp to the image and order top-to-bottom, left-to-right so the panel's
+    // "Face 1, 2, 3…" numbering is stable and matches reading order.
+    const iw = image.naturalWidth
+    const ih = image.naturalHeight
+    return boxes
+      .map((b) => {
+        const x = Math.max(0, Math.min(iw - 1, b.x))
+        const y = Math.max(0, Math.min(ih - 1, b.y))
+        return {
+          x,
+          y,
+          width: Math.max(1, Math.min(iw - x, b.width)),
+          height: Math.max(1, Math.min(ih - y, b.height)),
         }
-        worker.onerror = (e) => reject(new Error(e.message || 'Face detection failed'))
-        worker.postMessage({ bitmap, wasmPath: FACE_WASM_PATH, modelPath: FACE_MODEL_PATH }, [bitmap])
       })
-      // Clamp to the image and order top-to-bottom, left-to-right so the panel's
-      // "Face 1, 2, 3…" numbering is stable and matches reading order.
-      const iw = image.naturalWidth
-      const ih = image.naturalHeight
-      return boxes
-        .map((b) => {
-          const x = Math.max(0, Math.min(iw - 1, b.x))
-          const y = Math.max(0, Math.min(ih - 1, b.y))
-          return {
-            x,
-            y,
-            width: Math.max(1, Math.min(iw - x, b.width)),
-            height: Math.max(1, Math.min(ih - y, b.height)),
-          }
-        })
-        .sort((a, b) => (a.y - b.y) || (a.x - b.x))
-    } finally {
-      worker.terminate()
-    }
+      .sort((a, b) => (a.y - b.y) || (a.x - b.x))
   } finally {
     URL.revokeObjectURL(objectUrl)
   }
