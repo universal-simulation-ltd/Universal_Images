@@ -67,7 +67,12 @@ export async function detectFaces(file: File): Promise<Omit<FaceBox, 'id' | 'ena
   const { image, objectUrl } = await loadImage(file)
   try {
     const bitmap = await createImageBitmap(image)
-    const worker = new Worker(new URL('./faceBlur.worker.ts', import.meta.url), { type: 'module' })
+    // Classic worker (NOT { type: 'module' }): MediaPipe's tasks-vision loads its
+    // WASM glue via importScripts(), which only exists in classic workers. In a
+    // module worker importScripts throws a TypeError that the loader swallows,
+    // leaving its factory unset — surfacing as "ModuleFactory not set." at detect
+    // time. Vite bundles this worker's imports inline, so no runtime ESM is needed.
+    const worker = new Worker(new URL('./faceBlur.worker.ts', import.meta.url))
     try {
       const boxes = await new Promise<RawBox[]>((resolve, reject) => {
         worker.onmessage = (e: MessageEvent<{ ok: boolean; boxes?: RawBox[]; error?: string }>) => {
