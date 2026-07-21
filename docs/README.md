@@ -6,8 +6,8 @@ Universal Images is a clean Progressive Web App for **resizing, cropping,
 converting, and optimising images entirely in the browser** — drag & drop
 JPEG/PNG/WebP/HEIC/GIF, crop with live handles, apply social-media size
 presets, convert with a quality slider, remove backgrounds with a one-click
-on-device AI cut-out, and batch-export (individually or as a ZIP). No upload to
-a server; files stay on the device.
+on-device AI cut-out, blur/pixelate faces on-device, and batch-export
+(individually or as a ZIP). No upload to a server; files stay on the device.
 
 ## Background removal (on-device AI)
 
@@ -32,6 +32,35 @@ preview + export (`bgFill` in the store, threaded through `processAndEncode`; th
 swatches are gated on `imageHasAlpha`). Per-image editing state (size, crop,
 fill, background snapshots) is preserved when switching images via the `edits`
 map in the store.
+
+## Face redaction (on-device AI)
+
+The "Redact faces" tool (`src/lib/faceBlur.ts` + `faceBlur.worker.ts`, driven by
+`detectFaces` / `applyFaceBlur` in `src/stores/imageStore.ts`) blurs or pixelates
+faces using Google MediaPipe's **BlazeFace short-range** detector via
+[`@mediapipe/tasks-vision`](https://www.npmjs.com/package/@mediapipe/tasks-vision).
+Detection runs in a web worker (constructed lazily, so the ~126 KB MediaPipe JS
+lands in its own `faceBlur.worker` chunk and stays out of the base app bundle);
+the blur itself is a pure Canvas resample on the main thread (`renderRedacted` —
+pixelate = nearest-neighbour, blur = bilinear, both through a tiny intermediate
+canvas to avoid edge bleed). As with background removal, **the image never leaves
+the browser** — only the MediaPipe vision WASM runtime (~2 MB) and the BlazeFace
+`.tflite` model (~230 KB) download once from their CDNs (jsDelivr + Google model
+storage) and are then browser-cached. Neither is in the PWA install-time precache
+(`vite.config.ts` `workbox.globIgnores` excludes `**/*.wasm` / `**/*.tflite` /
+`**/*.task`); both are cached at runtime on first use (`runtimeCaching` rules
+`mediapipe-vision` and `face-model`). To make the feature **fully offline** (e.g.
+for the desktop build), set `VITE_FACE_MODEL_PATH` at build time to a base folder
+holding the `@mediapipe/tasks-vision` `wasm/` directory and a
+`blaze_face_short_range.tflite` — the twin of `VITE_BG_REMOVAL_PATH`.
+
+The redaction is baked into a PNG that replaces the image in place; the pre-blur
+original is stashed in `faceOriginal` so **Remove blur** undoes it in one tap
+(detected boxes stay cached for an instant re-blur). A **strength** slider, a
+**blur/pixelate** toggle, and a **per-face** toggle (`enabled` on each `FaceBox`,
+so individual faces can be kept visible) re-render the redaction live from the
+clean original. Face snapshots + boxes are preserved across image switches via
+the same `edits` map.
 
 - **Live:** [opensource.unisim.co.uk/images](https://opensource.unisim.co.uk/images/)
   — served by path via the `opensource-portal` Worker, which proxies `/images`
