@@ -6,6 +6,8 @@ import UsageTracker from './UsageTracker'
 import { useImageStore } from './stores/imageStore'
 import './index.css'
 
+console.log(`build: ${import.meta.env.VITE_BUILD_SHA}`)
+
 if (import.meta.env.DEV) {
   ;(window as unknown as { __stores: unknown }).__stores = {
     image: useImageStore
