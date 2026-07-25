@@ -72,6 +72,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const setFaceEnabled = useImageStore((s) => s.setFaceEnabled)
   const applyFaceBlur = useImageStore((s) => s.applyFaceBlur)
   const clearFaceBlur = useImageStore((s) => s.clearFaceBlur)
+  const metadataMap = useImageStore((s) => s.metadata)
+  const setMetadataOpen = useImageStore((s) => s.setMetadataOpen)
 
   // The free-form crop and the social crop are mutually exclusive; either one
   // (if set) is the region the export pipeline should cut.
@@ -299,6 +301,10 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
     (p) => presets[p].width === target.width && presets[p].height === target.height
   ) ?? null
 
+  // Only surfaced when the background read actually found something — a photo
+  // with no EXIF shouldn't grow a badge that says "nothing here".
+  const selectedMeta = selected ? metadataMap[selected.id] ?? null : null
+
   const social = groupedPresets()
   const activeSocialLabel = (() => {
     if (!socialCrop) return null
@@ -340,16 +346,36 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
           <span className="hidden sm:inline shrink-0">{selected.width} × {selected.height} px</span>
           <span className="hidden sm:inline shrink-0">·</span>
           <span className="hidden sm:inline shrink-0">{formatBytes(selected.bytes)}</span>
-          {crop && (
-            <span className="ml-auto inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0">
-              <span aria-hidden="true">✂</span> {Math.round(crop.width)} × {Math.round(crop.height)} crop
-            </span>
-          )}
-          {!crop && socialCrop && activeSocialLabel && (
-            <span className="ml-auto inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0">
-              <span aria-hidden="true">📐</span> {activeSocialLabel}
-            </span>
-          )}
+          <span className="ml-auto flex items-center gap-1.5 shrink-0">
+            {/* Metadata badge — only when this photo actually carries any. It's
+                the one thing in the bar the user may want to act on before
+                sharing, so it sits in the main view rather than only in the
+                Actions menu. */}
+            {selectedMeta && (
+              <button
+                type="button"
+                onClick={() => setMetadataOpen(true)}
+                title="See what this photo reveals about you"
+                className="inline-flex items-center gap-1 text-amber-800 bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 hover:ring-amber-300 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors"
+              >
+                <span aria-hidden="true">🏷</span>
+                <span>Metadata</span>
+                {selectedMeta.identifyingCount > 0 && (
+                  <span className="hidden sm:inline font-normal">· can identify you</span>
+                )}
+              </button>
+            )}
+            {crop && (
+              <span className="inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium">
+                <span aria-hidden="true">✂</span> {Math.round(crop.width)} × {Math.round(crop.height)} crop
+              </span>
+            )}
+            {!crop && socialCrop && activeSocialLabel && (
+              <span className="inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium">
+                <span aria-hidden="true">📐</span> {activeSocialLabel}
+              </span>
+            )}
+          </span>
         </div>
         <PreviewArea
           image={selected}

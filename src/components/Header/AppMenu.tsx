@@ -5,9 +5,16 @@ import { useImageStore } from '../../stores/imageStore'
 // Holds Open-images and Clear-all actions; stays in sync with the store.
 export default function AppMenu() {
   const images = useImageStore((s) => s.images)
+  const selectedId = useImageStore((s) => s.selectedId)
+  const metadataMap = useImageStore((s) => s.metadata)
+  const setMetadataOpen = useImageStore((s) => s.setMetadataOpen)
   const addFiles = useImageStore((s) => s.addFiles)
   const clearAll = useImageStore((s) => s.clearAll)
   const hasImages = images.length > 0
+  // Unlike the badge above the preview, this entry stays visible whether or not
+  // metadata was found — "is there anything in this photo?" is a question worth
+  // being able to ask, and a clean answer is a useful one.
+  const selectedMeta = selectedId ? metadataMap[selectedId] ?? null : null
 
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -69,6 +76,26 @@ export default function AppMenu() {
               {hasImages ? 'Add more images…' : 'Open images…'}
             </span>
           </button>
+
+          {hasImages && selectedId && (
+            <button
+              onClick={() => { setMetadataOpen(true); setOpen(false) }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-amber-50 hover:text-amber-800 text-sm border-t border-slate-100"
+            >
+              <span aria-hidden="true">🏷</span>
+              <span className="flex-1 text-left">
+                <span className="block font-medium leading-tight">Metadata</span>
+                <span className="block text-[11px] text-slate-500 leading-tight">
+                  {selectedMeta
+                    ? 'See where and when this photo was taken — then scrub it'
+                    : 'Check what this photo reveals about you'}
+                </span>
+              </span>
+              {selectedMeta && selectedMeta.identifyingCount > 0 && (
+                <span className="shrink-0 text-amber-600" title="Can identify you" aria-hidden="true">⚠</span>
+              )}
+            </button>
+          )}
 
           {hasImages && (
             <button
