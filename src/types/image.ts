@@ -11,6 +11,12 @@ export interface SourceImage {
   objectUrl: string
   /** Source bytes — used for "untouched" size comparisons. */
   bytes: number
+  /**
+   * True when the dropped file wasn't directly usable and was re-encoded on
+   * import (HEIC → JPEG, SVG → PNG). That conversion already discards the
+   * original's EXIF, which the metadata panel needs to say out loud.
+   */
+  converted?: boolean
 }
 
 export interface ResizeTarget {

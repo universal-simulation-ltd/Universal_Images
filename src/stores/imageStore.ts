@@ -9,6 +9,7 @@ import {
 } from '../lib/imageResize'
 import { removeImageBackground, deriveNobgName, type BgProgress } from '../lib/backgroundRemoval'
 import { detectFaces as runFaceDetection, renderRedactedFile, deriveBlurredName, type FaceBox, type FaceBlurStyle } from '../lib/faceBlur'
+import { readImageMetadata, scrubImageMetadata, type ImageMetadata, type ScrubResult } from '../lib/metadata'
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10)
@@ -63,6 +64,24 @@ interface ImageStore {
    * image is never rewritten. Cleared when the user picks a non-social size.
    */
   socialCrop: SourceCrop | null
+  /**
+   * EXIF / IPTC / XMP read per image, keyed by image id. Populated in the
+   * background as images are added so the editor can show the "Metadata"
+   * badge only for photos that actually carry any. A `null` entry means the
+   * read finished and found nothing.
+   */
+  metadata: Record<string, ImageMetadata | null>
+  /** True while the metadata panel is open. */
+  metadataOpen: boolean
+  setMetadataOpen: (open: boolean) => void
+  /**
+   * Strip the selected image's metadata, replacing it in place with a
+   * losslessly-rewritten copy. Resolves with what actually happened so the UI
+   * can be honest about formats it can't rewrite.
+   */
+  scrubMetadata: () => Promise<ScrubResult | null>
+  /** True while a scrub is running. */
+  scrubbing: boolean
   /** Add one or more files; only successfully-decoded images are appended. */
   addFiles: (files: File[] | FileList) => Promise<void>
   selectImage: (id: string) => void
@@ -244,6 +263,39 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   setFaceBlurStrength: (faceBlurStrength) => set({ faceBlurStrength }),
   setFaceBlurStyle: (faceBlurStyle) => set({ faceBlurStyle }),
   edits: {},
+  metadata: {},
+  metadataOpen: false,
+  scrubbing: false,
+  setMetadataOpen: (metadataOpen) => set({ metadataOpen }),
+
+  async scrubMetadata() {
+    const cur = get()
+    const img = cur.images.find((i) => i.id === cur.selectedId)
+    if (!img || cur.scrubbing) return null
+
+    set({ scrubbing: true })
+    try {
+      const result = await scrubImageMetadata(img.file)
+      if (result.mode === 'unsupported') return result
+
+      // Same pixels, new container — swap the file (and its object URL, so
+      // anything reading from it downstream sees the cleaned bytes) and mark
+      // the cached read as empty.
+      const objectUrl = URL.createObjectURL(result.file)
+      URL.revokeObjectURL(img.objectUrl)
+      set((s) => ({
+        images: s.images.map((i) =>
+          i.id === img.id
+            ? { ...i, file: result.file, bytes: result.file.size, objectUrl }
+            : i
+        ),
+        metadata: { ...s.metadata, [img.id]: null }
+      }))
+      return result
+    } finally {
+      set({ scrubbing: false })
+    }
+  },
 
   async addFiles(input) {
     const files = Array.from(input).filter(looksLikeImage)
@@ -251,19 +303,27 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     set({ loading: true })
     try {
       const decoded: SourceImage[] = []
+      // The file as the user dropped it, kept alongside the decoded image so the
+      // metadata read sees the ORIGINAL — a HEIC loses its EXIF in the JPEG
+      // conversion below, and reading the converted copy would wrongly report
+      // a geotagged photo as clean.
+      const originals: { id: string; file: File }[] = []
       for (const file of files) {
         try {
           // loadImage transparently converts HEIC → JPEG and returns the usable file.
           const { objectUrl, width, height, file: usableFile } = await loadImage(file)
+          const id = makeId()
           decoded.push({
-            id: makeId(),
+            id,
             name: usableFile.name,
             file: usableFile,
             width,
             height,
             objectUrl,
-            bytes: usableFile.size
+            bytes: usableFile.size,
+            converted: usableFile !== file
           })
+          originals.push({ id, file })
         } catch (err) {
           console.warn('Skipping unreadable image', file.name, err)
         }
@@ -278,6 +338,21 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         selectedId,
         target: get().target ?? makeDefaultTarget(selected)
       })
+
+      // Read metadata in the background — it pulls in `exifr` on first use and
+      // must never hold up showing the image.
+      for (const { id, file } of originals) {
+        readImageMetadata(file)
+          .then((meta) => {
+            // The image may have been removed while the read was in flight.
+            if (!get().images.some((i) => i.id === id)) return
+            set((s) => ({ metadata: { ...s.metadata, [id]: meta.hasAny ? meta : null } }))
+          })
+          .catch((err) => {
+            console.warn('Could not read metadata for', file.name, err)
+            set((s) => ({ metadata: { ...s.metadata, [id]: null } }))
+          })
+      }
     } finally {
       set({ loading: false })
     }
@@ -333,10 +408,12 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     }
     revokeEditUrls(edits[id])
     delete edits[id]
+    const metadata = { ...cur.metadata }
+    delete metadata[id]
 
     const remaining = cur.images.filter((i) => i.id !== id)
     if (remaining.length === 0) {
-      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, bgFill: null, bgOriginal: null, bgCutout: null, faceOriginal: null, faceBoxes: null, edits: {} })
+      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, bgFill: null, bgOriginal: null, bgCutout: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false })
       return
     }
     if (cur.selectedId === id) {
@@ -346,6 +423,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       set({
         images: remaining,
         edits,
+        metadata,
         selectedId: next.id,
         target: saved?.target ?? makeDefaultTarget(next),
         crop: saved?.crop ?? null,
@@ -357,7 +435,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         faceBoxes: saved?.faceBoxes ?? null
       })
     } else {
-      set({ images: remaining, edits })
+      set({ images: remaining, edits, metadata })
     }
   },
 
@@ -368,7 +446,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     if (cur.bgCutout) URL.revokeObjectURL(cur.bgCutout.objectUrl)
     if (cur.faceOriginal) URL.revokeObjectURL(cur.faceOriginal.objectUrl)
     for (const e of Object.values(cur.edits)) revokeEditUrls(e)
-    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, faceOriginal: null, faceBoxes: null, edits: {} })
+    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false })
   },
 
   setTarget(partial) {

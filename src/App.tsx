@@ -6,6 +6,7 @@ import LandingPage from './components/Landing/LandingPage'
 import ImageGrid from './components/Grid/ImageGrid'
 import ResizePanel from './components/Resize/ResizePanel'
 import HostedStoreDialog from './components/HostedStoreDialog'
+import MetadataDialog from './components/Metadata/MetadataDialog'
 import { useImageStore } from './stores/imageStore'
 import { CONTAINER } from './lib/layout'
 
@@ -15,6 +16,8 @@ export default function App() {
   const images = useImageStore((s) => s.images)
   const loading = useImageStore((s) => s.loading)
   const addFiles = useImageStore((s) => s.addFiles)
+  const metadataOpen = useImageStore((s) => s.metadataOpen)
+  const setMetadataOpen = useImageStore((s) => s.setMetadataOpen)
 
   const [dragOver, setDragOver] = useState(false)
   const dragCounter = useRef(0)
@@ -150,6 +153,7 @@ export default function App() {
       )}
 
       <HostedStoreDialog />
+      {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
     </div>
   )
 }
