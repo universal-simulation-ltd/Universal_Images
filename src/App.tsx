@@ -79,7 +79,7 @@ export default function App() {
         productLogo={<ProductLogo />}
         productHomeHref={import.meta.env.BASE_URL}
         onHome={hasImages ? clearAll : undefined}
-        fileMenu={hasImages ? <AppMenu /> : undefined}
+        actions={hasImages ? <AppMenu /> : undefined}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
         contentClassName={CONTAINER}
       />
