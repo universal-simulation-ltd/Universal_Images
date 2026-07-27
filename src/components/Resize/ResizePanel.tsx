@@ -106,8 +106,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   // the format where it genuinely encodes (elsewhere it silently yields PNG).
   const [avifOk, setAvifOk] = useState(false)
   // Format & quality is a controlled disclosure so the homepage "Convert" entry
-  // can open + highlight it. It starts open (and highlighted) in convert mode.
-  const [formatOpen, setFormatOpen] = useState(convertMode)
+  // can open + highlight it. It starts open on every image — the output format
+  // is the setting people reach for first — and is highlighted in convert mode.
+  const [formatOpen, setFormatOpen] = useState(true)
 
   // Hooks always run — the actual encode work is gated on having a real target.
   const estimate = useEncodedPreview(selected, target, effectiveCrop, bgFill, !!selected && !!target)
@@ -971,10 +972,10 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
             )}
           </div>
 
-          {/* Format & quality — collapsed by default (most users want the
-              imported file's format at 85%). Sits directly above Export so the
-              output settings live next to the download button. The homepage
-              "Convert" entry opens + highlights this section. */}
+          {/* Format & quality — expanded by default so the output format and
+              quality are visible as soon as an image opens. Sits directly above
+              Export so the output settings live next to the download button.
+              The homepage "Convert" entry re-opens + highlights this section. */}
           <div
             className={[
               'pt-2 border-t border-slate-200 transition-colors',
