@@ -1,8 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { useImageStore } from '../../stores/imageStore'
 
-// The per-app "Actions" dropdown that slots into <UniversalAppsNavBar />.
-// Holds Open-images and Clear-all actions; stays in sync with the store.
+// The per-app actions that slot into <UniversalAppsNavBar />'s `actions` prop —
+// ROWS ONLY, no trigger and no panel of its own. The SDK renders them inside the
+// merged profile pill, so the bar carries one dropdown on the right rather than
+// an Actions button on the left and an avatar on the right.
+//
+// Styling is inline rather than Tailwind to match the SDK dropdown's own rows
+// (the same 8px/14px rhythm and 13px label the profile and language rows use) —
+// these render inside SDK chrome, not ours. The per-row hover tints are kept
+// from the old panel: green for "add", amber for metadata, red for the
+// destructive one.
 export default function AppMenu() {
   const images = useImageStore((s) => s.images)
   const selectedId = useImageStore((s) => s.selectedId)
@@ -16,27 +24,7 @@ export default function AppMenu() {
   // being able to ask, and a clean answer is a useful one.
   const selectedMeta = selectedId ? metadataMap[selectedId] ?? null : null
 
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function onDoc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
@@ -45,18 +33,7 @@ export default function AppMenu() {
   }
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="true"
-        aria-expanded={open}
-        className="h-9 px-3 rounded-md bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 text-sm font-medium flex items-center gap-1.5 transition-colors shadow-sm"
-      >
-        Actions
-        <svg viewBox="0 0 12 12" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">
-          <path d="M2 4 L6 8 L10 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+    <>
       <input
         ref={fileInputRef}
         type="file"
@@ -65,55 +42,108 @@ export default function AppMenu() {
         hidden
         onChange={onPick}
       />
-      {open && (
-        <div className="absolute left-0 mt-2 w-60 bg-white text-slate-900 rounded-lg shadow-xl border border-slate-200 z-50 overflow-hidden">
-          <button
-            onClick={() => { fileInputRef.current?.click(); setOpen(false) }}
-            className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-emerald-50 hover:text-emerald-700 text-sm"
-          >
-            <span aria-hidden="true">🖼</span>
-            <span className="flex-1 text-left font-medium">
-              {hasImages ? 'Add more images…' : 'Open images…'}
-            </span>
-          </button>
 
-          {hasImages && selectedId && (
-            <button
-              onClick={() => { setMetadataOpen(true); setOpen(false) }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-amber-50 hover:text-amber-800 text-sm border-t border-slate-100"
-            >
-              <span aria-hidden="true">🏷</span>
-              <span className="flex-1 text-left">
-                <span className="block font-medium leading-tight">Metadata</span>
-                <span className="block text-[11px] text-slate-500 leading-tight">
-                  {selectedMeta
-                    ? 'See where and when this photo was taken — then scrub it'
-                    : 'Check what this photo reveals about you'}
-                </span>
-              </span>
-              {selectedMeta && selectedMeta.identifyingCount > 0 && (
-                <span className="shrink-0 text-amber-600" title="Can identify you" aria-hidden="true">⚠</span>
-              )}
-            </button>
-          )}
+      <MenuRow
+        icon="🖼"
+        tint={TINTS.add}
+        onClick={() => fileInputRef.current?.click()}
+        label={hasImages ? 'Add more images…' : 'Open images…'}
+      />
 
-          {hasImages && (
-            <button
-              onClick={() => {
-                if (confirm('Remove all images?')) {
-                  clearAll()
-                  setOpen(false)
-                }
-              }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-red-50 hover:text-red-700 text-sm border-t border-slate-100"
-            >
-              <span aria-hidden="true">🗑</span>
-              <span className="flex-1 text-left">Clear all images</span>
-              <span className="text-[11px] text-slate-400 tabular-nums">{images.length}</span>
-            </button>
-          )}
-        </div>
+      {hasImages && selectedId && (
+        <MenuRow
+          icon="🏷"
+          tint={TINTS.meta}
+          onClick={() => setMetadataOpen(true)}
+          label="Metadata"
+          sub={selectedMeta
+            ? 'See where and when this photo was taken — then scrub it'
+            : 'Check what this photo reveals about you'}
+          trailing={selectedMeta && selectedMeta.identifyingCount > 0
+            ? <span style={{ flexShrink: 0, color: '#d97706' }} title="Can identify you" aria-hidden>⚠</span>
+            : null}
+        />
       )}
-    </div>
+
+      {hasImages && (
+        <MenuRow
+          icon="🗑"
+          tint={TINTS.danger}
+          onClick={() => { if (confirm('Remove all images?')) clearAll() }}
+          label="Clear all images"
+          trailing={
+            <span style={{ fontSize: 11, color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>
+              {images.length}
+            </span>
+          }
+        />
+      )}
+    </>
+  )
+}
+
+const TINTS = {
+  add:    { bg: '#ecfdf5', fg: '#047857' },
+  meta:   { bg: '#fffbeb', fg: '#92400e' },
+  danger: { bg: '#fef2f2', fg: '#b91c1c' },
+} as const
+
+const REST_COLOR = '#374151'
+
+function MenuRow({
+  icon,
+  label,
+  sub,
+  trailing,
+  tint,
+  onClick,
+}: {
+  icon: string
+  label: string
+  sub?: string
+  trailing?: React.ReactNode
+  tint: { bg: string; fg: string }
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      style={{
+        display:    'flex',
+        alignItems: 'center',
+        gap:        10,
+        width:      '100%',
+        padding:    '8px 14px',
+        fontSize:   13,
+        fontFamily: 'inherit',
+        textAlign:  'left',
+        border:     0,
+        background: 'transparent',
+        color:      REST_COLOR,
+        cursor:     'pointer',
+        transition: 'background 120ms, color 120ms',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = tint.bg
+        e.currentTarget.style.color = tint.fg
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent'
+        e.currentTarget.style.color = REST_COLOR
+      }}
+    >
+      <span aria-hidden>{icon}</span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontWeight: 500, lineHeight: 1.3 }}>{label}</span>
+        {sub && (
+          <span style={{ display: 'block', fontSize: 11, color: '#64748b', lineHeight: 1.3 }}>
+            {sub}
+          </span>
+        )}
+      </span>
+      {trailing}
+    </button>
   )
 }

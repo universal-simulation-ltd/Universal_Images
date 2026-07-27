@@ -18,6 +18,7 @@ export default function App() {
   const addFiles = useImageStore((s) => s.addFiles)
   const metadataOpen = useImageStore((s) => s.metadataOpen)
   const setMetadataOpen = useImageStore((s) => s.setMetadataOpen)
+  const clearAll = useImageStore((s) => s.clearAll)
 
   const [dragOver, setDragOver] = useState(false)
   const dragCounter = useRef(0)
@@ -67,11 +68,18 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-full bg-slate-100">
+      {/* With an image open the suite switcher becomes a home button — the same
+          call Universal PDF makes with a document open. Mid-edit, "switch
+          product" is never what the logo is being clicked for; "get me out of
+          here" is. `clearAll` rather than following productHomeHref: navigating
+          would reload and drop the images anyway, and this brings the landing
+          page straight back. */}
       <UniversalAppsNavBar
         product="images"
         productLogo={<ProductLogo />}
         productHomeHref={import.meta.env.BASE_URL}
-        fileMenu={hasImages ? <AppMenu /> : undefined}
+        onHome={hasImages ? clearAll : undefined}
+        actions={hasImages ? <AppMenu /> : undefined}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
         contentClassName={CONTAINER}
       />
