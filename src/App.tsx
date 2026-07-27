@@ -8,7 +8,8 @@ import ResizePanel from './components/Resize/ResizePanel'
 import HostedStoreDialog from './components/HostedStoreDialog'
 import MetadataDialog from './components/Metadata/MetadataDialog'
 import { useImageStore } from './stores/imageStore'
-import { CONTAINER } from './lib/layout'
+import EditShortcuts from './components/Header/EditShortcuts'
+import { CONTAINER, EDITOR_CONTAINER } from './lib/layout'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_Images'
 
@@ -68,20 +69,24 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-full bg-slate-100">
-      {/* With an image open the suite switcher becomes a home button — the same
-          call Universal PDF makes with a document open. Mid-edit, "switch
-          product" is never what the logo is being clicked for; "get me out of
-          here" is. `clearAll` rather than following productHomeHref: navigating
-          would reload and drop the images anyway, and this brings the landing
-          page straight back. */}
+      {/* With an image open the bar stops being a navbar and becomes the
+          editor's toolbar: identity out for a home button, brand claim out for
+          the quick edits, and the whole row widened to the viewport so its two
+          ends line up with the full-bleed editor below. Universal PDF's
+          open-document chrome is the shape being matched.
+
+          `clearAll` for home rather than following productHomeHref: navigating
+          would reload and drop the open images anyway, and this brings the
+          landing page straight back. */}
       <UniversalAppsNavBar
         product="images"
         productLogo={<ProductLogo />}
         productHomeHref={import.meta.env.BASE_URL}
         onHome={hasImages ? clearAll : undefined}
+        centre={hasImages ? <EditShortcuts /> : undefined}
         actions={hasImages ? <AppMenu /> : undefined}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
-        contentClassName={CONTAINER}
+        contentClassName={hasImages ? EDITOR_CONTAINER : CONTAINER}
       />
 
       <main className="flex-1 min-h-0 flex relative">
