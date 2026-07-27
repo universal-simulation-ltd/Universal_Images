@@ -16,6 +16,32 @@ function makeId() {
 }
 
 /**
+ * Make a user-typed name safe to hand to a download attribute: no path
+ * separators (which browsers treat as directories), no control characters, no
+ * surrounding space. Returns '' when nothing usable is left.
+ */
+function sanitiseFilename(name: string) {
+  // eslint-disable-next-line no-control-regex
+  return name.replace(/[\\/:*?"<>|\x00-\x1f]/g, '').trim().slice(0, 120)
+}
+
+/** The part of a filename before its extension ('photo.jpg' → 'photo'). */
+function stemOf(name: string) {
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? name.slice(0, dot) : name
+}
+
+/**
+ * Swap the stem of a derived name, keeping whatever the derivation appended:
+ * 'photo-nobg.png' with photo → holiday becomes 'holiday-nobg.png'.
+ */
+function reStem(name: string, oldStem: string, newStem: string) {
+  if (name.startsWith(oldStem)) return newStem + name.slice(oldStem.length)
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? newStem + name.slice(dot) : newStem
+}
+
+/**
  * Per-image editing state, stashed when the user switches away so each image
  * keeps its own custom size, crop, background fill and background-removal
  * snapshots. The `edits` map only ever holds the NON-selected images — the
@@ -146,6 +172,12 @@ interface ImageStore {
   /** Add one or more files; only successfully-decoded images are appended. */
   addFiles: (files: File[] | FileList) => Promise<void>
   selectImage: (id: string) => void
+  /**
+   * Rename an image (the name shown in the toolbar / grid, and the stem of the
+   * exported file). Trailing/leading space and path separators are stripped;
+   * an empty result is ignored.
+   */
+  renameImage: (id: string, name: string) => void
   removeImage: (id: string) => void
   clearAll: () => void
   setTarget: (partial: Partial<ResizeTarget>) => void
@@ -460,6 +492,40 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       bgCutout: saved?.bgCutout ?? null,
       faceOriginal: saved?.faceOriginal ?? null,
       faceBoxes: saved?.faceBoxes ?? null
+    })
+  },
+
+  renameImage(id, name) {
+    const cur = get()
+    const img = cur.images.find((i) => i.id === id)
+    const cleaned = sanitiseFilename(name)
+    if (!img || !cleaned || cleaned === img.name) return
+
+    // Undo snapshots (the pre-cut-out original, the un-blurred base) carry
+    // derived names like "photo-nobg.png" and share the image's id. Rename
+    // those too, or restoring one silently reverts the user's rename.
+    const oldStem = stemOf(img.name)
+    const newStem = stemOf(cleaned)
+    const rename = <T extends SourceImage | null | undefined>(s: T): T =>
+      s && s.id === id ? ({ ...s, name: reStem(s.name, oldStem, newStem) } as T) : s
+    const edit = cur.edits[id]
+
+    set({
+      images: cur.images.map((i) => (i.id === id ? { ...i, name: cleaned } : i)),
+      bgOriginal: rename(cur.bgOriginal),
+      bgCutout: rename(cur.bgCutout),
+      faceOriginal: rename(cur.faceOriginal),
+      edits: edit
+        ? {
+            ...cur.edits,
+            [id]: {
+              ...edit,
+              bgOriginal: rename(edit.bgOriginal),
+              bgCutout: rename(edit.bgCutout),
+              faceOriginal: rename(edit.faceOriginal)
+            }
+          }
+        : cur.edits
     })
   },
 

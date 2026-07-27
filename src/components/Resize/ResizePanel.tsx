@@ -74,6 +74,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const clearFaceBlur = useImageStore((s) => s.clearFaceBlur)
   const metadataMap = useImageStore((s) => s.metadata)
   const setMetadataOpen = useImageStore((s) => s.setMetadataOpen)
+  const renameImage = useImageStore((s) => s.renameImage)
 
   // The free-form crop and the social crop are mutually exclusive; either one
   // (if set) is the region the export pipeline should cut.
@@ -99,6 +100,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const [faceError, setFaceError] = useState<string | null>(null)
   // Hidden native colour picker backing the "+" custom background-fill swatch.
   const customColorRef = useRef<HTMLInputElement>(null)
+  // Inline rename of the filename shown in the info bar.
+  const [renaming, setRenaming] = useState(false)
+  const [renameDraft, setRenameDraft] = useState('')
   // Whether the selected image has real transparency — gates the background-fill
   // swatches (which only make sense on a transparent image).
   const [hasAlpha, setHasAlpha] = useState(false)
@@ -184,6 +188,23 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   function setPreset(p: PresetSize) {
     const dim = presets[p]
     setTarget({ width: dim.width, height: dim.height })
+  }
+
+  function startRename() {
+    setRenameDraft(selected!.name)
+    setRenaming(true)
+  }
+
+  function commitRename() {
+    renameImage(selected!.id, renameDraft)
+    setRenaming(false)
+  }
+
+  // Preselect the stem only, so typing replaces the name but keeps ".jpg" —
+  // the same thing Finder and Explorer do when you rename a file.
+  function selectStem(input: HTMLInputElement) {
+    const dot = input.value.lastIndexOf('.')
+    input.setSelectionRange(0, dot > 0 ? dot : input.value.length)
   }
 
   function onWidth(nextRaw: number) {
@@ -342,7 +363,34 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               {images.length}
             </button>
           )}
-          <span className="font-medium text-slate-700 truncate">{selected.name}</span>
+          {/* The filename doubles as the rename control — click it to edit.
+              Enter / blur commits, Escape reverts. It's the stem of every
+              exported file, so this is the one place to change it. */}
+          {renaming ? (
+            <input
+              autoFocus
+              value={renameDraft}
+              onChange={(e) => setRenameDraft(e.target.value)}
+              onFocus={(e) => selectStem(e.currentTarget)}
+              onBlur={commitRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commitRename() }
+                else if (e.key === 'Escape') { e.preventDefault(); setRenaming(false) }
+              }}
+              aria-label="File name"
+              className="min-w-0 flex-1 max-w-[22rem] font-medium text-slate-800 bg-white border border-orange-400 rounded px-1.5 py-0.5 text-xs outline-none ring-1 ring-orange-500/30"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={startRename}
+              title="Rename — this becomes the name of the file you download"
+              className="min-w-0 inline-flex items-center gap-1 font-medium text-slate-700 truncate rounded px-1 -mx-1 py-0.5 hover:bg-slate-100 hover:text-slate-900 group/name transition-colors"
+            >
+              <span className="truncate">{selected.name}</span>
+              <span aria-hidden="true" className="shrink-0 text-slate-400 opacity-0 group-hover/name:opacity-100 transition-opacity">✎</span>
+            </button>
+          )}
           <span className="hidden sm:inline shrink-0">·</span>
           <span className="hidden sm:inline shrink-0">{selected.width} × {selected.height} px</span>
           <span className="hidden sm:inline shrink-0">·</span>
