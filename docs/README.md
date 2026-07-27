@@ -62,6 +62,29 @@ so individual faces can be kept visible) re-render the redaction live from the
 clean original. Face snapshots + boxes are preserved across image switches via
 the same `edits` map.
 
+### Combining it with background removal
+
+The blur is modelled as a layer **above** the background edit, so the two
+compose in either order. `faceOriginal` always holds the un-blurred image for
+whichever background state is current (the full photo, or the cut-out once the
+background is removed), and `bgOriginal` / `bgCutout` always hold *clean*
+(never blurred) snapshots. Two consequences:
+
+- **Segmentation always runs on the clean photo.** Handing the model a baked
+  blur destroys the detail it needs and it answers by keeping the whole blurred
+  block as foreground — an opaque rectangle around the face. `removeBackground`
+  therefore segments `faceOriginal` when a redaction is applied.
+- **The blur is re-baked whenever the background state changes**, from the
+  *opaque* pre-removal photo, stencilled by the cut-out's alpha
+  (`renderRedacted`'s `mask` argument, a `destination-in` composite). Rendering
+  from the opaque original keeps the subject's silhouette crisp — resampling the
+  transparent cut-out directly would smear its alpha — and the stencil deletes
+  the blurred layer in exactly the same places the background was removed.
+
+Both re-bakes happen *before* the new bitmap is swapped in (`bakeFaceBlur` /
+`rebakeBlur` are pure and touch no store state), so neither "Remove background"
+nor "Restore background" ever shows an un-redacted frame.
+
 - **Live:** [opensource.unisim.co.uk/images](https://opensource.unisim.co.uk/images/)
   — served by path via the `opensource-portal` Worker, which proxies `/images`
   to its Cloudflare Pages project.
