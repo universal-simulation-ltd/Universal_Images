@@ -181,12 +181,20 @@ function redactBox(
  * Draw `image` into a canvas at natural size and redact every enabled face box.
  * Returns the canvas so the caller can encode it to a file. Disabled boxes are
  * skipped, so per-face un-redaction is just a re-render with that box off.
+ *
+ * `mask` (optional) is an alpha stencil applied after the redaction: the result
+ * keeps only the pixels the mask keeps. It exists for the "blur faces, then
+ * remove the background" combination — the blur is rendered from the ORIGINAL
+ * opaque photo (so the redaction has real pixels to resample and the subject's
+ * silhouette stays crisp), then the cut-out is used as the mask so the blurred
+ * layer is erased in exactly the same places the background was.
  */
 export function renderRedacted(
   image: HTMLImageElement,
   boxes: FaceBox[],
   strength: number,
-  style: FaceBlurStyle
+  style: FaceBlurStyle,
+  mask?: CanvasImageSource | null
 ): HTMLCanvasElement {
   const w = image.naturalWidth
   const h = image.naturalHeight
@@ -197,6 +205,16 @@ export function renderRedacted(
   ctx.drawImage(image, 0, 0)
   for (const box of boxes) {
     if (box.enabled) redactBox(ctx, canvas, box, w, h, strength, style)
+  }
+  if (mask) {
+    // `destination-in` multiplies what we've drawn by the mask's alpha. Scaled
+    // to the canvas defensively — the cut-out is the same size as its source,
+    // but a mismatch should stretch the stencil, not offset it.
+    ctx.save()
+    ctx.globalCompositeOperation = 'destination-in'
+    ctx.imageSmoothingEnabled = true
+    ctx.drawImage(mask, 0, 0, w, h)
+    ctx.restore()
   }
   return canvas
 }
@@ -210,17 +228,26 @@ export async function renderRedactedFile(
   file: File,
   boxes: FaceBox[],
   strength: number,
-  style: FaceBlurStyle
+  style: FaceBlurStyle,
+  maskFile?: File | null
 ): Promise<{ blob: Blob; width: number; height: number }> {
   const { image, objectUrl } = await loadImage(file)
+  let maskUrl: string | null = null
   try {
-    const canvas = renderRedacted(image, boxes, strength, style)
+    let mask: HTMLImageElement | null = null
+    if (maskFile) {
+      const loaded = await loadImage(maskFile)
+      maskUrl = loaded.objectUrl
+      mask = loaded.image
+    }
+    const canvas = renderRedacted(image, boxes, strength, style, mask)
     const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not render redacted image'))), 'image/png')
     })
     return { blob, width: canvas.width, height: canvas.height }
   } finally {
     URL.revokeObjectURL(objectUrl)
+    if (maskUrl) URL.revokeObjectURL(maskUrl)
   }
 }
 

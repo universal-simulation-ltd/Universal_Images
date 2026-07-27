@@ -39,6 +39,67 @@ function revokeEditUrls(edit: ImageEdit | undefined) {
   if (edit.faceOriginal) URL.revokeObjectURL(edit.faceOriginal.objectUrl)
 }
 
+/**
+ * Free the bitmaps in `dropped` that we're no longer referencing. Snapshots are
+ * shared by reference across the active fields, the `edits` stash and the image
+ * list (a cut-out can be both "the image shown" and "the clean base held for
+ * undo"), so anything still reachable must be spared — `keep` lists those.
+ */
+function revokeDropped(dropped: (SourceImage | null | undefined)[], keep: (SourceImage | null | undefined)[]) {
+  const kept = new Set(keep.filter(Boolean).map((s) => s!.objectUrl))
+  const freed = new Set<string>()
+  for (const s of dropped) {
+    if (!s || kept.has(s.objectUrl) || freed.has(s.objectUrl)) continue
+    freed.add(s.objectUrl)
+    URL.revokeObjectURL(s.objectUrl)
+  }
+}
+
+/**
+ * Render the face redaction that sits on top of `base` and wrap it as a
+ * SourceImage. Pure — it touches no store state, so callers can bake the new
+ * bitmap *before* swapping it in and never flash an un-redacted frame.
+ *
+ * `opaqueSource` is set when `base` is a background cut-out: the blur is then
+ * rendered from that pre-removal photo (real, opaque pixels to resample) and
+ * stencilled by the cut-out's alpha, so the blurred layer is erased in exactly
+ * the same places the background was. Passing null blurs `base` directly.
+ */
+async function bakeFaceBlur(
+  base: SourceImage,
+  opaqueSource: SourceImage | null,
+  boxes: FaceBox[],
+  strength: number,
+  style: FaceBlurStyle
+): Promise<SourceImage> {
+  const { blob, width, height } = await renderRedactedFile(
+    (opaqueSource ?? base).file,
+    boxes,
+    strength,
+    style,
+    opaqueSource ? base.file : null
+  )
+  const name = deriveBlurredName(base.name)
+  const file = new File([blob], name, { type: 'image/png' })
+  return { id: base.id, name, file, width, height, objectUrl: URL.createObjectURL(file), bytes: file.size }
+}
+
+/**
+ * Re-apply the redaction currently configured in `state` over a new base — the
+ * fresh cut-out after a background removal, or the full image after a restore.
+ * Returns `base` itself when there's nothing to redact, so callers can tell a
+ * real bake from a pass-through by identity.
+ */
+function rebakeBlur(
+  state: { faceBoxes: FaceBox[] | null; faceBlurStrength: number; faceBlurStyle: FaceBlurStyle },
+  base: SourceImage,
+  opaqueSource: SourceImage | null
+): Promise<SourceImage> {
+  const boxes = state.faceBoxes
+  if (!boxes || boxes.length === 0) return Promise.resolve(base)
+  return bakeFaceBlur(base, opaqueSource, boxes, state.faceBlurStrength, state.faceBlurStyle)
+}
+
 function chooseDefaultFormat(file: File): OutputFormat {
   const t = file.type
   if (t === 'image/png') return 'image/png'
@@ -129,6 +190,8 @@ interface ImageStore {
    * Snapshot of the selected image *before* its background was removed, kept so
    * "Restore background" can undo it. Null when the selected image hasn't had
    * its background removed (or the snapshot was cleared on select/remove).
+   * Always the CLEAN version — never a face-blur bake — so it doubles as the
+   * opaque source the blur is re-rendered from while a cut-out is shown.
    */
   bgOriginal: SourceImage | null
   /**
@@ -136,7 +199,8 @@ interface ImageStore {
    * that clicking "Remove background" again swaps it straight back in without
    * re-running the model. Held only while that image stays selected (revoked on
    * select-away / remove / clear). Mutually exclusive with `bgOriginal`: whichever
-   * version isn't currently shown is the one cached.
+   * version isn't currently shown is the one cached. Clean (un-blurred), like
+   * `bgOriginal` — the face blur is re-baked on top after the swap.
    */
   bgCutout: SourceImage | null
   /**
@@ -164,6 +228,11 @@ interface ImageStore {
    * Snapshot of the selected image *before* faces were blurred, kept so
    * "Remove blur" can undo it in one tap. Non-null exactly when a redaction is
    * currently applied to the selected image. Cleared on select/remove.
+   *
+   * The blur sits *above* the background edit: this is the un-blurred image for
+   * whichever background state is current — the full original, or the cut-out
+   * once the background has been removed — and the blur is re-baked from it
+   * whenever that state changes.
    */
   faceOriginal: SourceImage | null
   /** Redaction strength 0..100 (higher = heavier blur / bigger pixels). */
@@ -573,24 +642,45 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   },
 
   async removeBackground(onProgress) {
-    const { images, selectedId, removingBg, bgOriginal, bgCutout } = get()
+    const { images, selectedId, removingBg, bgOriginal, bgCutout, faceOriginal } = get()
     if (removingBg) return
     const img = images.find((i) => i.id === selectedId)
     if (!img) return
 
+    // Always segment the CLEAN image. A baked face blur destroys the detail the
+    // model needs, and it answers by keeping the whole blurred block as
+    // foreground — the opaque rectangle bug. The blur is re-baked on top of the
+    // finished cut-out afterwards (see `applyFaceBlur`), so the layer order the
+    // user sees is: photo → cut-out → blur, with the blur erased wherever the
+    // background was.
+    const blurred = !!faceOriginal && faceOriginal.id === img.id
+    const clean = blurred ? faceOriginal! : img
+
     // Cache hit: the cut-out for this image is already computed (the user
     // restored it earlier). Swap it straight back in — no reprocessing.
     if (bgCutout && bgCutout.id === img.id) {
-      const nextImages = images.map((i) => (i.id === img.id ? bgCutout : i))
-      const isSelected = selectedId === img.id
-      const t = get().target
-      if (isSelected && get().faceOriginal) URL.revokeObjectURL(get().faceOriginal!.objectUrl)
+      // Re-bake the blur onto the cut-out first, so the swap never shows an
+      // un-redacted frame.
+      const shown = blurred ? await rebakeBlur(get(), bgCutout, clean) : bgCutout
+      const cur = get()
+      if (cur.bgCutout !== bgCutout || !cur.images.some((i) => i.id === img.id)) {
+        revokeDropped([shown], [bgCutout])
+        return
+      }
+      const t = cur.target
+      // The blurred bake we're replacing is gone; `clean` lives on as bgOriginal.
+      revokeDropped([img], [clean, bgCutout, shown])
       set({
-        images: nextImages,
-        bgOriginal: img, // the original we just replaced — enables Restore again
+        images: cur.images.map((i) => (i.id === img.id ? shown : i)),
+        bgOriginal: clean, // the un-blurred original — enables Restore again
         bgCutout: null,
-        target: isSelected && t ? { ...t, format: 'image/png', allowTransparency: true } : t,
-        ...(isSelected ? { crop: null, socialCrop: null, bgFill: null, faceOriginal: null, faceBoxes: null } : {})
+        target: t ? { ...t, format: 'image/png', allowTransparency: true } : t,
+        crop: null,
+        socialCrop: null,
+        bgFill: null,
+        // The cut-out is the un-blurred base for this background state — it's
+        // what "Remove blur" restores, and what the blur is re-baked over.
+        faceOriginal: shown === bgCutout ? null : bgCutout
       })
       onProgress?.(1)
       return
@@ -598,7 +688,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
 
     set({ removingBg: true, bgProgress: 0 })
     try {
-      const { blob, width, height } = await removeImageBackground(img.file, (f) => {
+      const { blob, width, height } = await removeImageBackground(clean.file, (f) => {
         set({ bgProgress: f })
         onProgress?.(f)
       })
@@ -608,50 +698,69 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       const current = get()
       if (!current.images.some((i) => i.id === img.id)) return
 
-      const name = deriveNobgName(img.name)
+      const name = deriveNobgName(clean.name)
       const file = new File([blob], name, { type: 'image/png' })
       const objectUrl = URL.createObjectURL(file)
       const cutout: SourceImage = { id: img.id, name, file, width, height, objectUrl, bytes: file.size }
 
-      // Stash the pre-removal image for "Restore background". If a stale snapshot
-      // or cached cut-out for this same image exists, drop it first.
-      if (bgOriginal && bgOriginal.id === img.id) URL.revokeObjectURL(bgOriginal.objectUrl)
-      if (current.bgCutout && current.bgCutout.id === img.id) URL.revokeObjectURL(current.bgCutout.objectUrl)
+      // Re-bake the blur over the finished cut-out (stencilled by it) before
+      // swapping anything in, so the cut-out is never shown un-redacted. The
+      // boxes are still valid: the cut-out has the source's pixel dimensions.
+      const shown = blurred && current.selectedId === img.id
+        ? await rebakeBlur(current, cutout, clean)
+        : cutout
+      // `shown === cutout` means no redaction was baked, so the cut-out itself
+      // is what's displayed and there's nothing for "Remove blur" to restore.
+      const cleanCutout = shown === cutout ? null : cutout
 
-      const nextImages = current.images.map((i) => (i.id === img.id ? cutout : i))
-      if (current.selectedId === img.id) {
-        if (current.faceOriginal) URL.revokeObjectURL(current.faceOriginal.objectUrl)
+      const after = get()
+      if (!after.images.some((i) => i.id === img.id)) {
+        revokeDropped([cutout, shown], [])
+        return
+      }
+      const nextImages = after.images.map((i) => (i.id === img.id ? shown : i))
+
+      if (after.selectedId === img.id) {
+        // Free the blurred bake we're replacing plus any stale snapshots for
+        // this image — but never `clean`, which becomes the restore point.
+        revokeDropped(
+          [img, bgOriginal?.id === img.id ? bgOriginal : null, after.bgCutout?.id === img.id ? after.bgCutout : null],
+          [clean, cutout, shown]
+        )
         set({
           images: nextImages,
-          bgOriginal: img,
+          bgOriginal: clean,
           bgCutout: null,
           // The cut-out has transparency, so force PNG output so it isn't
           // flattened onto white on export.
-          target: current.target ? { ...current.target, format: 'image/png', allowTransparency: true } : current.target,
+          target: after.target ? { ...after.target, format: 'image/png', allowTransparency: true } : after.target,
           // Crops referenced the old bitmap coordinates; clear them for clarity.
           crop: null,
           socialCrop: null,
           bgFill: null,
-          // A fresh cut-out supersedes any prior face redaction on this image.
-          faceOriginal: null,
-          faceBoxes: null
+          // The cut-out is now the un-blurred base that "Remove blur" restores.
+          faceOriginal: cleanCutout
         })
       } else {
         // The user switched away during the run — persist the result into the
-        // image's saved edit rather than clobbering the now-different active image.
-        const edits = { ...current.edits }
-        revokeEditUrls(edits[img.id])
-        const base = edits[img.id]?.target ?? makeDefaultTarget(img)
+        // image's saved edit rather than clobbering the now-different active
+        // image. The boxes come along, so an un-baked blur is one tap away.
+        const edits = { ...after.edits }
+        const prev = edits[img.id]
+        revokeDropped(
+          [img, prev?.bgOriginal, prev?.bgCutout, prev?.faceOriginal],
+          [clean, cutout, shown]
+        )
+        const base = prev?.target ?? makeDefaultTarget(img)
         edits[img.id] = {
           target: { ...base, format: 'image/png', allowTransparency: true },
           crop: null,
           socialCrop: null,
           bgFill: null,
-          bgOriginal: img,
+          bgOriginal: clean,
           bgCutout: null,
-          // The revoked edit's face snapshot is gone; a fresh cut-out supersedes it.
-          faceOriginal: null,
-          faceBoxes: null
+          faceOriginal: cleanCutout,
+          faceBoxes: prev?.faceBoxes ?? null
         }
         set({ images: nextImages, edits })
       }
@@ -663,35 +772,57 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     }
   },
 
-  restoreBackground() {
-    const { images, selectedId, bgOriginal, bgCutout, target } = get()
+  async restoreBackground() {
+    const state = get()
+    const { images, selectedId, bgOriginal, bgCutout, faceOriginal, target } = state
     if (!bgOriginal) return
-    // Keep the cut-out currently in the list as the cache so re-removing is instant.
-    const cutout = images.find((i) => i.id === bgOriginal.id) ?? null
-    // Drop any older cached cut-out we're about to replace (shouldn't normally exist).
-    if (bgCutout && cutout && bgCutout.id === cutout.id && bgCutout !== cutout) {
-      URL.revokeObjectURL(bgCutout.objectUrl)
-    }
-    const nextImages = images.map((i) => (i.id === bgOriginal.id ? bgOriginal : i))
     const isSelected = selectedId === bgOriginal.id
-    if (isSelected && get().faceOriginal) URL.revokeObjectURL(get().faceOriginal!.objectUrl)
+    const displayed = images.find((i) => i.id === bgOriginal.id) ?? null
+    const blurred = isSelected && !!faceOriginal && faceOriginal.id === bgOriginal.id
+    // Cache the CLEAN cut-out so re-removing is instant. With a blur applied the
+    // shown image is a blurred bake of the cut-out, and the clean cut-out is the
+    // one stashed in `faceOriginal`.
+    const cutout = blurred ? faceOriginal! : displayed
+
+    // Put the blur back on the full-background image before swapping it in —
+    // undoing the cut-out shouldn't un-redact the faces, even for a frame. The
+    // original is opaque, so it needs no stencil.
+    const shown = blurred ? await rebakeBlur(state, bgOriginal, null) : bgOriginal
+    // A second click (or another edit) may have landed while that rendered.
+    if (get().bgOriginal !== bgOriginal) {
+      revokeDropped([shown], [bgOriginal])
+      return
+    }
+
+    // Drop the blurred bake we're replacing, plus any older cached cut-out
+    // (shouldn't normally exist) — but never the cut-out we're caching.
+    revokeDropped(
+      [blurred ? displayed : null, bgCutout?.id === bgOriginal.id ? bgCutout : null],
+      [cutout, bgOriginal, shown]
+    )
     set({
-      images: nextImages,
+      images: get().images.map((i) => (i.id === bgOriginal.id ? shown : i)),
       bgOriginal: null,
       bgCutout: cutout,
       target: isSelected && target ? makeDefaultTarget(bgOriginal) : target,
-      ...(isSelected ? { crop: null, socialCrop: null, bgFill: null, faceOriginal: null, faceBoxes: null } : {})
+      // The restored original is the un-blurred base again, and the boxes are
+      // kept so the strength/style controls keep driving the re-bake.
+      ...(isSelected ? { crop: null, socialCrop: null, bgFill: null, faceOriginal: shown === bgOriginal ? null : bgOriginal } : {})
     })
   },
 
   async detectFaces() {
-    const { images, selectedId, detectingFaces, faceOriginal } = get()
+    const { images, selectedId, detectingFaces, faceOriginal, bgOriginal } = get()
     if (detectingFaces) return
     const img = images.find((i) => i.id === selectedId)
     if (!img) return
     // Always detect on the CLEAN image (the pre-blur original when a redaction is
-    // already applied, otherwise the selected image itself).
-    const clean = faceOriginal && faceOriginal.id === img.id ? faceOriginal : img
+    // already applied, otherwise the selected image itself) — and, when the
+    // background has been removed, on the opaque pre-removal original rather
+    // than the cut-out, which the detector reads as a face against black. Both
+    // share the same pixel dimensions, so the boxes are valid either way.
+    const base = faceOriginal && faceOriginal.id === img.id ? faceOriginal : img
+    const clean = bgOriginal && bgOriginal.id === img.id ? bgOriginal : base
     set({ detectingFaces: true })
     try {
       const raw = await runFaceDetection(clean.file)
@@ -717,7 +848,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   },
 
   async applyFaceBlur() {
-    const { images, selectedId, faceBoxes, faceOriginal, faceBlurStrength, faceBlurStyle } = get()
+    const { images, selectedId, faceBoxes, faceOriginal, bgOriginal, faceBlurStrength, faceBlurStyle } = get()
     if (!faceBoxes || faceBoxes.length === 0) return
     const img = images.find((i) => i.id === selectedId)
     if (!img) return
@@ -726,15 +857,20 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     const clean = faceOriginal && faceOriginal.id === img.id ? faceOriginal : img
     const firstApply = clean === img
 
-    const { blob, width, height } = await renderRedactedFile(clean.file, faceBoxes, faceBlurStrength, faceBlurStyle)
+    // With the background removed, the clean base is a transparent cut-out —
+    // resampling it would smear its alpha and fray the silhouette, and a face at
+    // the edge of the subject would blur into the transparency. So render the
+    // blur from the opaque pre-removal original and stencil it with the cut-out:
+    // the blurred layer then ends exactly where the background was removed.
+    const opaqueSource = bgOriginal && bgOriginal.id === img.id ? bgOriginal : null
+
+    const redacted = await bakeFaceBlur(clean, opaqueSource, faceBoxes, faceBlurStrength, faceBlurStyle)
 
     const cur = get()
-    if (cur.selectedId !== img.id || !cur.images.some((i) => i.id === img.id)) return
-
-    const name = deriveBlurredName(clean.name)
-    const file = new File([blob], name, { type: 'image/png' })
-    const objectUrl = URL.createObjectURL(file)
-    const redacted: SourceImage = { id: img.id, name, file, width, height, objectUrl, bytes: file.size }
+    if (cur.selectedId !== img.id || !cur.images.some((i) => i.id === img.id)) {
+      URL.revokeObjectURL(redacted.objectUrl)
+      return
+    }
 
     // Revoke the previous redaction's URL (but never the clean original — it's
     // held for undo). On first apply the outgoing entry IS the clean original.
