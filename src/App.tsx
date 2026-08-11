@@ -55,14 +55,25 @@ export default function App() {
       if (!files || files.length === 0) return
       await addFiles(files)
     }
+    // ⚠️ The landing page's drop circle stops the drop, so the same file is not
+    // added twice — which also stops the handler above from ever clearing this
+    // overlay, stranding it over the editor that just opened. Capture runs
+    // before anything in the page and cannot be suppressed, so the reset lives
+    // here on its own and the counting handlers stay in the bubble phase.
+    function onDropCapture() {
+      dragCounter.current = 0
+      setDragOver(false)
+    }
     window.addEventListener('dragenter', onEnter)
     window.addEventListener('dragover', onOver)
     window.addEventListener('dragleave', onLeave)
+    window.addEventListener('drop', onDropCapture, true)
     window.addEventListener('drop', onDrop)
     return () => {
       window.removeEventListener('dragenter', onEnter)
       window.removeEventListener('dragover', onOver)
       window.removeEventListener('dragleave', onLeave)
+      window.removeEventListener('drop', onDropCapture, true)
       window.removeEventListener('drop', onDrop)
     }
   }, [addFiles])
