@@ -1,7 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#0f172a"/>
-  <rect x="12" y="14" width="40" height="32" rx="3" fill="#fff"/>
-  <circle cx="22" cy="24" r="3" fill="#e05504"/>
+<!-- GENERATED FILE — do not edit by hand.
+     Source: backoffice/universal-platform/scripts/app-marks/marks.mjs
+     Regenerate: node scripts/app-marks/build.mjs (from backoffice/universal-platform)
+     Mark: Universal Images — A photo: a sun over hills. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Universal Images">
+  <rect x="0" y="0" width="64" height="64" rx="14" fill="#0f172a"/>
+  <rect x="12" y="14" width="40" height="32" rx="3" fill="#ffffff"/>
+  <circle cx="22" cy="24" r="3.4" fill="#e05504"/>
   <path d="M14 42l10-12 8 8 6-6 12 10v4H14z" fill="#e05504"/>
-  <path d="M14 42l10-12 8 8 6-6 12 10v4H14z" fill="#c2410c" opacity="0.4"/>
 </svg>

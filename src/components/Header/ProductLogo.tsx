@@ -1,25 +1,37 @@
-// Universal Images brand icon — icon-only by design. The SDK's
-// UniversalAppsNavBar renders the product name from the catalogue beside this
-// slot, and wraps logo+name in a single home-link when App.tsx passes
-// productHomeHref. So no anchor, no wordmark, just the icon.
+// GENERATED FILE — do not edit by hand.
+// Source: backoffice/universal-platform/scripts/app-marks/marks.mjs
+// Regenerate: node scripts/app-marks/build.mjs (from backoffice/universal-platform)
+// Mark: Universal Images — A photo: a sun over hills.
+// Hover: The sun rises clear of the hills.
+//
+// Icon-only by design: the SDK's UniversalAppsNavBar renders the product name
+// from its catalogue beside this slot, so a wordmark here would print it twice.
+
+const CSS = `
+  /* Resting states */
+  .uam-images-sun { transform: translateY(7px); opacity: 0.35; transition: transform .55s cubic-bezier(0.16,1,0.3,1), opacity .5s ease; }
+
+  /* Active states */
+  .uam-host-images:hover .uam-images-sun,
+  .uam-host-images:focus-visible .uam-images-sun { transform: translateY(0); opacity: 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .uam-images-sun { transition: none !important; }
+  }
+`
+
 export default function ProductLogo() {
   return (
     <span
-      className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-emerald-600 text-white"
+      className="uam-host-images inline-flex h-6 w-6 shrink-0 items-center justify-center"
       aria-hidden="true"
     >
-      <svg
-        viewBox="0 0 16 16"
-        className="w-4 h-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="1.5" y="2.75" width="13" height="10.5" rx="1.5" />
-        <circle cx="5" cy="6" r="1.1" fill="currentColor" stroke="none" />
-        <path d="M2.5 11 L5.5 7.8 L8 9.8 L10.5 7 L13.5 10.2" />
+      <style>{CSS}</style>
+      <svg viewBox="0 0 64 64" className="h-6 w-6" aria-hidden="true">
+        <rect x="0" y="0" width="64" height="64" rx="14" fill="#0f172a" />
+        <rect x={12} y={14} width={40} height={32} rx={3} fill="#ffffff" />
+        <circle cx={22} cy={24} r={3.4} fill="#e05504" className="uam-images-sun" />
+        <path d="M14 42l10-12 8 8 6-6 12 10v4H14z" fill="#e05504" />
       </svg>
     </span>
   )
