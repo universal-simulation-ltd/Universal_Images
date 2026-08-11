@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
+import { useFileDrop } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import ImageIllustration from './ImageIllustration'
 import { CONTAINER } from '../../lib/layout'
 
 export default function LandingPage() {
-  const inputRef = useRef<HTMLInputElement>(null)
   // Set when the user arrives via "Convert" — the next picked files open the
   // editor with the Format & quality section expanded + highlighted.
   const convertIntentRef = useRef(false)
@@ -12,19 +12,23 @@ export default function LandingPage() {
   const setConvertMode = useImageStore((s) => s.setConvertMode)
   const [loadingExample, setLoadingExample] = useState(false)
 
-  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files
-    if (files && files.length > 0) {
+  // The picker mechanics come from the SDK (shared with Compress, Converter and
+  // the rest), so re-picking the same file still fires. `clickToBrowse` is off
+  // because the two buttons below open it themselves — with different intent —
+  // and dropping anywhere on the page is already handled in App.tsx.
+  const picker = useFileDrop({
+    onFiles: async (files) => {
       setConvertMode(convertIntentRef.current)
+      convertIntentRef.current = false
       await addFiles(files)
-    }
-    convertIntentRef.current = false
-    e.target.value = ''
-  }
+    },
+    accept: 'image/*,.heic,.heif,.svg',
+    clickToBrowse: false,
+  })
 
   function openPicker(convert: boolean) {
     convertIntentRef.current = convert
-    inputRef.current?.click()
+    picker.open()
   }
 
   async function loadExample() {
@@ -84,14 +88,7 @@ export default function LandingPage() {
                     →
                   </span>
                 </button>
-                <input
-                  ref={inputRef}
-                  type="file"
-                  accept="image/*,.heic,.heif,.svg"
-                  multiple
-                  hidden
-                  onChange={onPick}
-                />
+                <input {...picker.inputProps} hidden />
 
                 <button
                   type="button"

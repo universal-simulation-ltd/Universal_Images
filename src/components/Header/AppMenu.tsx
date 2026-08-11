@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useFileDrop } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 
 // The per-app actions that slot into <UniversalAppsNavBar />'s `actions` prop —
@@ -24,29 +24,23 @@ export default function AppMenu() {
   // being able to ask, and a clean answer is a useful one.
   const selectedMeta = selectedId ? metadataMap[selectedId] ?? null : null
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files
-    if (files && files.length > 0) await addFiles(files)
-    e.target.value = ''
-  }
+  // A menu row, not a drop target — only the input and `open()` are used. The
+  // SDK owns the mechanics so this picker behaves like every other one in the
+  // suite, re-picking the same file included.
+  const picker = useFileDrop({
+    onFiles: addFiles,
+    accept: 'image/*,.heic,.heif',
+    clickToBrowse: false,
+  })
 
   return (
     <>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,.heic,.heif"
-        multiple
-        hidden
-        onChange={onPick}
-      />
+      <input {...picker.inputProps} hidden />
 
       <MenuRow
         icon="🖼"
         tint={TINTS.add}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={picker.open}
         label={hasImages ? 'Add more images…' : 'Open images…'}
       />
 
