@@ -167,7 +167,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
           <button
             type="button"
             onClick={onShowGrid}
-            className="md:hidden inline-flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+            className="md:hidden inline-flex items-center gap-2 px-4 py-2.5 bg-orange-700 hover:bg-orange-800 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
           >
             Open an image
           </button>
@@ -1159,7 +1159,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 type="button"
                 onClick={exportSelected}
                 disabled={exporting}
-                className="flex-1 h-10 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium shadow-sm disabled:opacity-60 disabled:cursor-wait transition-colors"
+                className="flex-1 h-10 rounded-lg bg-orange-700 hover:bg-orange-800 text-white font-medium shadow-sm disabled:opacity-60 disabled:cursor-wait transition-colors"
               >
                 {exporting ? 'Exporting…' : `Download ${target.width}×${target.height}`}
               </button>
@@ -1433,7 +1433,7 @@ function PreviewArea({
               <span
                 className={[
                   'text-[11px] font-medium tabular-nums px-2 py-1 rounded-md',
-                  pct >= 100 ? 'bg-orange-600 text-white' : 'bg-slate-900/85 text-white'
+                  pct >= 100 ? 'bg-orange-700 text-white' : 'bg-slate-900/85 text-white'
                 ].join(' ')}
                 title={pct >= 100 ? 'Showing at actual pixel size' : 'Scaled to fit the preview area'}
               >

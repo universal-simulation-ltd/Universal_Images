@@ -271,7 +271,7 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
             onClick={() => { if (crop.width >= MIN && crop.height >= MIN) setCommitted(true) }}
             title="Apply crop (Enter)"
             aria-label="Apply crop"
-            className="absolute w-7 h-7 rounded-full bg-orange-600 text-white hover:bg-orange-700 shadow-md ring-1 ring-orange-700/40 flex items-center justify-center"
+            className="absolute w-7 h-7 rounded-full bg-orange-700 text-white hover:bg-orange-800 shadow-md ring-1 ring-orange-700/40 flex items-center justify-center"
             style={{ left: render.left + render.width - 48, top: render.top - 14 }}
           >
             <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
