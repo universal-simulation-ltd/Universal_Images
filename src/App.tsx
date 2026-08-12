@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { DropAnywhere, UniversalAppsNavBar, useFileDrop } from '@unisim/sdk'
+import { DropAnywhere, UniversalAppsNavBar, UpdateNotice, useFileDrop } from '@unisim/sdk'
 import AppMenu from './components/Header/AppMenu'
 import ProductLogo from './components/Header/ProductLogo'
 import LandingPage from './components/Landing/LandingPage'
@@ -73,6 +73,13 @@ export default function App() {
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
         contentClassName={hasImages ? EDITOR_CONTAINER : CONTAINER}
       />
+
+      {/* Renders nothing until this tab is genuinely running superseded code.
+          See the SDK's useAppUpdate: an autoUpdate PWA hands the new worker
+          control but leaves the running page on its old JavaScript. */}
+      <div className={`${hasImages ? EDITOR_CONTAINER : CONTAINER} pt-4`}>
+        <UpdateNotice />
+      </div>
 
       <main className="flex-1 min-h-0 flex relative">
         {loading && !hasImages ? (
