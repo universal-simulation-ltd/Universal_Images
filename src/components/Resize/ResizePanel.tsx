@@ -629,7 +629,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                       ))}
                     </div>
                     {autoCropping && (
-                      <p className="mt-2 text-[11px] text-orange-600">Scanning for whitespace…</p>
+                      <p className="mt-2 text-[11px] text-orange-700">Scanning for whitespace…</p>
                     )}
                   </div>
                 )}

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { UniversalAppsNavBar } from '@unisim/sdk'
+import { useEffect, useState } from 'react'
+import { DropAnywhere, UniversalAppsNavBar, useFileDrop } from '@unisim/sdk'
 import AppMenu from './components/Header/AppMenu'
 import ProductLogo from './components/Header/ProductLogo'
 import LandingPage from './components/Landing/LandingPage'
@@ -21,9 +21,6 @@ export default function App() {
   const setMetadataOpen = useImageStore((s) => s.setMetadataOpen)
   const clearAll = useImageStore((s) => s.clearAll)
 
-  const [dragOver, setDragOver] = useState(false)
-  const dragCounter = useRef(0)
-
   // Mobile image-picker overlay — hidden by default; shown when user taps the grid button.
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const hasImages = images.length > 0
@@ -31,52 +28,29 @@ export default function App() {
     if (!hasImages) setMobileSidebarOpen(false)
   }, [hasImages])
 
-  useEffect(() => {
-    function onEnter(e: DragEvent) {
-      if (!e.dataTransfer?.types.includes('Files')) return
-      e.preventDefault()
-      dragCounter.current++
-      setDragOver(true)
-    }
-    function onOver(e: DragEvent) {
-      if (!e.dataTransfer?.types.includes('Files')) return
-      e.preventDefault()
-    }
-    function onLeave(e: DragEvent) {
-      e.preventDefault()
-      dragCounter.current = Math.max(0, dragCounter.current - 1)
-      if (dragCounter.current === 0) setDragOver(false)
-    }
-    async function onDrop(e: DragEvent) {
-      e.preventDefault()
-      dragCounter.current = 0
-      setDragOver(false)
-      const files = e.dataTransfer?.files
-      if (!files || files.length === 0) return
-      await addFiles(files)
-    }
-    // ⚠️ The landing page's drop circle stops the drop, so the same file is not
-    // added twice — which also stops the handler above from ever clearing this
-    // overlay, stranding it over the editor that just opened. Capture runs
-    // before anything in the page and cannot be suppressed, so the reset lives
-    // here on its own and the counting handlers stay in the bubble phase.
-    function onDropCapture() {
-      dragCounter.current = 0
-      setDragOver(false)
-    }
-    window.addEventListener('dragenter', onEnter)
-    window.addEventListener('dragover', onOver)
-    window.addEventListener('dragleave', onLeave)
-    window.addEventListener('drop', onDropCapture, true)
-    window.addEventListener('drop', onDrop)
-    return () => {
-      window.removeEventListener('dragenter', onEnter)
-      window.removeEventListener('dragover', onOver)
-      window.removeEventListener('dragleave', onLeave)
-      window.removeEventListener('drop', onDropCapture, true)
-      window.removeEventListener('drop', onDrop)
-    }
-  }, [addFiles])
+  // Drop images anywhere on the page and they are added — the SDK's `pageWide`,
+  // not the hand-rolled `window` listener this used to be. That copy predated the
+  // hook and paid its whole cost: a depth counter, a bubble-phase drop handler,
+  // and a SECOND capture-phase one whose only job was to clear the overlay after
+  // the landing circle stopped the event so one file was not added twice. All
+  // three now live once, in `useFileDrop`, which skips any drop that landed
+  // inside a `data-unisim-dropzone` rather than asking the zone to stop it.
+  //
+  // This one covers the EDITOR only. The landing page runs its own page-wide zone
+  // around the drop circle, and `disabled` hands the page to it — the hook picks
+  // the last-mounted zone that isn't disabled, and the landing page mounts inside
+  // this component.
+  const pageDrop = useFileDrop({
+    onFiles: addFiles,
+    clickToBrowse: false,
+    pageWide: true,
+    disabled: !hasImages,
+  })
+  // ⚠️ `pageOver` goes true for any page drag whether or not this zone is
+  // disabled — the hook lights every page-wide zone and only checks `disabled`
+  // when deciding who TAKES the file. Promising a drop that will not be taken is
+  // a lie, so the hint is gated on the same condition.
+  const showDropHint = pageDrop.pageOver && hasImages
 
   return (
     <div className="flex flex-col h-full bg-slate-100">
@@ -141,7 +115,7 @@ export default function App() {
                 href="https://www.unisim.co.uk"
                 target="_blank"
                 rel="noreferrer"
-                className="text-slate-700 hover:text-orange-600 underline-offset-2 hover:underline"
+                className="text-slate-700 hover:text-orange-700 underline-offset-2 hover:underline"
               >
                 UNI SIM
               </a>
@@ -163,18 +137,15 @@ export default function App() {
         </footer>
       )}
 
-      {dragOver && (
-        <div className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center bg-orange-600/20">
-          <div className="absolute inset-4 border-4 border-dashed border-orange-500 rounded-2xl" />
-          <div className="bg-white shadow-xl rounded-xl px-6 py-5 flex items-center gap-3">
-            <div className="text-3xl">🖼</div>
-            <div>
-              <div className="font-semibold text-slate-900">Drop to add</div>
-              <div className="text-xs text-slate-500">JPEG, PNG, WebP, HEIC, GIF</div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* The suite's shared page-wide hint, replacing a per-app overlay. Same
+          sentence, same orange, but now identical to the one Compress, PDF,
+          Video and Signatures show. */}
+      <DropAnywhere
+        show={showDropHint}
+        title="Drop to add"
+        hint="JPEG, PNG, WebP, HEIC, GIF"
+        icon={<span aria-hidden="true">🖼</span>}
+      />
 
       <HostedStoreDialog />
       {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}

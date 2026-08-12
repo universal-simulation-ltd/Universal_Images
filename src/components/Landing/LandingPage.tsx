@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { DropRing, useFileDrop } from '@unisim/sdk'
+import { useEffect, useRef, useState } from 'react'
+import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import ImageIllustration from './ImageIllustration'
 import { CONTAINER } from '../../lib/layout'
@@ -16,6 +16,12 @@ export default function LandingPage() {
   // the rest), so re-picking the same file still fires. The circle itself is the
   // click target; the two buttons below open the same picker with a different
   // intent through `openPicker`.
+  //
+  // `pageWide`: the circle is where to aim, not where you have to land. It
+  // replaces the `window` listener App.tsx used to keep for this, and with it the
+  // stopPropagation wrappers this zone needed to stop that listener adding the
+  // same files a second time — the hook skips any drop that landed inside a
+  // `data-unisim-dropzone`, which this is.
   const picker = useFileDrop({
     onFiles: async (files) => {
       setConvertMode(convertIntentRef.current)
@@ -23,6 +29,7 @@ export default function LandingPage() {
       await addFiles(files)
     },
     accept: 'image/*,.heic,.heif,.svg',
+    pageWide: true,
     label: 'Drop images here, or click to browse',
   })
 
@@ -39,6 +46,14 @@ export default function LandingPage() {
   function clearConvertIntent() {
     convertIntentRef.current = false
   }
+
+  // A drop is always a plain open, and since `pageWide` the drop no longer has to
+  // land on the circle to happen — so the intent is cleared the moment a file
+  // drag enters the PAGE rather than on the zone's own drop handler, which a
+  // dropped-in-the-margin file never reaches.
+  useEffect(() => {
+    if (picker.over) clearConvertIntent()
+  }, [picker.over])
 
   async function loadExample() {
     if (loadingExample) return
@@ -88,20 +103,15 @@ export default function LandingPage() {
                     runs on this page, and a busy chase on an empty page reads as
                     "still loading".
 
-                    ⚠️ The drag handlers stop the event. App.tsx also watches
-                    `window` so images can land anywhere on the page, and without
-                    this every dropped file would go through `addFiles` twice.
-                    Stopping enter/leave as well keeps that listener's depth
-                    counter balanced — its full-screen overlay steps aside while
-                    the circle holds the drag and the circle's own highlight
-                    takes over — and its capture-phase reset clears the overlay
-                    on a drop this one swallows. */}
+                    The drag handlers used to stop the event so App.tsx's own
+                    `window` listener would not put the same files through
+                    `addFiles` twice. That listener is gone — this zone is
+                    `pageWide` now, and the hook recognises its own zones by the
+                    `data-unisim-dropzone` marker it spreads on, so a drop that
+                    lands here is never picked up a second time. */}
                 <div className="flex flex-col items-center">
                   <div
                     {...picker.dropzoneProps}
-                    onDragEnter={(e) => { e.stopPropagation(); picker.dropzoneProps.onDragEnter(e) }}
-                    onDragLeave={(e) => { e.stopPropagation(); picker.dropzoneProps.onDragLeave(e) }}
-                    onDrop={(e) => { e.stopPropagation(); clearConvertIntent(); picker.dropzoneProps.onDrop(e) }}
                     onClick={() => { clearConvertIntent(); picker.dropzoneProps.onClick?.() }}
                     onKeyDown={(e) => { clearConvertIntent(); picker.dropzoneProps.onKeyDown?.(e) }}
                     className={`relative w-full max-w-[260px] cursor-pointer rounded-full transition-transform focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-600 ${
@@ -163,18 +173,27 @@ export default function LandingPage() {
                 </button>
 
                 <ul className="mt-5 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                  <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> JPEG, PNG, WebP, HEIC</li>
-                  <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> S / M / L presets</li>
-                  <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> Custom width × height</li>
-                  <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> Aspect-ratio locked</li>
-                  <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> Remove background (AI)</li>
-                  <li className="flex items-center gap-2"><span className="text-orange-600">✓</span> Batch ZIP export</li>
+                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> JPEG, PNG, WebP, HEIC</li>
+                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> S / M / L presets</li>
+                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Custom width × height</li>
+                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Aspect-ratio locked</li>
+                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Remove background (AI)</li>
+                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Batch ZIP export</li>
                 </ul>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* The other half of `pageWide` — the circle lights up wherever the drag
+          is, and this says why, in the margin where the pointer actually is. */}
+      <DropAnywhere
+        show={picker.pageOver}
+        title="Drop to open"
+        hint="JPEG, PNG, WebP, HEIC, GIF — anywhere on this page will do"
+        icon={<span aria-hidden="true">🖼</span>}
+      />
     </div>
   )
 }

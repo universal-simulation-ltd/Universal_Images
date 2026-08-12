@@ -33,7 +33,7 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
             <button
               type="button"
               onClick={onBack}
-              className="text-xs font-semibold text-orange-600 hover:text-orange-700 px-2 py-1 rounded-md hover:bg-orange-50 transition-colors"
+              className="text-xs font-semibold text-orange-700 hover:text-orange-800 px-2 py-1 rounded-md hover:bg-orange-50 transition-colors"
             >
               Done
             </button>
