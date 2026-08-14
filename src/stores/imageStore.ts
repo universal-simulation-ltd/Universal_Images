@@ -196,6 +196,12 @@ interface ImageStore {
   autoCrop: (mode: AutoCropMode) => Promise<void>
   /** True while `autoCrop` is decoding + scanning the image. */
   autoCropping: boolean
+  /**
+   * Why the last `autoCrop` left the crop untouched (e.g. the image has no
+   * blank border to trim), or null when it did trim. Shown in the panel so a
+   * no-op never looks like a broken button. Cleared by any other crop change.
+   */
+  autoCropNote: string | null
   /** Forget the free-form crop — the whole image exports again. */
   clearCrop: () => void
   /**
@@ -330,6 +336,18 @@ function clampCrop(
   return { x, y, width, height }
 }
 
+/**
+ * True when a detected content box effectively fills the region it was scanned
+ * in — within 1% on both axes. Trimming to it would return the same rectangle,
+ * which is Autocrop appearing to do nothing.
+ */
+function fillsRegion(bounds: SourceCrop, region: SourceCrop): boolean {
+  return (
+    bounds.width >= region.width * 0.99 &&
+    bounds.height >= region.height * 0.99
+  )
+}
+
 // Filenames like 'photo.heic' have no MIME type in some browsers, so we accept
 // any file that *looks* like an image by name even when File.type is empty.
 const NAME_IMAGE_RE = /\.(jpe?g|png|webp|gif|bmp|tiff?|avif|heic|heif|svg)$/i
@@ -350,6 +368,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   crop: null,
   socialCrop: null,
   autoCropping: false,
+  autoCropNote: null,
   removingBg: false,
   bgProgress: 0,
   bgOriginal: null,
@@ -487,6 +506,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       target: saved?.target ?? makeDefaultTarget(img),
       crop: saved?.crop ?? null,
       socialCrop: saved?.socialCrop ?? null,
+      autoCropNote: null,
       bgFill: saved?.bgFill ?? null,
       bgOriginal: saved?.bgOriginal ?? null,
       bgCutout: saved?.bgCutout ?? null,
@@ -548,7 +568,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
 
     const remaining = cur.images.filter((i) => i.id !== id)
     if (remaining.length === 0) {
-      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, bgFill: null, bgOriginal: null, bgCutout: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false })
+      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, bgFill: null, bgOriginal: null, bgCutout: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false })
       return
     }
     if (cur.selectedId === id) {
@@ -563,6 +583,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         target: saved?.target ?? makeDefaultTarget(next),
         crop: saved?.crop ?? null,
         socialCrop: saved?.socialCrop ?? null,
+        autoCropNote: null,
         bgFill: saved?.bgFill ?? null,
         bgOriginal: saved?.bgOriginal ?? null,
         bgCutout: saved?.bgCutout ?? null,
@@ -581,7 +602,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     if (cur.bgCutout) URL.revokeObjectURL(cur.bgCutout.objectUrl)
     if (cur.faceOriginal) URL.revokeObjectURL(cur.faceOriginal.objectUrl)
     for (const e of Object.values(cur.edits)) revokeEditUrls(e)
-    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false })
+    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false })
   },
 
   setTarget(partial) {
@@ -610,14 +631,14 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     if (!rect) {
       // Removing the crop reverts the export target to the image's original
       // size (format/quality/lock are kept — only the dimensions revert).
-      set({ crop: null, target: target ? { ...target, width: img.width, height: img.height } : target })
+      set({ crop: null, autoCropNote: null, target: target ? { ...target, width: img.width, height: img.height } : target })
       return
     }
     const c = clampCrop(rect, img.width, img.height)
     // Keep the output target matched to the crop's native size so a crop never
     // squishes on export. Picking an S/M/L preset afterwards rescales from here;
     // moving the crop (same size) leaves the target untouched.
-    const next: Partial<ImageStore> = { crop: c, socialCrop: null }
+    const next: Partial<ImageStore> = { crop: c, socialCrop: null, autoCropNote: null }
     if (target && (target.width !== c.width || target.height !== c.height)) {
       next.target = { ...target, width: c.width, height: c.height }
     }
@@ -634,6 +655,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     set({
       crop: c,
       socialCrop: null,
+      autoCropNote: null,
       target: target ? { ...target, width: c.width, height: c.height } : target
     })
   },
@@ -643,15 +665,37 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     if (autoCropping) return
     const img = images.find((i) => i.id === selectedId)
     if (!img) return
-    set({ autoCropping: true })
+    set({ autoCropping: true, autoCropNote: null })
     try {
       const { image, objectUrl } = await loadImage(img.file)
       try {
+        const full: SourceCrop = { x: 0, y: 0, width: img.width, height: img.height }
         // When a crop is already active, trim WITHIN it (scan + size relative to
         // the crop) rather than across the whole image. Otherwise use the whole
         // image as the region.
-        const region: SourceCrop = crop ?? { x: 0, y: 0, width: img.width, height: img.height }
-        const bounds = computeContentBounds(image, 24, crop ?? undefined) ?? region
+        let region: SourceCrop = crop ?? full
+        let bounds = computeContentBounds(image, 24, crop ?? undefined)
+
+        // Scanning inside the crop found nothing, or found content filling it
+        // edge to edge — trimming there would hand back the same rectangle and
+        // read as "Autocrop did nothing". Widen the search to the whole image so
+        // the subject is still found when the crop was drawn through it (or left
+        // over from an earlier edit).
+        if (crop && (!bounds || fillsRegion(bounds, region))) {
+          const wide = computeContentBounds(image, 24, undefined)
+          if (wide && !fillsRegion(wide, full)) {
+            bounds = wide
+            region = full
+          }
+        }
+
+        // Nothing stands out from the background anywhere — leave the user's
+        // crop alone rather than replacing it with an arbitrary rectangle.
+        if (!bounds || fillsRegion(bounds, region)) {
+          set({ autoCropNote: 'Nothing to trim — no blank border found.' })
+          return
+        }
+
         const rect = contentCropForMode(bounds, mode, region)
         const c = clampCrop(rect, img.width, img.height)
         set({
@@ -664,6 +708,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       }
     } catch (err) {
       console.error('Autocrop failed', err)
+      set({ autoCropNote: 'Autocrop could not read this image.' })
     } finally {
       set({ autoCropping: false })
     }
@@ -673,7 +718,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     // Match setCrop(null): reverting the crop restores the original export size.
     const { images, selectedId, target } = get()
     const img = images.find((i) => i.id === selectedId)
-    set({ crop: null, target: img && target ? { ...target, width: img.width, height: img.height } : target })
+    set({ crop: null, autoCropNote: null, target: img && target ? { ...target, width: img.width, height: img.height } : target })
   },
 
   applySocialPreset(width, height) {
@@ -684,6 +729,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     set({
       target: { ...target, width, height, aspectLocked: false },
       crop: null,
+      autoCropNote: null,
       socialCrop: crop
     })
   },
@@ -742,6 +788,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         bgCutout: null,
         target: t ? { ...t, format: 'image/png', allowTransparency: true } : t,
         crop: null,
+        autoCropNote: null,
         socialCrop: null,
         bgFill: null,
         // The cut-out is the un-blurred base for this background state — it's
@@ -802,6 +849,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
           target: after.target ? { ...after.target, format: 'image/png', allowTransparency: true } : after.target,
           // Crops referenced the old bitmap coordinates; clear them for clarity.
           crop: null,
+          autoCropNote: null,
           socialCrop: null,
           bgFill: null,
           // The cut-out is now the un-blurred base that "Remove blur" restores.
@@ -873,7 +921,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       target: isSelected && target ? makeDefaultTarget(bgOriginal) : target,
       // The restored original is the un-blurred base again, and the boxes are
       // kept so the strength/style controls keep driving the re-bake.
-      ...(isSelected ? { crop: null, socialCrop: null, bgFill: null, faceOriginal: shown === bgOriginal ? null : bgOriginal } : {})
+      ...(isSelected ? { crop: null, autoCropNote: null, socialCrop: null, bgFill: null, faceOriginal: shown === bgOriginal ? null : bgOriginal } : {})
     })
   },
 

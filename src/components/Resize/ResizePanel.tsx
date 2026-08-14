@@ -47,6 +47,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const addCenteredCrop = useImageStore((s) => s.addCenteredCrop)
   const autoCrop = useImageStore((s) => s.autoCrop)
   const autoCropping = useImageStore((s) => s.autoCropping)
+  const autoCropNote = useImageStore((s) => s.autoCropNote)
   const clearCrop = useImageStore((s) => s.clearCrop)
   const convertMode = useImageStore((s) => s.convertMode)
   const setConvertMode = useImageStore((s) => s.setConvertMode)
@@ -628,9 +629,13 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                         </button>
                       ))}
                     </div>
-                    {autoCropping && (
+                    {autoCropping ? (
                       <p className="mt-2 text-[11px] text-orange-700">Scanning for whitespace…</p>
-                    )}
+                    ) : autoCropNote ? (
+                      // Autocrop left the crop as it was — say so, or a no-op
+                      // reads as a broken button.
+                      <p className="mt-2 text-[11px] text-slate-500" role="status">{autoCropNote}</p>
+                    ) : null}
                   </div>
                 )}
 

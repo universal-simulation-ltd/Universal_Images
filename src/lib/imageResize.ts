@@ -391,20 +391,130 @@ export function computeCenteredCoverCrop(
 export type AutoCropMode = 'max' | 'square' | 'ratio'
 
 /**
+ * Alpha below this (0–255) counts as background. It is deliberately well above
+ * "barely visible": a matting model (background removal) leaves a wash of
+ * near-zero alpha where it was unsure — invisible against the checkerboard, but
+ * enough to pin the bounding box to the image edges if we treated any non-zero
+ * alpha as content. The subject's own core is opaque, and its anti-aliased rim
+ * climbs past this within a pixel or two.
+ */
+const ALPHA_CONTENT = 64
+/**
+ * Speck filter. A blob of content is ignored when it is tiny on BOTH axes —
+ * under this fraction of the scanned area's long edge — *and* holds under
+ * `SPECK_MASS` of all the content found. A mote of dust on a scan, a stray
+ * pixel the matting model left behind, a lone JPEG artefact: each is content by
+ * colour, and one of them in a corner would otherwise pin the bounding box to
+ * the image edge. Both tests must fail before a blob is dropped, so a small but
+ * lonely subject (a single icon on white) is still found, and anything with
+ * real extent — a hairline rule, a wire, an antenna — is never at risk.
+ */
+const SPECK_EXTENT = 0.005
+const SPECK_MASS = 0.005
+
+/** One connected blob of content: its bounding box and pixel count. */
+interface ContentBlob { x0: number; y0: number; x1: number; y1: number; n: number }
+
+/**
+ * Connected-component labelling over a binary mask, by horizontal runs: each
+ * row's runs are unioned with the runs above them that they touch (8-connected,
+ * so a diagonal still counts), and the roots are then reduced to one blob each.
+ *
+ * Runs rather than pixels because the mask is mostly solid areas — a row of a
+ * photo is a single run — and because a per-pixel flood fill over a 1400²
+ * scan spends seconds where this spends milliseconds.
+ */
+function labelRuns(mask: Uint8Array, sw: number, sh: number): ContentBlob[] {
+  // Parallel arrays indexed by run, grown geometrically.
+  let cap = 1024
+  let x0s = new Int32Array(cap)
+  let x1s = new Int32Array(cap)
+  let ys = new Int32Array(cap)
+  let parent = new Int32Array(cap)
+  let count = 0
+  const addRun = (x0: number, x1: number, y: number) => {
+    if (count === cap) {
+      cap *= 2
+      const grow = (a: Int32Array) => { const b = new Int32Array(cap); b.set(a); return b }
+      x0s = grow(x0s); x1s = grow(x1s); ys = grow(ys); parent = grow(parent)
+    }
+    x0s[count] = x0; x1s[count] = x1; ys[count] = y; parent[count] = count
+    return count++
+  }
+  const find = (a: number) => {
+    while (parent[a]! !== a) { parent[a] = parent[parent[a]!]!; a = parent[a]! }
+    return a
+  }
+  const union = (a: number, b: number) => {
+    const ra = find(a), rb = find(b)
+    if (ra !== rb) parent[rb > ra ? rb : ra] = rb > ra ? ra : rb
+  }
+
+  let prevStart = 0
+  let prevEnd = 0
+  for (let y = 0; y < sh; y++) {
+    const rowStart = count
+    const base = y * sw
+    let x = 0
+    while (x < sw) {
+      if (!mask[base + x]) { x++; continue }
+      const start = x
+      while (x < sw && mask[base + x]) x++
+      addRun(start, x - 1, y)
+    }
+    // Both rows' runs are sorted and disjoint, so one merge walk links them.
+    let p = prevStart
+    for (let r = rowStart; r < count; r++) {
+      while (p < prevEnd && x1s[p]! < x0s[r]! - 1) p++
+      for (let q = p; q < prevEnd && x0s[q]! <= x1s[r]! + 1; q++) union(r, q)
+    }
+    prevStart = rowStart
+    prevEnd = count
+  }
+
+  // Reduce the runs onto their roots.
+  const byRoot = new Map<number, ContentBlob>()
+  for (let r = 0; r < count; r++) {
+    const root = find(r)
+    const x0 = x0s[r]!, x1 = x1s[r]!, y = ys[r]!
+    const b = byRoot.get(root)
+    if (!b) {
+      byRoot.set(root, { x0, y0: y, x1, y1: y, n: x1 - x0 + 1 })
+    } else {
+      if (x0 < b.x0) b.x0 = x0
+      if (x1 > b.x1) b.x1 = x1
+      if (y < b.y0) b.y0 = y
+      if (y > b.y1) b.y1 = y
+      b.n += x1 - x0 + 1
+    }
+  }
+  return [...byRoot.values()]
+}
+
+/**
  * Find the tight bounding box of the image's real content by trimming uniform
  * (near-solid-colour or transparent) borders — the "whitespace" around a logo,
- * scan, or screenshot. The background colour is sampled from the four corners,
- * so a photo on a black card trims just as well as a logo on white.
+ * scan, or screenshot.
  *
- * Returns the box in source-pixel space, or `null` when the whole image is a
- * single flat colour (nothing to trim) — callers should fall back to the full
- * image in that case.
+ * Two ways of telling content from background, picked per scan:
+ *   - **Alpha** when the scanned area is meaningfully transparent (a cut-out
+ *     from background removal). The alpha channel already *is* the answer, and
+ *     it stays right when the subject is dark or reaches the edge — colour
+ *     sampling would call a black subject "background", since the pixels under
+ *     transparency read as black.
+ *   - **Colour** otherwise: the background is the median of the scanned area's
+ *     border pixels, so a photo on a black card trims like a logo on white. A
+ *     median (not the four corners) survives a subject that touches an edge.
+ *
+ * Returns the box in source-pixel space, or `null` when nothing stands out from
+ * the background (a flat colour, or a crop drawn wholly inside the subject) —
+ * callers decide what to fall back to.
  */
 export function computeContentBounds(
   image: HTMLImageElement,
   tolerance = 24,
   // When given, only this sub-rectangle (source pixels) is scanned and the
-  // background colour is sampled from ITS corners — so Autocrop trims whitespace
+  // background is sampled from ITS border — so Autocrop trims whitespace
   // *inside the current crop* rather than across the whole image. Returned bounds
   // are still in full-image space.
   region?: SourceCrop
@@ -443,47 +553,65 @@ export function computeContentBounds(
     return null
   }
 
-  // Background = average of the four corner pixels. Robust to a logo that
-  // happens to touch one edge.
-  const corners = [
-    0,
-    (sw - 1) * 4,
-    (sh - 1) * sw * 4,
-    ((sh - 1) * sw + (sw - 1)) * 4
-  ]
+  // A cut-out is defined by its alpha channel; anything else by its colour
+  // against the border. One transparent pixel in fifty is enough to call it a
+  // cut-out — a JPEG or a flattened PNG has none at all.
+  let transparent = 0
+  for (let i = 3; i < data.length; i += 4) if (data[i]! < ALPHA_CONTENT) transparent++
+  const byAlpha = transparent > (sw * sh) / 50
+
+  // Background colour = per-channel median of the scanned area's border pixels.
   let bgR = 0, bgG = 0, bgB = 0
-  for (const c of corners) {
-    bgR += data[c]!
-    bgG += data[c + 1]!
-    bgB += data[c + 2]!
+  if (!byAlpha) {
+    const edge: number[] = []
+    for (let x = 0; x < sw; x++) { edge.push((x) * 4); edge.push(((sh - 1) * sw + x) * 4) }
+    for (let y = 0; y < sh; y++) { edge.push((y * sw) * 4); edge.push((y * sw + sw - 1) * 4) }
+    const chan = (o: number) => {
+      const vals = edge.map((i) => data[i + o]!).sort((a, b) => a - b)
+      return vals[vals.length >> 1]!
+    }
+    bgR = chan(0); bgG = chan(1); bgB = chan(2)
   }
-  bgR /= 4; bgG /= 4; bgB /= 4
   const tol2 = 3 * tolerance * tolerance
 
-  let minX = sw, minY = sh, maxX = -1, maxY = -1
-  for (let y = 0; y < sh; y++) {
-    for (let x = 0; x < sw; x++) {
-      const i = (y * sw + x) * 4
-      const a = data[i + 3]!
-      let isContent: boolean
-      if (a < 16) {
-        isContent = false // transparent → background
-      } else {
-        const dr = data[i]! - bgR
-        const dg = data[i + 1]! - bgG
-        const db = data[i + 2]! - bgB
-        isContent = dr * dr + dg * dg + db * db > tol2
-      }
-      if (isContent) {
-        if (x < minX) minX = x
-        if (x > maxX) maxX = x
-        if (y < minY) minY = y
-        if (y > maxY) maxY = y
-      }
+  // Mark every pixel that differs from the background.
+  const mask = new Uint8Array(sw * sh)
+  let total = 0
+  for (let p = 0, i = 0; p < mask.length; p++, i += 4) {
+    let content = data[i + 3]! >= ALPHA_CONTENT // transparent → background
+    if (content && !byAlpha) {
+      const dr = data[i]! - bgR
+      const dg = data[i + 1]! - bgG
+      const db = data[i + 2]! - bgB
+      content = dr * dr + dg * dg + db * db > tol2
     }
+    if (content) { mask[p] = 1; total++ }
   }
+  if (total === 0) return null // flat colour, or a region inside the subject
 
-  if (maxX < minX || maxY < minY) return null // flat colour — nothing to trim
+  // Group the marked pixels into blobs so a speck can be judged by its own size
+  // rather than by the pixel it happens to sit on. Connected components are
+  // labelled a row at a time — each row's horizontal runs are merged with the
+  // overlapping runs above them (8-connected) — which costs one pass per row of
+  // runs rather than a per-pixel flood fill.
+  const blobs = labelRuns(mask, sw, sh)
+
+  // Ignore the specks. If every blob looks like one, the image is made of
+  // specks — keep them all rather than reporting nothing.
+  const maxSpeck = Math.max(2, Math.round(SPECK_EXTENT * Math.max(sw, sh)))
+  const maxSpeckMass = total * SPECK_MASS
+  const isSpeck = (b: ContentBlob) =>
+    b.x1 - b.x0 + 1 <= maxSpeck && b.y1 - b.y0 + 1 <= maxSpeck && b.n <= maxSpeckMass
+  const kept = blobs.some((b) => !isSpeck(b)) ? blobs.filter((b) => !isSpeck(b)) : blobs
+
+  let minX = sw, minY = sh, maxX = -1, maxY = -1
+  for (const b of kept) {
+    if (b.x0 < minX) minX = b.x0
+    if (b.x1 > maxX) maxX = b.x1
+    if (b.y0 < minY) minY = b.y0
+    if (b.y1 > maxY) maxY = b.y1
+  }
+  if (maxX < minX || maxY < minY) return null
 
   // Back to source space (offset by the scanned region's origin), growing the
   // box outward by the scan step so a 1px rounding never clips a hair of real
