@@ -47,6 +47,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const addCenteredCrop = useImageStore((s) => s.addCenteredCrop)
   const autoCrop = useImageStore((s) => s.autoCrop)
   const autoCropping = useImageStore((s) => s.autoCropping)
+  const autoCropNote = useImageStore((s) => s.autoCropNote)
   const clearCrop = useImageStore((s) => s.clearCrop)
   const convertMode = useImageStore((s) => s.convertMode)
   const setConvertMode = useImageStore((s) => s.setConvertMode)
@@ -608,7 +609,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 {autocropOpen && (
                   <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
                     <p className="text-[11px] text-slate-500 leading-snug mb-2">
-                      {crop ? 'Trim the blank border inside your crop.' : 'Trim the blank border around your image.'}
+                      {crop
+                        ? 'Find the subject in the whole image and crop to it, replacing your crop.'
+                        : 'Trim the blank border around your image.'}
                     </p>
                     <div className="grid grid-cols-3 gap-2">
                       {([
@@ -628,9 +631,13 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                         </button>
                       ))}
                     </div>
-                    {autoCropping && (
+                    {autoCropping ? (
                       <p className="mt-2 text-[11px] text-orange-700">Scanning for whitespace…</p>
-                    )}
+                    ) : autoCropNote ? (
+                      // Autocrop left the crop as it was — say so, or a no-op
+                      // reads as a broken button.
+                      <p className="mt-2 text-[11px] text-slate-500" role="status">{autoCropNote}</p>
+                    ) : null}
                   </div>
                 )}
 
