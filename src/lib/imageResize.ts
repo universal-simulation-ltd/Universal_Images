@@ -496,54 +496,45 @@ function labelRuns(mask: Uint8Array, sw: number, sh: number): ContentBlob[] {
  * (near-solid-colour or transparent) borders — the "whitespace" around a logo,
  * scan, or screenshot.
  *
+ * Always scans the whole image, never the current crop: Autocrop's job is to
+ * find the subject, and a crop drawn through it must not be able to hide part
+ * of it from the search.
+ *
  * Two ways of telling content from background, picked per scan:
- *   - **Alpha** when the scanned area is meaningfully transparent (a cut-out
- *     from background removal). The alpha channel already *is* the answer, and
- *     it stays right when the subject is dark or reaches the edge — colour
+ *   - **Alpha** when the image is meaningfully transparent (a cut-out from
+ *     background removal). The alpha channel already *is* the answer, and it
+ *     stays right when the subject is dark or reaches the edge — colour
  *     sampling would call a black subject "background", since the pixels under
  *     transparency read as black.
- *   - **Colour** otherwise: the background is the median of the scanned area's
- *     border pixels, so a photo on a black card trims like a logo on white. A
- *     median (not the four corners) survives a subject that touches an edge.
+ *   - **Colour** otherwise: the background is the median of the image's border
+ *     pixels, so a photo on a black card trims like a logo on white. A median
+ *     (not the four corners) survives a subject that touches an edge.
  *
  * Returns the box in source-pixel space, or `null` when nothing stands out from
- * the background (a flat colour, or a crop drawn wholly inside the subject) —
- * callers decide what to fall back to.
+ * the background (a flat colour) — callers decide what to fall back to.
  */
 export function computeContentBounds(
   image: HTMLImageElement,
-  tolerance = 24,
-  // When given, only this sub-rectangle (source pixels) is scanned and the
-  // background is sampled from ITS border — so Autocrop trims whitespace
-  // *inside the current crop* rather than across the whole image. Returned bounds
-  // are still in full-image space.
-  region?: SourceCrop
+  tolerance = 24
 ): SourceCrop | null {
   const iw = image.naturalWidth
   const ih = image.naturalHeight
   if (!iw || !ih) return null
 
-  // Source rectangle to scan — the region (clamped to the image) or the whole image.
-  const rx = region ? Math.max(0, Math.min(iw - 1, Math.floor(region.x))) : 0
-  const ry = region ? Math.max(0, Math.min(ih - 1, Math.floor(region.y))) : 0
-  const rw = region ? Math.max(1, Math.min(iw - rx, Math.round(region.width))) : iw
-  const rh = region ? Math.max(1, Math.min(ih - ry, Math.round(region.height))) : ih
-
   // Scan at a capped resolution — a tight bounding box doesn't need every pixel,
   // and reading a 40MP buffer would stall the main thread. Coordinates are
   // scaled back up to source space at the end.
   const MAX_SCAN = 1400
-  const scale = Math.min(1, MAX_SCAN / Math.max(rw, rh))
-  const sw = Math.max(1, Math.round(rw * scale))
-  const sh = Math.max(1, Math.round(rh * scale))
+  const scale = Math.min(1, MAX_SCAN / Math.max(iw, ih))
+  const sw = Math.max(1, Math.round(iw * scale))
+  const sh = Math.max(1, Math.round(ih * scale))
 
   const canvas = document.createElement('canvas')
   canvas.width = sw
   canvas.height = sh
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) return null
-  // Draw just the scanned region into the canvas.
-  ctx.drawImage(image, rx, ry, rw, rh, 0, 0, sw, sh)
+  ctx.drawImage(image, 0, 0, sw, sh)
 
   let data: Uint8ClampedArray
   try {
@@ -560,7 +551,7 @@ export function computeContentBounds(
   for (let i = 3; i < data.length; i += 4) if (data[i]! < ALPHA_CONTENT) transparent++
   const byAlpha = transparent > (sw * sh) / 50
 
-  // Background colour = per-channel median of the scanned area's border pixels.
+  // Background colour = per-channel median of the image's border pixels.
   let bgR = 0, bgG = 0, bgB = 0
   if (!byAlpha) {
     const edge: number[] = []
@@ -587,7 +578,7 @@ export function computeContentBounds(
     }
     if (content) { mask[p] = 1; total++ }
   }
-  if (total === 0) return null // flat colour, or a region inside the subject
+  if (total === 0) return null // flat colour — nothing to trim
 
   // Group the marked pixels into blobs so a speck can be judged by its own size
   // rather than by the pixel it happens to sit on. Connected components are
@@ -613,14 +604,13 @@ export function computeContentBounds(
   }
   if (maxX < minX || maxY < minY) return null
 
-  // Back to source space (offset by the scanned region's origin), growing the
-  // box outward by the scan step so a 1px rounding never clips a hair of real
-  // content.
+  // Back to source space, growing the box outward by the scan step so a 1px
+  // rounding never clips a hair of real content.
   const inv = 1 / scale
-  const x = Math.max(rx, rx + Math.floor(minX * inv))
-  const y = Math.max(ry, ry + Math.floor(minY * inv))
-  const right = Math.min(rx + rw, rx + Math.ceil((maxX + 1) * inv))
-  const bottom = Math.min(ry + rh, ry + Math.ceil((maxY + 1) * inv))
+  const x = Math.max(0, Math.floor(minX * inv))
+  const y = Math.max(0, Math.floor(minY * inv))
+  const right = Math.min(iw, Math.ceil((maxX + 1) * inv))
+  const bottom = Math.min(ih, Math.ceil((maxY + 1) * inv))
   return { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) }
 }
 
@@ -666,9 +656,9 @@ export function imageHasAlpha(image: HTMLImageElement, sampleMax = 256): boolean
 export function contentCropForMode(
   bounds: SourceCrop,
   mode: AutoCropMode,
-  // Bounding region the result is clamped to. Pass the whole image
-  // ({x:0,y:0,width:imgW,height:imgH}) for a full-image autocrop, or the current
-  // crop to trim within it. `square`/`ratio` are sized relative to this region.
+  // Bounding region the result is clamped to — the whole image
+  // ({x:0,y:0,width:imgW,height:imgH}). `square`/`ratio` are sized relative to
+  // it, so the aspect `ratio` keeps is the source's.
   region: SourceCrop
 ): SourceCrop {
   if (mode === 'max') {

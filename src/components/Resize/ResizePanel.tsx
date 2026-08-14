@@ -609,7 +609,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 {autocropOpen && (
                   <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
                     <p className="text-[11px] text-slate-500 leading-snug mb-2">
-                      {crop ? 'Trim the blank border inside your crop.' : 'Trim the blank border around your image.'}
+                      {crop
+                        ? 'Find the subject in the whole image and crop to it, replacing your crop.'
+                        : 'Trim the blank border around your image.'}
                     </p>
                     <div className="grid grid-cols-3 gap-2">
                       {([

@@ -192,6 +192,11 @@ interface ImageStore {
    * free-form crop. `max` gives the tightest box, `square` a centred 1:1, and
    * `ratio` keeps the source aspect. Async — it decodes the image to inspect
    * its pixels.
+   *
+   * Always scans the whole image and replaces any crop already set: the point
+   * is to find the subject, so a crop drawn through it must not narrow the
+   * search. When the result would be the crop the user already has, nothing is
+   * changed and `autoCropNote` explains why.
    */
   autoCrop: (mode: AutoCropMode) => Promise<void>
   /** True while `autoCrop` is decoding + scanning the image. */
@@ -337,14 +342,15 @@ function clampCrop(
 }
 
 /**
- * True when a detected content box effectively fills the region it was scanned
- * in — within 1% on both axes. Trimming to it would return the same rectangle,
- * which is Autocrop appearing to do nothing.
+ * True when two crops are the same rectangle bar a pixel or two of rounding —
+ * i.e. applying one over the other would change nothing on screen.
  */
-function fillsRegion(bounds: SourceCrop, region: SourceCrop): boolean {
+function sameRect(a: SourceCrop, b: SourceCrop): boolean {
   return (
-    bounds.width >= region.width * 0.99 &&
-    bounds.height >= region.height * 0.99
+    Math.abs(a.x - b.x) <= 2 &&
+    Math.abs(a.y - b.y) <= 2 &&
+    Math.abs(a.width - b.width) <= 2 &&
+    Math.abs(a.height - b.height) <= 2
   )
 }
 
@@ -669,35 +675,28 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     try {
       const { image, objectUrl } = await loadImage(img.file)
       try {
+        // Always scan the whole image, replacing any crop that's already there.
+        // Autocrop's job is to find the subject, and scanning inside the current
+        // crop would let a crop drawn through the subject hide part of it — the
+        // button would hand back the same rectangle and look broken.
         const full: SourceCrop = { x: 0, y: 0, width: img.width, height: img.height }
-        // When a crop is already active, trim WITHIN it (scan + size relative to
-        // the crop) rather than across the whole image. Otherwise use the whole
-        // image as the region.
-        let region: SourceCrop = crop ?? full
-        let bounds = computeContentBounds(image, 24, crop ?? undefined)
+        const bounds = computeContentBounds(image, 24)
 
-        // Scanning inside the crop found nothing, or found content filling it
-        // edge to edge — trimming there would hand back the same rectangle and
-        // read as "Autocrop did nothing". Widen the search to the whole image so
-        // the subject is still found when the crop was drawn through it (or left
-        // over from an earlier edit).
-        if (crop && (!bounds || fillsRegion(bounds, region))) {
-          const wide = computeContentBounds(image, 24, undefined)
-          if (wide && !fillsRegion(wide, full)) {
-            bounds = wide
-            region = full
-          }
-        }
-
-        // Nothing stands out from the background anywhere — leave the user's
-        // crop alone rather than replacing it with an arbitrary rectangle.
-        if (!bounds || fillsRegion(bounds, region)) {
+        // Nothing stands out from the background — a flat colour. Leave the
+        // user's crop alone rather than replacing it with an arbitrary rectangle.
+        if (!bounds) {
           set({ autoCropNote: 'Nothing to trim — no blank border found.' })
           return
         }
 
-        const rect = contentCropForMode(bounds, mode, region)
-        const c = clampCrop(rect, img.width, img.height)
+        const c = clampCrop(contentCropForMode(bounds, mode, full), img.width, img.height)
+        // The answer is the crop the user already has (or the whole image, when
+        // they have none): there was no border to trim in this mode. Say so
+        // rather than re-setting the same rectangle.
+        if (sameRect(c, crop ?? full)) {
+          set({ autoCropNote: 'Nothing to trim — no blank border found.' })
+          return
+        }
         set({
           crop: c,
           socialCrop: null,
