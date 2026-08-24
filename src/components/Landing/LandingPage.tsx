@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
+import DropWatermark from './DropWatermark'
 import { useImageStore } from '../../stores/imageStore'
 import ImageIllustration from './ImageIllustration'
 import { CONTAINER } from '../../lib/layout'
@@ -119,6 +120,18 @@ export default function LandingPage() {
                     }`}
                   >
                     <DropRing size="100%" over={picker.over} motion="idle">
+                      {/* Backdrop. Must be a CHILD of the ring — DropRing paints
+                          an opaque white interior, so anything behind it is
+                          covered. Absolute keeps it out of the ring's flex
+                          column so the copy stays centred, and
+                          pointer-events-none leaves the whole circle a drop
+                          target rather than putting a decoration in the way. */}
+                      <div
+                        className="pointer-events-none absolute inset-[14%] opacity-[0.3]"
+                        aria-hidden="true"
+                      >
+                        <DropWatermark />
+                      </div>
                       <svg
                         viewBox="0 0 24 24"
                         className={`mb-1 h-9 w-9 ${picker.over ? 'text-orange-500' : 'text-slate-400'}`}
