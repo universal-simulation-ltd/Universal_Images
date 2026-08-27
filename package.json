@@ -58,19 +58,21 @@
       "target": [
         "dmg"
       ],
-      "icon": "public/unisim-icon.png",
+      "icon": "build/app-icon.png",
       "category": "public.app-category.graphics-design"
     },
     "win": {
       "target": [
         "nsis"
       ],
-      "icon": "public/unisim-icon.png"
+      "icon": "build/app-icon.png"
     },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/installer-icon.ico",
+      "uninstallerIcon": "build/installer-icon.ico"
     }
   }
 }
