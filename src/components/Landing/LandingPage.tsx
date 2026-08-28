@@ -184,6 +184,7 @@ export default function LandingPage() {
               <PrivacyNote
                 className="mt-4"
                 repo="https://github.com/universal-simulation-ltd/Universal_Images"
+                proof="https://github.com/universal-simulation-ltd/Universal_Images/blob/main/PRIVACY.md"
                 subject="Your images"
                 plural
                 except="backup"
