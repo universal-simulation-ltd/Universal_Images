@@ -187,7 +187,6 @@ export default function LandingPage() {
                 subject="Your images"
                 plural
                 except="backup"
-                badge="on-device · works offline"
               />
             </div>
           </div>
