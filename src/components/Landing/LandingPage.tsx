@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { DropAnywhere, DropRing, useFileDrop } from '@unisim/sdk'
+import { DropAnywhere, DropRing, PrivacyNote, useFileDrop } from '@unisim/sdk'
 import DropWatermark from './DropWatermark'
 import { useImageStore } from '../../stores/imageStore'
 import ImageIllustration from './ImageIllustration'
@@ -92,7 +92,7 @@ export default function LandingPage() {
                 That <span className="text-orange-600">just work</span>.
               </h1>
               <p className="mt-3 text-slate-600 max-w-md">
-                Drop one or many. Pick a size, get a smaller file. Nothing leaves your device.
+                Drop one or many. Pick a size, get a smaller file.
               </p>
 
               <div className="mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
@@ -139,10 +139,7 @@ export default function LandingPage() {
                       <span className="text-[15px] font-bold text-slate-900">
                         {picker.over ? 'Drop to open' : 'Drop images here'}
                       </span>
-                      <span className="text-[11.5px] leading-relaxed text-slate-500">
-                        they stay on your device
-                      </span>
-                      <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
+                                            <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
                     </DropRing>
                   </div>
                   <input {...picker.inputProps} className="hidden" />
@@ -182,6 +179,15 @@ export default function LandingPage() {
                   <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Batch ZIP export</li>
                 </ul>
               </div>
+
+              {/* Under the card, outside the box — the suite's placement. */}
+              <PrivacyNote
+                className="mt-4"
+                repo="https://github.com/universal-simulation-ltd/Universal_Images"
+                subject="Your images"
+                plural
+                except="backup"
+              />
             </div>
           </div>
         </div>
