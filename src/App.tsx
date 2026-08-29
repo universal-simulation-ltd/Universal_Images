@@ -54,7 +54,14 @@ export default function App() {
   const showDropHint = pageDrop.pageOver && hasImages
 
   return (
-    <div className="flex flex-col h-full bg-slate-100">
+    // ⚠️ pt-[env(safe-area-inset-top)] is for the native (Capacitor) build, not
+    // the web one. Capacitor runs the app in a FULL-SCREEN WKWebView, and
+    // index.html asks for `viewport-fit=cover`, so without this the bar renders
+    // UNDERNEATH the status bar and Dynamic Island. It matters more here than
+    // in most apps because with an image open this bar IS the editor's toolbar
+    // — losing its top edge behind the notch takes the edit controls with it.
+    // In a browser the inset is 0, so it is a no-op on web and on desktop.
+    <div className="flex flex-col h-full bg-slate-100 pt-[env(safe-area-inset-top)]">
       {/* With an image open the bar stops being a navbar and becomes the
           editor's toolbar: identity out for a home button, brand claim out for
           the quick edits, and the whole row widened to the viewport so its two

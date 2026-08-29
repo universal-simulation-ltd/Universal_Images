@@ -1,4 +1,5 @@
 import { useImageStore } from '../stores/imageStore'
+import { saveBlob } from './saveFile'
 import type { ResizeTarget, SourceCrop } from '../types/image'
 
 // "Save to desktop" backup for Universal Images — the editable middle tier
@@ -79,14 +80,7 @@ export async function buildBackup(): Promise<{ blob: Blob; fileName: string }> {
 /** Save the selected image + edits to the guest's device as a backup. */
 export async function downloadBackup(): Promise<void> {
   const { blob, fileName } = await buildBackup()
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = fileName
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  saveBlob(blob, fileName)
 }
 
 /** Restore a previously-downloaded backup: load the source image back in and

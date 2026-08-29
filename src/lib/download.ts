@@ -1,11 +1,8 @@
+// Kept as this app's download entry point so no call site had to change. The
+// mechanics — and the reason a phone needs a different one entirely — live in
+// `saveFile.ts`.
+import { saveBlob } from './saveFile'
+
 export function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  // Give the browser a tick to start the download before reclaiming memory.
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  saveBlob(blob, filename)
 }
