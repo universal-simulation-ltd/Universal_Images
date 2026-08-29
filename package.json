@@ -19,7 +19,8 @@
     "cap:sync": "npm run build && npx cap sync",
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android",
-    "test:geo": "node --experimental-strip-types scripts/geo.test.mjs"
+    "test:geo": "node --experimental-strip-types scripts/geo.test.mjs",
+    "build:example": "node scripts/build-example-image.mjs"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
