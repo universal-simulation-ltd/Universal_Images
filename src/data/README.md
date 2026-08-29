@@ -52,6 +52,37 @@ per country before it works offline; the country map never does.
 the country to this app's own server. `PRIVACY.md` states this plainly and the
 panel says it under the map. Do not quietly widen it.
 
+### Places live in the same files
+
+Each region file also carries that country's **towns and villages** — GeoNames
+`cities500`, so down to about 500 people, which is what makes the answer a
+village rather than the nearest city fifty miles away. They are folded in rather
+than given files of their own precisely so that naming a place costs **no
+request beyond the one the county zoom already makes**.
+
+Coordinates are quantised onto the same grid as the boundaries, so they cost
+integers rather than decimal strings. The runtime does a flat nearest scan —
+22,000 places at the very worst, which is not worth an index.
+
+⚠️ **GeoNames is CC BY 4.0 and the attribution is a condition of shipping.** The
+credit is rendered under the map whenever a place name appears, and repeated in
+the repo README. If the places are ever removed, remove the credit with them; if
+a different gazetteer is swapped in, check its licence rather than assuming.
+
+⚠️ **Two ways the country bridge has silently failed**, both fixed and both
+pinned by `scripts/geo.test.mjs`:
+
+- GeoNames keys on ISO alpha-2, and Natural Earth carries `-99` in `ISO_A2` for
+  a handful of countries — **France and Norway among them**. Use `ISO_A2_EH`.
+- Several admin-0 features can claim the same alpha-2, and a plain `Map` keeps
+  the **last**: three claim `AU`, so every Australian place went to Ashmore and
+  Cartier Islands and Australia shipped empty. A dependency never displaces a
+  sovereign country.
+
+The build prints a `WARNING` listing any country that has regions but no places.
+Only genuinely tiny territories belong there — a familiar country in that list
+is a bug.
+
 ## Where it comes from
 
 Natural Earth's 1:50m admin-0 countries, as packaged by

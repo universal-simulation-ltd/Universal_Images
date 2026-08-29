@@ -30,6 +30,14 @@ export interface LocatedPoint {
    * loaded. Null otherwise — the country map is still drawn.
    */
   region: string | null
+  /**
+   * Nearest named town or village, and how far the point is from its centre.
+   *
+   * A nearest-place answer, not a containing one: `km` is what stops "Wem"
+   * being printed over a photo taken eight kilometres outside it. Comes from
+   * the same file as the regions, so it costs no request of its own.
+   */
+  place: { name: string; km: number } | null
   /** Closed rings of the matched country, in degrees. Outer rings and holes both. */
   rings: LonLat[][]
   /**
@@ -137,6 +145,11 @@ export interface Boundaries {
   arcs: [number, number][][]
   names: string[]
   polys: { c: number; b: [number, number, number, number]; r: number[][] }[]
+  /**
+   * Populated places as `[name, x, y]`, quantised onto the same grid as the
+   * boundaries above. Only the per-country region files carry these.
+   */
+  places?: [string, number, number][]
 }
 
 /** The countries, plus the ISO alpha-3 that names each one's region file. */
@@ -429,6 +442,38 @@ function findPolygon(
   return winner
 }
 
+/**
+ * The nearest populated place to a point, with its distance in kilometres.
+ *
+ * A flat scan: the largest country carries about 22,000 places, which is a few
+ * hundredths of a second of arithmetic and not worth an index. Squared
+ * distances are compared so only the winner needs a square root.
+ */
+function nearestPlace(
+  boundaries: Boundaries,
+  latitude: number,
+  longitude: number
+): { name: string; km: number } | null {
+  const places = boundaries.places
+  if (!places || places.length === 0) return null
+
+  const { scale, translate } = boundaries.transform
+  const lonScale = Math.max(0.02, Math.cos((latitude * Math.PI) / 180))
+
+  let bestName: string | null = null
+  let bestSq = Infinity
+  for (const [name, x, y] of places) {
+    const dLat = y * scale[1] + translate[1] - latitude
+    const dLon = (x * scale[0] + translate[0] - longitude) * lonScale
+    const sq = dLat * dLat + dLon * dLon
+    if (sq < bestSq) {
+      bestSq = sq
+      bestName = name
+    }
+  }
+  return bestName === null ? null : { name: bestName, km: Math.sqrt(bestSq) * KM_PER_DEGREE }
+}
+
 /** Every ring of every polygon belonging to one entry of a boundary set. */
 function ringsOf(boundaries: Boundaries, index: number): LonLat[][] {
   return boundaries.polys
@@ -465,6 +510,7 @@ export function locateIn(world: World, latitude: number, longitude: number): Loc
   return {
     country: match === null ? null : world.names[match],
     region: null,
+    place: null,
     rings,
     // Neighbours are only worth decoding when there is a country to put in
     // context; the world fallback is already showing everything.
@@ -501,6 +547,7 @@ export function refineToRegion(
   return {
     ...base,
     region: regions.names[hit.index],
+    place: nearestPlace(regions, latitude, longitude),
     rings: ringsOf(regions, hit.index),
     // Sibling regions first, then land belonging to other countries — without
     // the second, everything across the border reads as water.

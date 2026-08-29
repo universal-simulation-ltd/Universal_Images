@@ -91,6 +91,21 @@ uploaded as a workflow artifact in that case.
 
 Issues and pull requests welcome. The project is intentionally small and dependency-light; please open an issue before adding a large feature.
 
+## Bundled data
+
+The metadata panel's location map is drawn from data shipped inside the app, so
+that showing you where a photo was taken never means telling anybody where it
+was taken.
+
+- **Boundaries** — country outlines and admin-1 regions from
+  [Natural Earth](https://www.naturalearthdata.com/), which is public domain.
+- **Place names** — populated places from [GeoNames](https://www.geonames.org/),
+  licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The app
+  carries this credit under the map wherever a place name is shown.
+
+Regenerate with `node scripts/build-world-data.mjs` and
+`node scripts/build-region-data.mjs`; see [`src/data/README.md`](src/data/README.md).
+
 ## License
 
-[MIT](./LICENSE).
+[MIT](./LICENSE). The bundled data is under its own licences — see above.

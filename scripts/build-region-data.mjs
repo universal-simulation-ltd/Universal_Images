@@ -1,5 +1,10 @@
 // Generates `src/data/regions/*.json` — the county / state / province outlines
-// the metadata panel zooms to once it knows which country a photo is from.
+// the metadata panel zooms to once it knows which country a photo is from, and
+// the towns and villages it names the nearest of.
+//
+// Both live in one file per country on purpose. They are always wanted
+// together, and folding them in means naming somewhere costs no request beyond
+// the one the county zoom already makes.
 //
 // Run: node scripts/build-region-data.mjs
 //
@@ -28,11 +33,20 @@
 // on first run and cached beside the repo in `.cache/`. What IS committed is
 // everything this writes, so a checkout builds and ships without the network.
 //
-// Natural Earth is public domain. See `src/data/README.md`.
+// ⚠️ TWO sources, on two different licences.
+//
+// Boundaries are Natural Earth, which is public domain and asks for nothing.
+// The places are GeoNames, which is **CC BY 4.0 and requires attribution** —
+// that is a condition of shipping, not a courtesy, and the app carries it under
+// the map. If the places are ever dropped, the credit goes with them; if
+// another gazetteer is swapped in, check its licence before assuming the same.
+//
+// See `src/data/README.md`.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
+import JSZip from 'jszip'
 import { topology } from 'topojson-server'
 import { presimplify, simplify } from 'topojson-simplify'
 import { quantize } from 'topojson-client'
@@ -51,6 +65,18 @@ const SOURCE =
  */
 const SIMPLIFY_WEIGHT = 1e-5
 
+const placesCache = resolve(root, '.cache/cities500.zip')
+// Populated places down to about 500 people, which is what makes the answer a
+// village rather than the nearest city fifty miles away. 235,000 worldwide;
+// per country that is a median of 1.4 KB gzipped and 254 KB at the very worst.
+const PLACES_SOURCE = 'https://download.geonames.org/export/dump/cities500.zip'
+const admin0Path = resolve(root, '.cache/ne_50m_admin_0_countries.geojson')
+
+// Spelled out rather than written inline, because a shell heredoc collapsed
+// '\n' to a real newline here once and the file would not parse.
+const NEWLINE = '\n'
+const TAB = '\t'
+
 
 async function loadSource() {
   if (existsSync(cache)) return JSON.parse(readFileSync(cache, 'utf8'))
@@ -64,6 +90,63 @@ async function loadSource() {
 }
 
 const source = await loadSource()
+
+/**
+ * GeoNames' places, grouped by the ISO alpha-3 these files are keyed on.
+ *
+ * The dump keys on alpha-2, so the two are bridged through the same Natural
+ * Earth admin-0 release everything else here is aligned to. `jszip` is already
+ * a runtime dependency of the app, so reading the archive costs no new one.
+ */
+async function loadPlaces() {
+  if (!existsSync(admin0Path)) {
+    throw new Error('Missing .cache/ne_50m_admin_0_countries.geojson — see build-world-data.mjs')
+  }
+  if (!existsSync(placesCache)) {
+    console.log('fetching GeoNames cities500 (13 MB, once)…')
+    const res = await fetch(PLACES_SOURCE)
+    if (!res.ok) throw new Error(`could not fetch places (${res.status})`)
+    mkdirSync(dirname(placesCache), { recursive: true })
+    writeFileSync(placesCache, Buffer.from(await res.arrayBuffer()))
+  }
+  const zip = await JSZip.loadAsync(readFileSync(placesCache))
+  const text = await zip.file('cities500.txt').async('string')
+  const admin0 = JSON.parse(readFileSync(admin0Path, 'utf8'))
+
+  // ⚠️ `ISO_A2_EH`, not `ISO_A2`. Natural Earth carries `-99` in the plain
+  // field for a handful of countries — France and Norway among them — so
+  // keying on it silently gave FRANCE no places at all while every neighbour
+  // worked. The `_EH` variant is the corrected one, and is absent only for
+  // genuinely code-less disputed areas (Somaliland, Northern Cyprus, Kashmir).
+  //
+  // ⚠️ And several features can claim the same alpha-2, where a plain Map keeps
+  // the LAST — which handed every Australian place to Ashmore and Cartier
+  // Islands and left Australia itself empty. A dependency never displaces a
+  // sovereign country that claims the same code.
+  const alpha3 = new Map()
+  for (const f of admin0.features) {
+    const a2 = f.properties.ISO_A2_EH
+    if (!a2 || a2 === '-99') continue
+    if (alpha3.has(a2) && f.properties.TYPE === 'Dependency') continue
+    alpha3.set(a2, f.properties.ADM0_A3)
+  }
+
+  const byCode = new Map()
+  for (const line of text.split(NEWLINE)) {
+    if (!line) continue
+    // name, latitude, longitude and country are columns 1, 4, 5 and 8.
+    const f = line.split(TAB)
+    const code = alpha3.get(f[8])
+    const lat = Number(f[4])
+    const lon = Number(f[5])
+    if (!code || !f[1] || !Number.isFinite(lat) || !Number.isFinite(lon)) continue
+    if (!byCode.has(code)) byCode.set(code, [])
+    byCode.get(code).push({ name: f[1], lat, lon })
+  }
+  return byCode
+}
+
+const placesByCode = await loadPlaces()
 
 // Files are named after the country's ISO alpha-3 code, never its name.
 //
@@ -102,6 +185,8 @@ mkdirSync(outDir, { recursive: true })
 const unmatched = []
 let written = 0
 let totalBytes = 0
+let totalPlaces = 0
+const placeless = []
 
 for (const [country, features] of [...byCountry].sort()) {
   if (!known.has(country)) {
@@ -154,13 +239,44 @@ for (const [country, features] of [...byCountry].sort()) {
     }
   }
 
-  const json = JSON.stringify({ transform: topo.transform, arcs: topo.arcs, names, polys })
+  // Places ride on the same quantised grid as the boundaries, so they cost
+  // integers rather than decimal strings and need no second transform.
+  const { scale, translate } = topo.transform
+  const places = (placesByCode.get(country) ?? []).map((place) => [
+    place.name,
+    Math.round((place.lon - translate[0]) / scale[0]),
+    Math.round((place.lat - translate[1]) / scale[1]),
+  ])
+
+  const json = JSON.stringify({
+    transform: topo.transform,
+    arcs: topo.arcs,
+    names,
+    polys,
+    places,
+  })
   writeFileSync(resolve(outDir, `${country.toLowerCase()}.json`), json)
   written++
   totalBytes += json.length
+  totalPlaces += places.length
+  if (places.length === 0) placeless.push(country)
 }
 
-console.log(`regions: ${written} countries, ${(totalBytes / 1024 / 1024).toFixed(2)} MB raw total`)
+console.log(
+  `regions: ${written} countries, ${totalPlaces.toLocaleString()} places, ` +
+    `${(totalBytes / 1024 / 1024).toFixed(2)} MB raw total`
+)
+
+// A country with counties but no towns is almost always a code that failed to
+// bridge, not a country with no towns — that is how France shipped empty once.
+// Say so loudly rather than leaving it to be noticed in the UI.
+if (placeless.length > 0) {
+  console.log(
+    `WARNING: ${placeless.length} countries have regions but NO places. Expect ` +
+      `only genuinely tiny or code-less territories; a familiar country is a bug: ` +
+      placeless.join(', ')
+  )
+}
 if (unmatched.length > 0) {
   // Expected leftovers are dependencies and disputed areas that the admin-0 set
   // does not carry as countries of their own. A familiar country appearing here

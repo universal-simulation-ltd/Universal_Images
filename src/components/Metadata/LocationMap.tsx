@@ -28,6 +28,17 @@ const ASPECT = 20 / 9
 const OFFSHORE_KM = 5
 
 /**
+ * Within this many kilometres of a town's centre, the answer is just that town;
+ * beyond it the distance is quoted too.
+ *
+ * The gazetteer gives one point per settlement rather than its outline, so
+ * "Wem" over a photo taken in Wem is right and "Wem" over one taken eight
+ * kilometres away is not. Two kilometres is about the radius of a place small
+ * enough for that to matter — anywhere larger has a nearer entry of its own.
+ */
+const IN_THE_PLACE_KM = 2
+
+/**
  * A highlighted place whose longest side is under this many viewBox units is
  * smaller on screen than the marker sitting on top of it — literally hidden by
  * the dot that points at it. Monaco, which has no regions to zoom to, frames at
@@ -171,8 +182,19 @@ export default function LocationMap({ latitude, longitude }: Props) {
               ? 'Not inside any country — at sea, or not a real place.'
               : located.approximate && located.offshoreKm >= OFFSHORE_KM
                 ? `About ${Math.round(located.offshoreKm)} km off the coast of ${located.country}.`
-                : // The county is the point of zooming in, so lead with it.
-                  [located.region, located.country].filter(Boolean).join(', ')}
+                : // Most specific first: the town, then the county, then the
+                  // country. The distance is what keeps a nearest-place answer
+                  // honest when the point is not actually in the place.
+                  [
+                    located.place &&
+                      (located.place.km <= IN_THE_PLACE_KM
+                        ? located.place.name
+                        : `${located.place.km.toFixed(1)} km from ${located.place.name}`),
+                    located.region,
+                    located.country,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
           </span>
           {tooSmallToDraw && (
             <span className="block">Too small to draw at this scale — the dot is the place.</span>
@@ -182,6 +204,13 @@ export default function LocationMap({ latitude, longitude }: Props) {
               to be narrower when it is on screen — saying "nothing was sent"
               over a picture that needed a request would be a lie the Network
               tab exposes in one click. */}
+          {located.place && (
+            // GeoNames is CC BY 4.0 — this credit is a condition of using the
+            // place names, not decoration. It goes wherever they are shown.
+            <span className="block">
+              Place names from GeoNames (CC BY 4.0); boundaries from Natural Earth.
+            </span>
+          )}
           <span className="block">
             {located.region
               ? 'Your coordinates never left this tab. The county outlines came from this app’s own server, which reveals the country and nothing finer.'

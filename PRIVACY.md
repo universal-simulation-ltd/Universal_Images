@@ -22,7 +22,7 @@ happens on your machine:
 | Resizing, cropping and re-encoding | your browser's own canvas | [`src/lib/imageResize.ts`](src/lib/imageResize.ts) |
 | Reading and stripping EXIF/GPS metadata | your browser | [`src/lib/metadata.ts`](src/lib/metadata.ts) |
 | Naming the country and drawing the location map | your browser, on boundaries bundled with the app | [`src/lib/geo.ts`](src/lib/geo.ts) |
-| Naming the county and zooming to it | your browser, on one county file fetched from this app (see below) | [`src/lib/geo.ts`](src/lib/geo.ts) |
+| Naming the county and the nearest town, and zooming to them | your browser, on one county file fetched from this app (see below) | [`src/lib/geo.ts`](src/lib/geo.ts) |
 | Removing a background | your browser, on a downloaded AI model | [`src/lib/backgroundRemoval.ts`](src/lib/backgroundRemoval.ts) |
 | Blurring faces | your browser, on a downloaded AI model | [`src/lib/faceBlur.ts`](src/lib/faceBlur.ts) |
 | Saving the result | your browser's download | [`src/lib/download.ts`](src/lib/download.ts) |
@@ -68,6 +68,11 @@ panel makes.** Specifically:
 The panel says which of the two you are looking at, under the map. That is a
 narrower promise than "nothing is sent", and it is narrower on purpose: a claim
 your own Network tab can disprove in one click is worse than no claim.
+
+The map also names the nearest **town or village**, and that costs nothing
+extra: those names travel inside the very same county file, so there is no
+second request. They come from GeoNames, which requires crediting — the panel
+does, under the map.
 
 ### What it still will not do
 

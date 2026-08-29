@@ -40,6 +40,13 @@
 //     Dover, whose map loses the French coast and draws sea instead
 //   · `NEAR_REGION_KM = 0` → 1 red, the beach 2 km offshore
 //
+//   · rebuilding the region files with the plain `ISO_A2` field instead of
+//     `ISO_A2_EH` → 1 red, France, which Natural Earth codes as "-99" and which
+//     therefore ships with no places at all
+//   · rebuilding them without the dependency rule, so a plain Map keeps the LAST
+//     feature claiming an alpha-2 → 1 red, Australia, whose towns all go to
+//     Ashmore and Cartier Islands
+//
 // ⚠️ Both region-layer controls were green the first time they were run, and
 // the tests were wrong rather than the code. "France is drawn beside it" was a
 // ring COUNT, which Kent's own neighbouring boroughs clear by themselves, so it
@@ -48,7 +55,7 @@
 // negative control that does not go red is not a passing test — it is a test
 // that was never testing.
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { locateIn, refineToRegion } from '../src/lib/geo.ts'
@@ -231,6 +238,48 @@ check('the ocean is still nobody', refineToRegion(world, gbr, atlantic, 30, -40)
 const monacoBase = at(43.7384, 7.4246)
 check('Monaco has no region file to load', monacoBase.region, null)
 check('  …and still names the country', monacoBase.country, 'Monaco')
+
+// ── Nearest town or village ────────────────────────────────────────────────
+//
+// The places ride in the same per-country file as the regions, so they cost no
+// request of their own. What matters here is that the answer is a NEAREST-place
+// answer: the distance is not decoration, it is what stops a village name being
+// printed over a photo taken in the next valley.
+const placeAt = (regions, lat, lon) => locateIn2(regions, lat, lon).place
+
+check('London names London', placeAt(gbr, 51.5074, -0.1278).name, 'London')
+check('  …and knows it is in it', placeAt(gbr, 51.5074, -0.1278).km < 2, true)
+check('Shrewsbury', placeAt(gbr, 52.7069, -2.7527).name, 'Shrewsbury')
+check('Dover', placeAt(gbr, 51.1279, 1.3134).name, 'Dover')
+
+// A field outside a small market town: the right answer is the town AND the
+// distance, so the panel can say "1.3 km from Wem" rather than claiming Wem.
+const field = placeAt(gbr, 52.87, -2.72)
+check('a field near Wem finds Wem', field.name, 'Wem')
+check('  …and reports it is outside it', field.km > 1 && field.km < 3, true)
+
+// France is the case that shipped empty once: Natural Earth carries ISO_A2
+// "-99" for it, so bridging the gazetteer's alpha-2 through that field gave
+// France no places at all while every neighbour worked. Australia is the other
+// half of the same bug — three admin-0 features claim "AU", and keeping the
+// last handed every Australian place to Ashmore and Cartier Islands.
+const fra = JSON.parse(readFileSync(resolve(root, 'src/data/regions/fra.json'), 'utf8'))
+const aus = JSON.parse(readFileSync(resolve(root, 'src/data/regions/aus.json'), 'utf8'))
+check('France has places at all', fra.places.length > 10000, true)
+check('  …and Paris is one', placeAt(fra, 48.8566, 2.3522).name, 'Paris')
+check('Australia has places at all', aus.places.length > 1000, true)
+check('  …and Sydney is one', placeAt(aus, -33.8688, 151.2093).name, 'Sydney')
+
+// Every country file that carries regions should carry places too. This is the
+// generated-data twin of the build script's own warning, so a future
+// regeneration cannot quietly lose a country's towns.
+const withRegions = readdirSync(resolve(root, 'src/data/regions')).filter((f) => f.endsWith('.json'))
+const placeless = withRegions.filter((f) => {
+  const d = JSON.parse(readFileSync(resolve(root, 'src/data/regions', f), 'utf8'))
+  return !d.places || d.places.length === 0
+})
+check(`only tiny territories lack places (${placeless.join(', ') || 'none'})`,
+  placeless.length <= 2, true)
 
 console.log(failed === 0 ? '\nall passed' : `\n${failed} failed`)
 process.exit(failed === 0 ? 0 : 1)
