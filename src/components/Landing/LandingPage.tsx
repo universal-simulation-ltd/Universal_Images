@@ -4,6 +4,46 @@ import DropWatermark from './DropWatermark'
 import { useImageStore } from '../../stores/imageStore'
 import ImageIllustration from './ImageIllustration'
 import { CONTAINER } from '../../lib/layout'
+// The third column of the closing grid. These are not features, they are the
+// answer to "what does it cost me when it isn't money", so each one names the
+// thing it is refusing — a struck-through cloud, eye and megaphone — rather than
+// wearing the tick its neighbours do. Lucide's `cloud-off` / `eye-off` /
+// `megaphone-off` outlines, drawn inline rather than typed as characters: a lone
+// symbol falls back to whatever font happens to carry it.
+//
+// ⚠️ Twin of `PROMISES` in Universal PDF's LandingPage — the same three claims,
+// in the same shape, deliberately. Change one and change the other; they are the
+// suite making one promise, and two apps disagreeing about it would be worse
+// than the duplication.
+const PROMISES: { claim: string; paths: string[] }[] = [
+  {
+    claim: 'No forced uploads',
+    paths: [
+      'M5.78 5.78A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.3-.19',
+      'M21.53 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7 7 0 0 0 10 5.07',
+      'M2 2l20 20'
+    ]
+  },
+  {
+    claim: 'No data scraping',
+    paths: [
+      'M9.88 9.88a3 3 0 1 0 4.24 4.24',
+      'M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68',
+      'M6.61 6.61A13.53 13.53 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61',
+      'M2 2l20 20'
+    ]
+  },
+  {
+    claim: 'No advertising',
+    paths: [
+      'M9.26 9.26 3 11v3l14.14 3.14',
+      'M21 15.34V6l-7.31 2.03',
+      'M11.6 16.8a3 3 0 1 1-5.8-1.6',
+      'M2 2l20 20'
+    ]
+  }
+]
+
 
 export default function LandingPage() {
   // Set when the user arrives via "Convert" — the next picked files open the
@@ -170,13 +210,61 @@ export default function LandingPage() {
                   {loadingExample ? 'Loading example…' : 'Try with example image'}
                 </button>
 
-                <ul className="mt-5 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> JPEG, PNG, WebP, HEIC</li>
-                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> S / M / L presets</li>
-                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Custom width × height</li>
-                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Aspect-ratio locked</li>
-                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Remove background (AI)</li>
-                  <li className="flex items-center gap-2"><span className="text-orange-700">✓</span> Batch ZIP export</li>
+                {/* Universal PDF's closing grid, in the same shape (2026-08-29).
+                    The six on the left used to name CAPABILITIES — "S / M / L
+                    presets", "Aspect-ratio locked" — which answers a question
+                    nobody arriving on the page is asking yet. Each now ends
+                    "for free" instead, because that IS the question, and one
+                    "all free" heading over a list does not answer it the way
+                    the word next to each item does.
+
+                    ⚠️ `grid-flow-col` + `grid-rows-3` fills DOWN each column, so
+                    the DOM order below IS the column order. Row-flow would deal
+                    the promises out across the rows and there would be no third
+                    column at all. Three columns only from `sm`, and ONE below
+                    it — measured on a 390px phone, two columns leave ~150px
+                    and four of these wrapped. (Universal PDF's twin keeps two
+                    columns there; its claims are short enough to fit. The
+                    breakpoint follows the copy, not a house rule.)
+
+                    ⚠️ `auto-cols-max` + `justify-between`, NOT three equal
+                    thirds. This app's claims are much longer than Universal
+                    PDF's — "Redact (AI) image faces for free" is half again the
+                    width of "Sign PDF for free" — and an equal third of this
+                    card is ~135px of text, so every item in the middle column
+                    broke onto a second line. Content-sized columns, spread to
+                    the edges, fit all nine on one line each. */}
+                <ul className="mt-5 grid grid-cols-1 sm:grid-cols-none sm:auto-cols-max sm:grid-rows-3 sm:grid-flow-col sm:justify-between gap-x-3 gap-y-2 text-xs text-slate-600">
+                  {[
+                    'Edit images for free',
+                    'Resize images for free',
+                    'Convert images for free',
+                    'Remove background (AI) for free',
+                    'Redact (AI) image faces for free',
+                    'Strips image metadata for free'
+                  ].map((claim) => (
+                    <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
+                      <span className="text-orange-700" aria-hidden="true">✓</span>
+                      {claim}
+                    </li>
+                  ))}
+                  {PROMISES.map(({ claim, paths }) => (
+                    <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-3.5 h-3.5 shrink-0 text-orange-700"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        {paths.map((d) => <path key={d} d={d} />)}
+                      </svg>
+                      {claim}
+                    </li>
+                  ))}
                 </ul>
               </div>
 
