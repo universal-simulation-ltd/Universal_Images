@@ -1,4 +1,4 @@
-import { useFileDrop } from '@unisim/sdk'
+import { AdvancedMenu, useFileDrop } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 
 // The per-app actions that slot into <UniversalAppsNavBar />'s `actions` prop —
@@ -72,6 +72,21 @@ export default function AppMenu() {
           }
         />
       )}
+
+      {/* Advanced — the SDK's own category, so every app in the suite has one
+          in the same place with the same rhythm, and so whatever goes in it
+          next is one change rather than nineteen. "About this app" is always
+          its last row; see AdvancedMenu.tsx. */}
+      <AdvancedMenu
+        about={{
+          repo:    'https://github.com/universal-simulation-ltd/Universal_Images',
+          proof:   'https://github.com/universal-simulation-ltd/Universal_Images/blob/main/PRIVACY.md',
+          subject: 'Your images',
+          plural:  true,
+          except:  'backup',
+          version: __APP_VERSION__,
+        }}
+      />
     </>
   )
 }
