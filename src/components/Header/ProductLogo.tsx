@@ -28,7 +28,13 @@ export default function ProductLogo() {
     >
       <style>{CSS}</style>
       <svg viewBox="0 0 64 64" className="h-6 w-6" aria-hidden="true">
-        <rect x="0" y="0" width="64" height="64" rx="14" fill="#0f172a" />
+        <defs>
+          <linearGradient id="uam-nav-images-tile" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#fe8c01" />
+            <stop offset="1" stopColor="#e05504" />
+          </linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="14" fill="url(#uam-nav-images-tile)" />
         <rect x={12} y={14} width={40} height={32} rx={3} fill="#ffffff" />
         <circle cx={22} cy={24} r={3.4} fill="#e05504" className="uam-images-sun" />
         <path d="M14 42l10-12 8 8 6-6 12 10v4H14z" fill="#e05504" />
