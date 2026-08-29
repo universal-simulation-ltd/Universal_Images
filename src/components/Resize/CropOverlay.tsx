@@ -50,7 +50,10 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
   // the editing chrome (source image, mask, dashed box, handles) is hidden and
   // the cropped result preview underneath shows through. The crop itself stays
   // in the store and is still applied to the export — accepting only collapses
-  // the editor. Clicking the result (or the Edit pill) re-opens editing.
+  // the editor. Once committed this whole layer goes inert: clicking the result
+  // does NOT re-open editing (that read as "my crop was undone", because the
+  // full source and the dashed box came straight back). The "Edit crop" pill is
+  // the only way back in.
   const setCommitted = onCommittedChange
 
   useLayoutEffect(() => {
@@ -84,15 +87,9 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
   function onPointerDown(e: React.PointerEvent) {
     // Touch on empty space (no crop) = scroll the panel, don't hijack it.
     if (e.pointerType !== 'mouse' && !crop) return
-    // While committed the box/handles aren't drawn — a press just re-opens the
-    // editor rather than starting a fresh draw (which would clobber the crop
-    // with a 0×0 box if the click landed outside the region).
-    if (committed) {
-      e.preventDefault()
-      setCommitted(false)
-      wrapperRef.current?.focus({ preventScroll: true })
-      return
-    }
+    // While committed the layer is pointer-events-none, so this shouldn't fire
+    // — but never start a gesture (or re-open the editor) if it somehow does.
+    if (committed) return
     const dataHandle = (e.target as HTMLElement).dataset.handle as Mode | undefined
     const pt = clientToSource(e.clientX, e.clientY)
     let mode: Mode
@@ -208,7 +205,9 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
       ref={wrapperRef}
       tabIndex={-1}
       onKeyDown={onKeyDown}
-      className={`absolute inset-0 select-none outline-none ${crop ? 'touch-none' : ''} ${crop && committed ? 'cursor-pointer' : 'cursor-crosshair'}`}
+      className={`absolute inset-0 select-none outline-none ${
+        crop && committed ? 'pointer-events-none' : `cursor-crosshair ${crop ? 'touch-none' : ''}`
+      }`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -294,15 +293,16 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
         </>
       )}
 
-      {/* Committed: the cropped result preview shows through; offer a way back
-          into editing (click anywhere, or this pill). */}
+      {/* Committed: the cropped result preview shows through. The layer itself
+          is inert, so only this pill (which opts back into pointer events)
+          re-opens editing. */}
       {render && committed && (
         <button
           type="button"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => setCommitted(false)}
           title="Edit crop"
-          className="absolute top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[11px] font-medium px-3 py-1.5 rounded-full shadow-md"
+          className="pointer-events-auto absolute top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 bg-slate-900/85 hover:bg-slate-900 text-white text-[11px] font-medium px-3 py-1.5 rounded-full shadow-md"
         >
           <svg viewBox="0 0 20 20" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M13 4l3 3-8 8H5v-3z" />
