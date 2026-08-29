@@ -139,6 +139,14 @@ interface ImageStore {
   target: ResizeTarget | null
   loading: boolean
   /**
+   * Files the last drop/pick could not decode, by name. A skipped file used to
+   * be a `console.warn` and nothing else, so dropping three iPhone HEICs that
+   * the decoder choked on looked exactly like dropping nothing at all — the
+   * page just sat there. Cleared by the next successful add, or by dismissing.
+   */
+  loadErrors: { name: string; reason: string }[]
+  dismissLoadErrors: () => void
+  /**
    * Free-form, non-destructive crop on the selected image (any aspect ratio).
    * Lives only in memory and is consumed by the export pipeline — the source
    * image is never rewritten, so changing the size preset just re-exports the
@@ -362,11 +370,30 @@ function looksLikeImage(file: File) {
   return file.type.startsWith('image/') || NAME_IMAGE_RE.test(file.name)
 }
 
+/**
+ * The decoders name the file in their errors, which is right for the console
+ * but reads twice over in a notice that already has the name as its heading
+ * ("Couldn't open IMG_9019.heic / Could not decode IMG_9019.heic"). Take the
+ * name back out and tidy what is left.
+ */
+function reasonWithoutFilename(err: unknown, name: string) {
+  const raw = (err as Error)?.message || ''
+  const trimmed = raw
+    .split(name)
+    .join('')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s—–-]+|[\s—–-]+$/g, '')
+    .trim()
+  return trimmed || 'Could not be decoded'
+}
+
 export const useImageStore = create<ImageStore>((set, get) => ({
   images: [],
   selectedId: null,
   target: null,
   loading: false,
+  loadErrors: [],
+  dismissLoadErrors: () => set({ loadErrors: [] }),
   hostedStoreOpen: false,
   setHostedStoreOpen: (hostedStoreOpen) => set({ hostedStoreOpen }),
   convertMode: false,
@@ -424,11 +451,22 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   },
 
   async addFiles(input) {
-    const files = Array.from(input).filter(looksLikeImage)
-    if (files.length === 0) return
-    set({ loading: true })
+    const all = Array.from(input)
+    const files = all.filter(looksLikeImage)
+    // Something was handed over and none of it was an image — say so rather
+    // than returning into silence.
+    if (files.length === 0) {
+      if (all.length > 0) {
+        set({
+          loadErrors: all.map((f) => ({ name: f.name, reason: 'Not an image file' }))
+        })
+      }
+      return
+    }
+    set({ loading: true, loadErrors: [] })
     try {
       const decoded: SourceImage[] = []
+      const failed: { name: string; reason: string }[] = []
       // The file as the user dropped it, kept alongside the decoded image so the
       // metadata read sees the ORIGINAL — a HEIC loses its EXIF in the JPEG
       // conversion below, and reading the converted copy would wrongly report
@@ -452,8 +490,10 @@ export const useImageStore = create<ImageStore>((set, get) => ({
           originals.push({ id, file })
         } catch (err) {
           console.warn('Skipping unreadable image', file.name, err)
+          failed.push({ name: file.name, reason: reasonWithoutFilename(err, file.name) })
         }
       }
+      set({ loadErrors: failed })
       if (decoded.length === 0) return
       const existing = get().images
       const next = [...existing, ...decoded]

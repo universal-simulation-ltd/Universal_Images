@@ -185,13 +185,21 @@ export default function LandingPage() {
                   <input {...picker.inputProps} className="hidden" />
                 </div>
 
+                {/* Try-the-sample first, then the "or" divider, then the tool
+                    that does something to your own file — the same order
+                    Universal PDF reads in (example / recents, or, 1 Click
+                    Compress). Convert &amp; compress was above the divider here,
+                    which put a second ask for a file directly under the circle
+                    and left the one thing you can press with nothing in hand
+                    at the bottom of the card. */}
                 <button
                   type="button"
-                  onClick={() => openPicker(true)}
-                  className="mt-5 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 transition-colors"
+                  onClick={loadExample}
+                  disabled={loadingExample}
+                  className="mt-5 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
                 >
-                  <span aria-hidden="true">🔄</span>
-                  Convert &amp; compress — change format or quality
+                  <span aria-hidden="true">🧪</span>
+                  {loadingExample ? 'Loading example…' : 'Try with example image'}
                 </button>
 
                 <div className="mt-4 flex items-center gap-3 text-xs text-slate-500">
@@ -202,12 +210,11 @@ export default function LandingPage() {
 
                 <button
                   type="button"
-                  onClick={loadExample}
-                  disabled={loadingExample}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
+                  onClick={() => openPicker(true)}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 transition-colors"
                 >
-                  <span aria-hidden="true">🧪</span>
-                  {loadingExample ? 'Loading example…' : 'Try with example image'}
+                  <span aria-hidden="true">🔄</span>
+                  Convert &amp; compress — change format or quality
                 </button>
 
                 {/* Universal PDF's closing grid, in the same shape (2026-08-29).

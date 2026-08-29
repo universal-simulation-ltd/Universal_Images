@@ -6,6 +6,7 @@ import LandingPage from './components/Landing/LandingPage'
 import ImageGrid from './components/Grid/ImageGrid'
 import ResizePanel from './components/Resize/ResizePanel'
 import HostedStoreDialog from './components/HostedStoreDialog'
+import LoadErrorNotice from './components/LoadErrorNotice'
 import MetadataDialog from './components/Metadata/MetadataDialog'
 import { useImageStore } from './stores/imageStore'
 import EditShortcuts from './components/Header/EditShortcuts'
@@ -79,6 +80,7 @@ export default function App() {
           control but leaves the running page on its old JavaScript. */}
       <div className={`${hasImages ? EDITOR_CONTAINER : CONTAINER} pt-4`}>
         <UpdateNotice />
+        <LoadErrorNotice />
       </div>
 
       <main className="flex-1 min-h-0 flex relative">
