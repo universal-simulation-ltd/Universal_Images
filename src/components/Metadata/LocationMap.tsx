@@ -151,9 +151,7 @@ export default function LocationMap({ latitude, longitude }: Props) {
               role="img"
               aria-label={
                 located?.country
-                  ? `Map showing the photo's location in ${
-                      [located.region, located.country].filter(Boolean).join(', ')
-                    }`
+                  ? `Map showing the photo's location in ${placeName(located)}`
                   : "Map showing the photo's location"
               }
             >
@@ -211,19 +209,7 @@ export default function LocationMap({ latitude, longitude }: Props) {
               ? 'Not inside any country — at sea, or not a real place.'
               : located.approximate && located.offshoreKm >= OFFSHORE_KM
                 ? `About ${Math.round(located.offshoreKm)} km off the coast of ${located.country}.`
-                : // Most specific first: the town, then the county, then the
-                  // country. The distance is what keeps a nearest-place answer
-                  // honest when the point is not actually in the place.
-                  [
-                    located.place &&
-                      (located.place.km <= IN_THE_PLACE_KM
-                        ? located.place.name
-                        : `${located.place.km.toFixed(1)} km from ${located.place.name}`),
-                    located.region,
-                    located.country,
-                  ]
-                    .filter(Boolean)
-                    .join(', ')}
+                : placeName(located)}
           </span>
           {tooSmallToDraw && (
             <span className="block">Too small to draw at this scale — the dot is the place.</span>
@@ -277,6 +263,28 @@ export default function LocationMap({ latitude, longitude }: Props) {
       )}
     </div>
   )
+}
+
+/**
+ * Where the photo was taken, as one line: most specific first — the town, then
+ * the county, then the country.
+ *
+ * Shared by the caption and the map's accessible label so the two can never
+ * drift. They had: the label was built from region and country only, so a
+ * screen reader heard "Shropshire, United Kingdom" while the caption on screen
+ * said "Wem, Shropshire, United Kingdom".
+ *
+ * The distance is what keeps a nearest-place answer honest — the gazetteer
+ * knows a settlement's centre, not its edges, so beyond `IN_THE_PLACE_KM` the
+ * name alone would be a confident lie.
+ */
+function placeName(located: LocatedPoint): string {
+  const place =
+    located.place &&
+    (located.place.km <= IN_THE_PLACE_KM
+      ? located.place.name
+      : `${located.place.km.toFixed(1)} km from ${located.place.name}`)
+  return [place, located.region, located.country].filter(Boolean).join(', ')
 }
 
 /**
