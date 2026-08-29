@@ -99,8 +99,25 @@ export default defineConfig(({ mode }) => {
           // what makes "turn the network off and it still tells you where the
           // photo was taken" true — which is the claim the whole feature is
           // built to support. See src/data/README.md.
-          globIgnores: ['**/*.wasm', '**/*.tflite', '**/*.task'],
+          // ⚠️ The HEIC decoder is a ~3 MB .js chunk, not a .wasm, so none of
+          // the patterns above catch it — and precaching it is a hard BUILD
+          // FAILURE here rather than a warning, because this config never
+          // raises workbox's 2 MB default cap. It is also the same bargain as
+          // the runtimes above: dynamic-imported in `imageResize.ts` precisely
+          // so that people who never open an iPhone photo never pay for it.
+          globIgnores: ['**/*.wasm', '**/*.tflite', '**/*.task', '**/heic-to-*.js'],
           runtimeCaching: [
+            {
+              // The HEIC decoder — cached after the first iPhone photo, so HEIC
+              // input keeps working offline from then on.
+              urlPattern: /\/assets\/heic-to-.*\.js$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'heic-to',
+                expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
             {
               urlPattern: /\/assets\/ort[-.].*\.(?:js|wasm)$/,
               handler: 'CacheFirst',

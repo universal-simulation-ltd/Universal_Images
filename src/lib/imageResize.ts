@@ -1,103 +1,71 @@
 import type { OutputFormat, PresetSize, SourceCrop } from '../types/image'
 
 const HEIC_EXT_RE = /\.(heic|heif)$/i
-const HEIC_MIME = new Set(['image/heic', 'image/heif'])
-
-function isHeic(file: File) {
-  return HEIC_MIME.has(file.type) || HEIC_EXT_RE.test(file.name)
-}
-
-const HEIC_JPEG_QUALITY = 0.92
-
-function heicJpegFile(blob: Blob, source: File): File {
-  const newName = source.name.replace(HEIC_EXT_RE, '.jpg')
-  return new File([blob], newName.endsWith('.jpg') ? newName : `${newName}.jpg`, {
-    type: 'image/jpeg',
-    lastModified: source.lastModified
-  })
-}
-
-async function canvasToJpeg(draw: (ctx: CanvasRenderingContext2D) => void, width: number, height: number) {
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Could not get a 2D canvas context')
-  draw(ctx)
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, 'image/jpeg', HEIC_JPEG_QUALITY)
-  )
-  if (!blob) throw new Error('Could not encode the decoded image')
-  return blob
-}
+const HEIC_MIME = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'])
 
 /**
- * Safari, iOS and macOS decode HEIC natively, so ask the browser first: it is
- * instant, it is the platform's own decoder, and it saves downloading 1.5MB of
- * WASM on the devices these files come from in the first place. Everywhere else
- * this throws immediately and we fall through to libheif.
+ * Is this the thing an iPhone hands you?
+ *
+ * ⚠️ The extension test is not belt-and-braces, it is the one that fires. A
+ * `.heic` copied off a phone routinely arrives with `file.type === ''` on
+ * Windows, because the OS has no MIME registered for it.
  */
-async function decodeHeicNatively(file: File): Promise<File | null> {
-  if (typeof createImageBitmap !== 'function') return null
-  let bitmap: ImageBitmap
-  try {
-    bitmap = await createImageBitmap(file)
-  } catch {
-    return null
-  }
-  try {
-    const blob = await canvasToJpeg((ctx) => ctx.drawImage(bitmap, 0, 0), bitmap.width, bitmap.height)
-    return heicJpegFile(blob, file)
-  } finally {
-    bitmap.close()
-  }
+function isHeic(file: File) {
+  return HEIC_MIME.has(file.type.toLowerCase()) || HEIC_EXT_RE.test(file.name)
 }
+
+// The rest of this app is File-based — the store keeps the file, shows its size
+// and hands it to every downstream step — so a HEIC arrives as a JPEG rather
+// than as pixels. Lossy, but it is what this app has always done with a HEIC,
+// and the alternative (PNG) turns a 2MB photo into a ~50MB one and then reports
+// that as its size on screen.
+const HEIC_JPEG_QUALITY = 0.92
 
 /**
  * Convert HEIC/HEIF (iPhone) to JPEG on the fly so the rest of the pipeline can
  * treat it as any other raster.
  *
- * This used to be `heic2any`, which bundles a libheif from 2019 — and every
- * photo a current iPhone takes fails on it. Those files store the picture as a
- * `grid` of ~45 HEVC tiles with an HDR gain map and a `tmap` tone-map item
- * beside it, and the old decoder answers `ERR_LIBHEIF format not supported`
- * (verified against real iPhone captures, 2026-08-29). libheif 1.19 decodes
- * exactly those files, so we drive it directly.
+ * ⚠️ **`heic-to` (libheif 1.19), NOT `heic2any`.** heic2any is what this app
+ * shipped with, and it fails on every photo a current iPhone takes: those files
+ * store the picture as a `grid` of ~45 HEVC tiles with an HDR gain map and a
+ * `tmap` tone-map item beside it, and the libheif from 2019 that heic2any
+ * bundles answers `ERR_LIBHEIF format not supported`. It decodes a *synthetic*
+ * single-item fixture perfectly, which is how a test goes green on something
+ * the app cannot do — a generated HEIC does not test HEIC. Verified against
+ * real captures, 2026-08-29.
  *
- * The decoder is heavy (~1.5MB of inlined WASM), so it is dynamic-imported only
- * once we actually meet a HEIC that the browser itself could not read.
+ * ⚠️ **HEIC is checked BEFORE any native decode, deliberately.** This briefly
+ * tried `createImageBitmap` first, on the reasoning that Safari and iOS read
+ * HEIC natively and would skip a multi-megabyte download. That gives Safari a
+ * different code path from every other engine, and only one of the two is ever
+ * the one under test — so the saving buys an untested path on the platform the
+ * files come from. Universal Converter, Compress and PDF all make the same
+ * call, with the same library; the long version is in the HEIC section of
+ * `Docs_UNI_SIM/landmines.md`.
+ *
+ * The decoder is ~3MB, so it is dynamic-imported on the first HEIC and costs
+ * nothing to anyone who never opens one. ⚠️ It must also stay out of the PWA
+ * precache — see `globIgnores` in `vite.config.ts`, without which the build
+ * fails outright on workbox's file-size cap.
  */
 export async function decodeHeicIfNeeded(file: File): Promise<File> {
   if (!isHeic(file)) return file
-
-  const native = await decodeHeicNatively(file)
-  if (native) return native
-
-  // The pre-bundled WASM build: one file, no separate .wasm to resolve at a
-  // path Vite would have to be taught about. Its default export is a factory
-  // that resolves once the module has compiled.
-  const { default: libheifFactory } = await import('libheif-js/libheif-wasm/libheif-bundle.mjs')
-  const libheif = await libheifFactory()
-
-  const images = new libheif.HeifDecoder().decode(new Uint8Array(await file.arrayBuffer()))
-  const image = images?.[0]
-  if (!image) throw new Error(`Could not decode ${file.name} — it may not be a valid HEIC image`)
-
-  const width = image.get_width()
-  const height = image.get_height()
-  if (!width || !height) throw new Error(`Could not decode ${file.name} — the image reports no size`)
-
-  // `display` fills an ImageData in place and calls back with it, or with null
-  // if the decode failed part-way through.
-  const canvas = document.createElement('canvas')
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Could not get a 2D canvas context')
-  const imageData = ctx.createImageData(width, height)
-  const decoded = await new Promise<ImageData | null>((resolve) => image.display(imageData, resolve))
-  if (!decoded) throw new Error(`Could not decode ${file.name}`)
-
-  const blob = await canvasToJpeg((c) => c.putImageData(decoded, 0, 0), width, height)
-  return heicJpegFile(blob, file)
+  const { heicTo } = await import('heic-to')
+  let blob: Blob
+  try {
+    blob = await heicTo({ blob: file, type: 'image/jpeg', quality: HEIC_JPEG_QUALITY })
+  } catch (e) {
+    // Name the cause. A friendly sentence that hides the decoder's own words
+    // blames the file for something the library did — which is most of how the
+    // heic2any breakage stayed invisible for as long as it did.
+    const why = e instanceof Error ? e.message : String(e)
+    throw new Error(`This HEIC couldn’t be decoded — ${why}`)
+  }
+  const newName = file.name.replace(HEIC_EXT_RE, '.jpg')
+  return new File([blob], newName.endsWith('.jpg') ? newName : `${newName}.jpg`, {
+    type: 'image/jpeg',
+    lastModified: file.lastModified
+  })
 }
 
 const SVG_EXT_RE = /\.svg$/i
