@@ -1500,6 +1500,25 @@ function PreviewArea({
   const resultRect = box.w && box.h
     ? { left: (box.w - displayW) / 2, top: (box.h - displayH) / 2, width: displayW, height: displayH }
     : null
+  // Changing the crop invalidates the encoded preview (it is the wrong shape
+  // now), and the next one is a debounce + an encode away. Falling back to the
+  // source in the meantime drew the WHOLE photo squashed into the crop-shaped
+  // box — the "full image stretched to the crop size, then it flashes to the
+  // right crop" every time a crop was adjusted. Show the crop region cut out of
+  // the source with CSS instead: same picture the encode is about to produce,
+  // on screen immediately, so there is nothing to flash away from.
+  const cropFallback = !previewUrl && crop && crop.width > 0 && crop.height > 0
+    ? (() => {
+        const kx = displayW / crop.width
+        const ky = displayH / crop.height
+        return {
+          backgroundImage: `url(${image.objectUrl})`,
+          backgroundSize: `${image.width * kx}px ${image.height * ky}px`,
+          backgroundPosition: `${-crop.x * kx}px ${-crop.y * ky}px`,
+          backgroundRepeat: 'no-repeat'
+        }
+      })()
+    : null
 
   return (
     <div ref={wrapperRef} className="relative flex flex-1 min-h-[55vh] lg:min-h-0 overflow-hidden checker-bg">
@@ -1514,13 +1533,23 @@ function PreviewArea({
               committed, so the cropped result previews through. */}
           {(!crop || committed) && (
             <div className="relative flex flex-1 min-h-0 items-center justify-center p-6">
-              <img
-                src={previewUrl ?? image.objectUrl}
-                alt={image.name}
-                draggable={false}
-                style={{ width: displayW, height: displayH }}
-                className="block object-fill shadow-lg ring-1 ring-slate-200 bg-white"
-              />
+              {cropFallback ? (
+                <div
+                  role="img"
+                  aria-label={image.name}
+                  data-preview="crop-fallback"
+                  style={{ width: displayW, height: displayH, ...cropFallback }}
+                  className="block shadow-lg ring-1 ring-slate-200 bg-white"
+                />
+              ) : (
+                <img
+                  src={previewUrl ?? image.objectUrl}
+                  alt={image.name}
+                  draggable={false}
+                  style={{ width: displayW, height: displayH }}
+                  className="block object-fill shadow-lg ring-1 ring-slate-200 bg-white"
+                />
+              )}
             </div>
           )}
           {!crop && (
