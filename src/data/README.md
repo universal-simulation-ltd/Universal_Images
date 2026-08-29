@@ -48,9 +48,13 @@ cached on first use instead. Precaching 211 files would undo the whole point of
 splitting them. The consequence is that the county layer needs one online visit
 per country before it works offline; the country map never does.
 
-⚠️ **That fetch is the only request the metadata panel makes**, and it reveals
-the country to this app's own server. `PRIVACY.md` states this plainly and the
-panel says it under the map. Do not quietly widen it.
+⚠️ **That fetch is the only request the metadata panel can make, and it happens
+only when the reader presses "Zoom in to county and town".** It reveals the
+country to this app's own server. Opening a geotagged photo sends nothing at
+all. `PRIVACY.md` states this plainly, the button says what it costs before it
+is pressed, and the caption under the map switches between the two claims.
+**Do not make it automatic** — that was considered and deliberately rejected, so
+the default caption can say "nothing was sent" without qualification.
 
 ### Places live in the same files
 

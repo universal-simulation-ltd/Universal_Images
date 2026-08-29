@@ -22,7 +22,7 @@ happens on your machine:
 | Resizing, cropping and re-encoding | your browser's own canvas | [`src/lib/imageResize.ts`](src/lib/imageResize.ts) |
 | Reading and stripping EXIF/GPS metadata | your browser | [`src/lib/metadata.ts`](src/lib/metadata.ts) |
 | Naming the country and drawing the location map | your browser, on boundaries bundled with the app | [`src/lib/geo.ts`](src/lib/geo.ts) |
-| Naming the county and the nearest town, and zooming to them | your browser, on one county file fetched from this app (see below) | [`src/lib/geo.ts`](src/lib/geo.ts) |
+| Naming the county and the nearest town, and zooming to them | your browser, on one county file fetched from this app **only if you press the button** (see below) | [`src/lib/geo.ts`](src/lib/geo.ts) |
 | Removing a background | your browser, on a downloaded AI model | [`src/lib/backgroundRemoval.ts`](src/lib/backgroundRemoval.ts) |
 | Blurring faces | your browser, on a downloaded AI model | [`src/lib/faceBlur.ts`](src/lib/faceBlur.ts) |
 | Saving the result | your browser's download | [`src/lib/download.ts`](src/lib/download.ts) |
@@ -43,10 +43,12 @@ country and drawing the outline are arithmetic your browser does on that file
 ([`src/lib/geo.ts`](src/lib/geo.ts)). Open your Network tab and put a geotagged
 photo in: nothing goes out. Turn the network off entirely and it still works.
 
-### The one request the map does make
+### The one request the map can make — if you ask for it
 
-The map then zooms in to name the **county, state or province** too, and that
-part is worth being exact about, because it is not free.
+Under the map there is a button: **Zoom in to county and town**. Press it and
+the map names the county, state or province you were in, and the nearest town or
+village. That part is worth being exact about, because it is not free — which is
+exactly why it is a button and not automatic.
 
 County outlines for every country come to about 1.7 MB — too much to hand every
 visitor to answer a question about one country. So they are split into one file
@@ -60,18 +62,23 @@ panel makes.** Specifically:
   reading the server log could infer **which country** your photo is from.
 - It does **not** carry your coordinates, your county, or anything about the
   photo. Those never leave the tab, and nothing is sent back.
-- It happens only after you open the Metadata panel on a geotagged photo, and
-  only once per country — after that it is cached, including offline.
+- **It happens only when you press the button.** Open a geotagged photo, read
+  the coordinates, look at the country map, close the panel — and nothing has
+  gone out. This is the same bargain as the **Copy** button beside the
+  coordinates: anything that could leave takes a deliberate press.
+- It is fetched once per country. A second photo from a country you have already
+  zoomed into costs nothing and skips the button entirely.
 - The country-level map is drawn **before** this and does not depend on it. If
   you are offline, or it fails, you still get the country map and no request.
 
-The panel says which of the two you are looking at, under the map. That is a
-narrower promise than "nothing is sent", and it is narrower on purpose: a claim
-your own Network tab can disprove in one click is worse than no claim.
+The panel says which of the two you are looking at, under the map, and the
+button tells you what it will cost **before** you press it rather than after.
+Until you do, the unqualified line stands: nothing was looked up, so nothing was
+sent. We would rather ask than quietly make a claim your own Network tab can
+disprove in one click.
 
-The map also names the nearest **town or village**, and that costs nothing
-extra: those names travel inside the very same county file, so there is no
-second request. They come from GeoNames, which requires crediting — the panel
+The nearest **town or village** comes with the county and costs nothing extra:
+those names travel inside the very same file, so there is no second request. They come from GeoNames, which requires crediting — the panel
 does, under the map.
 
 ### What it still will not do

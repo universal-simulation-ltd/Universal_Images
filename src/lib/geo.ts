@@ -331,6 +331,16 @@ function regionLoaders(): Record<string, () => Promise<string>> {
 const regionCache = new Map<string, Promise<Boundaries | null>>()
 
 /**
+ * The regions that have actually arrived.
+ *
+ * The promise map above cannot answer "is this already here?" without being
+ * awaited, and `locatePoint` needs that answer synchronously — it refines only
+ * when doing so is free, and leaves anything that would cost a request to the
+ * button.
+ */
+const loadedRegions = new Map<string, Boundaries>()
+
+/**
  * Loads one country's regions, by ISO alpha-3.
  *
  * ⚠️ This is the one part of the panel that makes a request. It is to this
@@ -350,7 +360,11 @@ function loadRegions(code: string): Promise<Boundaries | null> {
     regionCache.set(
       code,
       load()
-        .then((raw) => JSON.parse(raw) as Boundaries)
+        .then((raw) => {
+          const boundaries = JSON.parse(raw) as Boundaries
+          loadedRegions.set(code, boundaries)
+          return boundaries
+        })
         // Offline on a first visit, or the chunk 404s after a redeploy. The
         // country map is already drawn; losing the zoom is not worth an error.
         .catch(() => null)
@@ -373,9 +387,40 @@ export async function locatePoint(latitude: number, longitude: number): Promise<
   const base = locateIn(world, latitude, longitude)
   if (base.country === null) return base
 
-  const code = world.codes[world.names.indexOf(base.country)]
+  // Only refine for free — that is, when this country's regions are already in
+  // memory from an earlier photo. A country not yet seen would mean a request,
+  // and a request is something the reader asks for; see `refineLocation`.
+  const code = countryCode(world, base.country)
+  const cached = code ? loadedRegions.get(code) : undefined
+  return cached ? refineToRegion(world, cached, base, latitude, longitude) : base
+}
+
+/**
+ * Narrows an already-located point to its county and nearest town, fetching
+ * that country's data if this is the first photo from there.
+ *
+ * Separate from `locatePoint` because it is the only thing in this module that
+ * can cause a request, and the panel makes the reader press a button for it —
+ * the same bargain as the Copy button beside the coordinates. Opening a photo
+ * costs nothing; asking for more detail is a decision.
+ *
+ * Returns the point unchanged when there is nothing to add: no country, no
+ * region file for it, or the fetch failed.
+ */
+export async function refineLocation(
+  base: LocatedPoint,
+  latitude: number,
+  longitude: number
+): Promise<LocatedPoint> {
+  if (base.country === null) return base
+  const world = await loadWorld()
+  const code = countryCode(world, base.country)
   const regions = code ? await loadRegions(code) : null
   return regions ? refineToRegion(world, regions, base, latitude, longitude) : base
+}
+
+function countryCode(world: World, country: string): string | undefined {
+  return world.codes[world.names.indexOf(country)]
 }
 
 /**

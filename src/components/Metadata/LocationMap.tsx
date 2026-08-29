@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { locatePoint, type LocatedPoint, type LonLat } from '../../lib/geo'
+import { locatePoint, refineLocation, type LocatedPoint, type LonLat } from '../../lib/geo'
 
 // The locator map under the Location row of the metadata panel.
 //
@@ -13,6 +13,15 @@ import { locatePoint, type LocatedPoint, type LonLat } from '../../lib/geo'
 // where the photo was taken. That is the constraint the whole feature is built
 // inside of, and it is why the map stops at the country outline rather than
 // zooming to a street.
+//
+// Zooming to the county and naming the nearest town needs that country's
+// outlines, which are too big to hand everybody up front — so they are fetched,
+// and that fetch is the only request this panel can make. It therefore sits
+// behind a button the reader presses, which is the same bargain as the Copy
+// button beside the coordinates: opening a photo costs nothing, and anything
+// that could leave takes a deliberate press. It also lets the default caption
+// keep saying "nothing was sent" without qualification, because by default
+// nothing has been.
 
 /** Width:height of the frame. Wide and short — it sits inside a dialog row. */
 const ASPECT = 20 / 9
@@ -77,16 +86,36 @@ interface Frame {
 export default function LocationMap({ latitude, longitude }: Props) {
   const [located, setLocated] = useState<LocatedPoint | null>(null)
   const [failed, setFailed] = useState(false)
+  const [zooming, setZooming] = useState(false)
+  const [zoomFailed, setZoomFailed] = useState(false)
+
+  async function onZoomIn() {
+    if (!located || zooming) return
+    setZooming(true)
+    setZoomFailed(false)
+    try {
+      setLocated(await refineLocation(located, latitude, longitude))
+    } catch (error) {
+      console.error(error)
+      setZoomFailed(true)
+    } finally {
+      setZooming(false)
+    }
+  }
 
   useEffect(() => {
     let live = true
     setLocated(null)
     setFailed(false)
+    setZoomFailed(false)
     // The boundary set is a few hundred KB and loads on first use, so a photo
     // with no coordinates never pays for it.
     locatePoint(latitude, longitude).then(
       (result) => {
-        if (live) setLocated(result)
+        if (!live) return
+        setLocated(result)
+        // A second photo from a country already fetched costs nothing, so
+        // `locatePoint` will have zoomed in already — no button, no asking.
       },
       (error) => {
         console.error(error)
@@ -216,6 +245,34 @@ export default function LocationMap({ latitude, longitude }: Props) {
               ? 'Your coordinates never left this tab. The county outlines came from this app’s own server, which reveals the country and nothing finer.'
               : 'Drawn from boundaries stored in the app. Nothing was looked up, so nothing was sent.'}
           </span>
+        </p>
+      )}
+
+      {/* Offered only when there is somewhere to zoom to and it has not been
+          done — and never over the world fallback, where there is no country
+          whose regions could be fetched. */}
+      {located && !located.region && !located.isWorld && !zoomFailed && (
+        <div className="mt-1.5">
+          <button
+            type="button"
+            onClick={onZoomIn}
+            disabled={zooming}
+            className="text-[11px] font-medium text-blue-600 hover:text-blue-700 underline underline-offset-2 disabled:text-slate-400 disabled:no-underline"
+          >
+            {zooming ? 'Zooming in…' : 'Zoom in to county and town'}
+          </button>
+          {/* Says the cost before it is paid, not after. */}
+          <span className="block text-[11px] text-slate-500">
+            Asks this app’s own server for {located.country}’s county outlines — which
+            tells it the country, and nothing else. Your coordinates are not sent.
+          </span>
+        </div>
+      )}
+
+      {zoomFailed && (
+        <p className="text-[11px] text-slate-500 mt-1.5">
+          Couldn’t fetch the county outlines — you may be offline. The map above is
+          drawn from the app’s own data and is unaffected.
         </p>
       )}
     </div>
