@@ -1492,6 +1492,14 @@ function PreviewArea({
   const displayW = Math.max(1, Math.round(target.width * fitScale))
   const displayH = Math.max(1, Math.round(target.height * fitScale))
   const pct = Math.round(fitScale * 100)
+  // Where that preview lands in the pane. The img is centred in a padded box
+  // that fills the pane, and the padding is symmetric, so centring in the pane
+  // gives the same answer. CropOverlay needs it because on a committed crop
+  // that box IS the crop region on screen — it hangs the adjust handles and the
+  // crop-within-a-crop off it.
+  const resultRect = box.w && box.h
+    ? { left: (box.w - displayW) / 2, top: (box.h - displayH) / 2, width: displayW, height: displayH }
+    : null
 
   return (
     <div ref={wrapperRef} className="relative flex flex-1 min-h-[55vh] lg:min-h-0 overflow-hidden checker-bg">
@@ -1537,6 +1545,7 @@ function PreviewArea({
             onChange={onSetCrop}
             committed={committed}
             onCommittedChange={setCommitted}
+            resultRect={resultRect}
           />
         </>
       )}
