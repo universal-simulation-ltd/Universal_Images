@@ -8,8 +8,12 @@
 // pixels are untouched.
 //
 // Everything runs on the bytes in the tab. Nothing is uploaded, and the GPS
-// coordinates are deliberately shown as plain numbers rather than linked to a
-// map — looking a location up would hand it to somebody else's server.
+// coordinates are never looked up or linked out — a reverse geocode, or a
+// single map tile, would hand the photo's location to somebody else's server,
+// which is precisely the thing this panel exists to warn about. The panel does
+// draw a map, and draws it from boundaries bundled with the app; see
+// `src/lib/geo.ts` for why that is the only version of the feature that can
+// exist here, and what it costs (a country and a dot, never a street).
 
 export interface MetadataField {
   key: string

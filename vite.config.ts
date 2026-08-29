@@ -93,6 +93,12 @@ export default defineConfig(({ mode }) => {
           // precache — they would bloat the PWA install and blow past workbox's
           // 2 MB file limit — and cache them at runtime on first use instead, so
           // they still work offline once the user has run the tool once.
+          // The country boundaries behind the metadata panel's location map
+          // (~250 KB gzipped) DO stay in the precache, unlike the runtimes
+          // above. They are a fraction of the size, and precaching them is
+          // what makes "turn the network off and it still tells you where the
+          // photo was taken" true — which is the claim the whole feature is
+          // built to support. See src/data/README.md.
           globIgnores: ['**/*.wasm', '**/*.tflite', '**/*.task'],
           runtimeCaching: [
             {

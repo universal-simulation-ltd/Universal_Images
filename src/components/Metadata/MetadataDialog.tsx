@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useImageStore } from '../../stores/imageStore'
 import type { ScrubResult } from '../../lib/metadata'
+import LocationMap from './LocationMap'
 
 // The "Metadata (identification)" panel. Opened from the badge above the
 // preview or from Actions → Metadata. Shows exactly what the selected photo
@@ -24,8 +25,20 @@ export default function MetadataDialog({ onClose }: Props) {
   const meta = selectedId ? metadataMap[selectedId] ?? null : null
 
   const [infoOpen, setInfoOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [result, setResult] = useState<ScrubResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  async function onCopyCoordinates(gps: { latitude: number; longitude: number }) {
+    try {
+      await navigator.clipboard.writeText(`${gps.latitude}, ${gps.longitude}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard access can be refused outright (an insecure origin, a locked
+      // down browser). The numbers are on screen to be selected either way.
+    }
+  }
 
   async function onScrub() {
     setError(null)
@@ -157,9 +170,25 @@ export default function MetadataDialog({ onClose }: Props) {
                       )}
                     </dt>
                     <dd className="text-sm text-slate-800 break-words tabular-nums">{f.value}</dd>
-                    {f.key === 'gps' && (
-                      <dd className="text-[11px] text-slate-500 mt-0.5">
-                        Accurate to within a few metres — usually a home, school or workplace.
+                    {f.key === 'gps' && meta.gps && (
+                      <dd className="mt-0.5">
+                        <span className="text-[11px] text-slate-500">
+                          Accurate to within a few metres — usually a home, school or workplace.
+                        </span>
+                        {/* The map is drawn offline; the button is the only way
+                            these coordinates reach anywhere else, and it takes
+                            a deliberate press to do it. */}
+                        <button
+                          type="button"
+                          onClick={() => onCopyCoordinates(meta.gps!)}
+                          className="ml-1 text-[11px] text-blue-600 hover:text-blue-700 underline underline-offset-2"
+                        >
+                          {copied ? 'Copied' : 'Copy'}
+                        </button>
+                        <LocationMap
+                          latitude={meta.gps.latitude}
+                          longitude={meta.gps.longitude}
+                        />
                       </dd>
                     )}
                   </div>

@@ -21,16 +21,33 @@ happens on your machine:
 | Reading the files | your browser | [`src/stores/imageStore.ts`](src/stores/imageStore.ts) |
 | Resizing, cropping and re-encoding | your browser's own canvas | [`src/lib/imageResize.ts`](src/lib/imageResize.ts) |
 | Reading and stripping EXIF/GPS metadata | your browser | [`src/lib/metadata.ts`](src/lib/metadata.ts) |
+| Naming the country and drawing the location map | your browser, on boundaries bundled with the app | [`src/lib/geo.ts`](src/lib/geo.ts) |
 | Removing a background | your browser, on a downloaded AI model | [`src/lib/backgroundRemoval.ts`](src/lib/backgroundRemoval.ts) |
 | Blurring faces | your browser, on a downloaded AI model | [`src/lib/faceBlur.ts`](src/lib/faceBlur.ts) |
 | Saving the result | your browser's download | [`src/lib/download.ts`](src/lib/download.ts) |
 
 Worth calling out, because it is the opposite of what most photo tools do:
-**when the app shows you the GPS coordinates buried in a photo, it prints them
-as plain numbers and does not link them to a map.** Looking a location up would
-mean handing that location to somebody else's server, which is precisely the
-thing you came here to avoid. That decision is written down at the top of
-[`src/lib/metadata.ts`](src/lib/metadata.ts).
+**when the app shows you where a photo says it was taken, it draws that map
+without asking anybody where the photo was taken.**
+
+Every other tool does this by sending the coordinates away — to a geocoder, to
+a tile server, or to whoever is behind the "view on map" link. Any of those
+hands over the exact thing you came here to protect, along with your IP
+address, and it happens before you have decided to keep the photo at all.
+
+So the map ships with the app. The country boundaries are a file in this
+repository ([`src/data/world.json`](src/data/world.json), built by
+[`scripts/build-world-data.mjs`](scripts/build-world-data.mjs)), and naming the
+country and drawing the outline are arithmetic your browser does on that file
+([`src/lib/geo.ts`](src/lib/geo.ts)). Open your Network tab and put a geotagged
+photo in: nothing goes out. Turn the network off entirely and it still works.
+
+What that costs is precision, and the app would rather be honest about it than
+buy accuracy with your location: you get the country and a dot on it, never a
+street address. A street address cannot be worked out from a file small enough
+to bundle — it needs somebody else's server, which is the whole point. The
+coordinates themselves are printed in full above the map, and there is a
+**Copy** button, so sending them somewhere stays a thing you choose to do.
 
 ---
 
