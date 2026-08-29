@@ -28,11 +28,11 @@ const ASPECT = 20 / 9
 const OFFSHORE_KM = 5
 
 /**
- * A country whose longest side is under this many viewBox units is smaller on
- * screen than the marker sitting on top of it — literally hidden by the dot
- * that points at it. Monaco frames at about sixteen units. The map cannot fix
- * that by zooming (the boundary data does not know Monaco to better than a
- * kilometre), so it says so instead.
+ * A highlighted place whose longest side is under this many viewBox units is
+ * smaller on screen than the marker sitting on top of it — literally hidden by
+ * the dot that points at it. Monaco, which has no regions to zoom to, frames at
+ * about sixteen units. The map cannot fix that by zooming further (the boundary
+ * data does not know Monaco to better than a kilometre), so it says so instead.
  */
 const HIDDEN_UNDER_MARKER = 45
 
@@ -111,14 +111,20 @@ export default function LocationMap({ latitude, longitude }: Props) {
               role="img"
               aria-label={
                 located?.country
-                  ? `Map showing the photo's location in ${located.country}`
+                  ? `Map showing the photo's location in ${
+                      [located.region, located.country].filter(Boolean).join(', ')
+                    }`
                   : "Map showing the photo's location"
               }
             >
               {/* Neighbouring land, so the shape is placeable. */}
               <path d={frame.context} fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="0.8" />
               {/* The country the coordinates fall in. */}
-              <path d={frame.country} fill="#fde68a" stroke="#d97706" strokeWidth="1" />
+              {/* A thicker outline than the shape strictly needs: on a small
+                  county the marker covers most of the fill, and the border
+                  drawn around the dot is then the only thing showing which
+                  place is meant. */}
+              <path d={frame.country} fill="#fde68a" stroke="#d97706" strokeWidth="1.6" />
             </svg>
           )}
         </div>
@@ -140,7 +146,7 @@ export default function LocationMap({ latitude, longitude }: Props) {
               />
             )}
             <span
-              className="absolute block w-3 h-3 rounded-full bg-red-600 ring-2 ring-white shadow"
+              className="absolute block w-2.5 h-2.5 rounded-full bg-red-600 ring-2 ring-white shadow"
               style={{
                 left: `${frame.markerX}%`,
                 top: `${frame.markerY}%`,
@@ -165,13 +171,21 @@ export default function LocationMap({ latitude, longitude }: Props) {
               ? 'Not inside any country — at sea, or not a real place.'
               : located.approximate && located.offshoreKm >= OFFSHORE_KM
                 ? `About ${Math.round(located.offshoreKm)} km off the coast of ${located.country}.`
-                : located.country}
+                : // The county is the point of zooming in, so lead with it.
+                  [located.region, located.country].filter(Boolean).join(', ')}
           </span>
           {tooSmallToDraw && (
             <span className="block">Too small to draw at this scale — the dot is the place.</span>
           )}
+          {/* The country map is drawn from bundled data and costs nothing. The
+              zoomed-in county layer is one same-origin fetch, so the claim has
+              to be narrower when it is on screen — saying "nothing was sent"
+              over a picture that needed a request would be a lie the Network
+              tab exposes in one click. */}
           <span className="block">
-            Drawn from boundaries stored in the app. Nothing was looked up, so nothing was sent.
+            {located.region
+              ? 'Your coordinates never left this tab. The county outlines came from this app’s own server, which reveals the country and nothing finer.'
+              : 'Drawn from boundaries stored in the app. Nothing was looked up, so nothing was sent.'}
           </span>
         </p>
       )}

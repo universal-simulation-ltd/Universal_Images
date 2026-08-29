@@ -36,11 +36,22 @@
 //     France, Malta null, Singapore Malaysia, and Manhattan is inside the
 //     coarser coastline so it is no longer flagged approximate. (Luxembourg
 //     survives at 110m — it is the one microstate that set keeps.)
+//   · dropping the cross-border layer from `refineToRegion`'s context → 1 red,
+//     Dover, whose map loses the French coast and draws sea instead
+//   · `NEAR_REGION_KM = 0` → 1 red, the beach 2 km offshore
+//
+// ⚠️ Both region-layer controls were green the first time they were run, and
+// the tests were wrong rather than the code. "France is drawn beside it" was a
+// ring COUNT, which Kent's own neighbouring boroughs clear by themselves, so it
+// could not tell the cross-border layer was gone; it counts geometry on the far
+// side of the Channel now. And nothing exercised an offshore point at all. A
+// negative control that does not go red is not a passing test — it is a test
+// that was never testing.
 
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { locateIn } from '../src/lib/geo.ts'
+import { locateIn, refineToRegion } from '../src/lib/geo.ts'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const world = JSON.parse(readFileSync(resolve(root, 'src/data/world.json'), 'utf8'))
@@ -156,6 +167,70 @@ for (const [label, lat, lon] of [
 ]) {
   check(`${label} still gets a placeable view`, viewSpan(at(lat, lon)) >= 5, true)
 }
+
+// ── The region layer: county / state / province ────────────────────────────
+//
+// Loaded per country, so these read the same files the app would. `refineToRegion`
+// is the seam for the same reason `locateIn` is — the shipping path reaches the
+// data through a Vite `import.meta.glob` that Node cannot resolve.
+const gbr = JSON.parse(readFileSync(resolve(root, 'src/data/regions/gbr.json'), 'utf8'))
+const usa = JSON.parse(readFileSync(resolve(root, 'src/data/regions/usa.json'), 'utf8'))
+
+const region = (regions, lat, lon) =>
+  locateIn2(regions, lat, lon).region
+
+function locateIn2(regions, lat, lon) {
+  return refineToRegion(world, regions, at(lat, lon), lat, lon)
+}
+
+check('London is Westminster', region(gbr, 51.5074, -0.1278), 'Westminster')
+check('Shrewsbury is Shropshire', region(gbr, 52.7069, -2.7527), 'Shropshire')
+check('Edinburgh', region(gbr, 55.9533, -3.1883), 'Edinburgh')
+check('Cardiff', region(gbr, 51.4816, -3.1791), 'Cardiff')
+check('Manhattan is New York', region(usa, 40.7128, -74.006), 'New York')
+check('Anchorage is Alaska', region(usa, 61.2181, -149.9003), 'Alaska')
+
+// Crossing one county line should change the answer and nothing else — this is
+// the region-layer twin of the shared-border check further up.
+check('Camden, one borough north', region(gbr, 51.5423, -0.1435), 'Camden')
+check('  …still the same country', locateIn2(gbr, 51.5423, -0.1435).country, 'United Kingdom')
+
+// The country stays on the result: the caption reads "Westminster, United
+// Kingdom", so losing either half breaks it.
+const westminster = locateIn2(gbr, 51.5074, -0.1278)
+check('a region keeps its country', westminster.country, 'United Kingdom')
+check('a region reframes the map', westminster.view[3] - westminster.view[1] < 1, true)
+check('a region brings its neighbours', westminster.context.length > 0, true)
+
+// Context has to include the neighbouring COUNTRY as well as the neighbouring
+// counties, or a county on a national border draws open sea where its
+// neighbour should be. Kent looks across the Channel at France.
+const kent = locateIn2(gbr, 51.1279, 1.3134)
+check('Dover is in Kent', kent.region, 'Kent')
+// Count context geometry on the FRENCH side of the Channel. A ring count alone
+// does not discriminate — Kent's own neighbouring boroughs clear any plausible
+// threshold on their own, so dropping the cross-border layer left the test
+// green while the map drew open sea across the whole eastern half.
+const acrossTheChannel = kent.context
+  .flat()
+  .filter(([lon]) => lon > 1.45).length
+check('  …and France is drawn beside it, not sea', acrossTheChannel > 500, true)
+
+// The near-region margin, which is the region-layer twin of NEAR_SHORE_KM: a
+// photo from a beach or a pier is metres outside every county polygon.
+check('a beach 2 km offshore is still its county',
+  region(gbr, 50.8198 - 0.02, -0.1367), 'Brighton and Hove')
+check('  …but 4 km out gives up rather than guessing',
+  region(gbr, 50.8198 - 0.04, -0.1367), null)
+
+// A point at sea never reaches the region layer, and must not be broken by it.
+check('the ocean is still nobody', refineToRegion(world, gbr, atlantic, 30, -40).region, null)
+
+// A country whose regions we do not carry keeps the country-level answer
+// rather than losing the map. Monaco is one region, so it has no file at all.
+const monacoBase = at(43.7384, 7.4246)
+check('Monaco has no region file to load', monacoBase.region, null)
+check('  …and still names the country', monacoBase.country, 'Monaco')
 
 console.log(failed === 0 ? '\nall passed' : `\n${failed} failed`)
 process.exit(failed === 0 ? 0 : 1)

@@ -105,7 +105,18 @@ export default defineConfig(({ mode }) => {
           // raises workbox's 2 MB default cap. It is also the same bargain as
           // the runtimes above: dynamic-imported in `imageResize.ts` precisely
           // so that people who never open an iPhone photo never pay for it.
-          globIgnores: ['**/*.wasm', '**/*.tflite', '**/*.task', '**/heic-to-*.js'],
+          // ⚠️ `region-*` is the whole point of splitting the county boundaries
+          // per country. There are 211 of them, ~1.7 MB gzipped all told;
+          // precaching the set would mean every install downloading every
+          // country's counties to answer a question about one. They are cached
+          // on first use instead, by the rule below.
+          globIgnores: [
+            '**/*.wasm',
+            '**/*.tflite',
+            '**/*.task',
+            '**/heic-to-*.js',
+            '**/region-*.js',
+          ],
           runtimeCaching: [
             {
               // The HEIC decoder — cached after the first iPhone photo, so HEIC
@@ -115,6 +126,18 @@ export default defineConfig(({ mode }) => {
               options: {
                 cacheName: 'heic-to',
                 expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              // One country's counties, fetched the first time a photo from
+              // there is opened. Cached so a second such photo — and the same
+              // photo offline later — costs nothing.
+              urlPattern: /\/assets\/region-[a-z]{3}-.*\.js$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'region-boundaries',
+                expiration: { maxEntries: 24, maxAgeSeconds: 60 * 60 * 24 * 90 },
                 cacheableResponse: { statuses: [0, 200] },
               },
             },
@@ -154,6 +177,22 @@ export default defineConfig(({ mode }) => {
         devOptions: { enabled: false }
       })]),
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          // Give each country's region data a chunk name we can pattern-match
+          // on. Without this they are `assets/<hash>.js` like everything else,
+          // and the two rules below — keep them OUT of the install-time
+          // precache, cache them on first use — have nothing to match.
+          chunkFileNames: (chunk) => {
+            const id = chunk.facadeModuleId ?? ''
+            return id.includes('/data/regions/')
+              ? 'assets/region-[name]-[hash].js'
+              : 'assets/[name]-[hash].js'
+          },
+        },
+      },
+    },
     worker: {
       format: 'es'
     }

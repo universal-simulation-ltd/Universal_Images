@@ -25,6 +25,11 @@ export type LonLat = [number, number]
 export interface LocatedPoint {
   /** Country the point falls inside, or null (at sea, or off the boundary set). */
   country: string | null
+  /**
+   * County, state or province, when that country's region set is available and
+   * loaded. Null otherwise — the country map is still drawn.
+   */
+  region: string | null
   /** Closed rings of the matched country, in degrees. Outer rings and holes both. */
   rings: LonLat[][]
   /**
@@ -103,15 +108,40 @@ const VIEW_PADDING = 0.35
 const MIN_VIEW_SPAN_DEGREES = 5
 
 /**
- * The generated boundary set. Exported so `scripts/geo.test.mjs` can hand a
- * real one to `locateIn` — Node's type-stripping can't resolve Vite's `?raw`
- * import, so the test loads `world.json` itself and skips `loadWorld`.
+ * The same near-border allowance as `NEAR_SHORE_KM`, but for regions — much
+ * tighter, because the region boundaries are drawn at 1:10m where the country
+ * ones are 1:50m. A point more than a couple of kilometres outside every county
+ * of a country it is definitely in means something is wrong, not that the
+ * coastline is coarse.
  */
-export interface World {
+const NEAR_REGION_KM = 3
+
+/**
+ * Smallest span the region map will show, in degrees of latitude — roughly
+ * 50 km. Small enough to be a county map, large enough that a city district
+ * still shows the city around it.
+ */
+const MIN_REGION_VIEW_SPAN_DEGREES = 0.45
+
+/**
+ * One generated boundary set. `world.json` is the countries; each
+ * `regions/<iso3>.json` is one country's counties, states or provinces, in the
+ * identical shape — so every helper below serves both layers.
+ *
+ * Exported so `scripts/geo.test.mjs` can hand real ones in: Node's
+ * type-stripping can't resolve Vite's `?raw` import, so the tests load the JSON
+ * themselves and skip the loaders.
+ */
+export interface Boundaries {
   transform: { scale: [number, number]; translate: [number, number] }
   arcs: [number, number][][]
   names: string[]
   polys: { c: number; b: [number, number, number, number]; r: number[][] }[]
+}
+
+/** The countries, plus the ISO alpha-3 that names each one's region file. */
+export interface World extends Boundaries {
+  codes: string[]
 }
 
 let worldPromise: Promise<World> | null = null
@@ -132,9 +162,9 @@ function loadWorld(): Promise<World> {
  * Germany's western one — and stored as deltas, so decoding is worth caching
  * for as long as the world is in memory.
  */
-const arcCache = new WeakMap<World, Map<number, [number, number][]>>()
+const arcCache = new WeakMap<Boundaries, Map<number, [number, number][]>>()
 
-function absoluteArc(world: World, index: number): [number, number][] {
+function absoluteArc(world: Boundaries, index: number): [number, number][] {
   let cache = arcCache.get(world)
   if (!cache) {
     cache = new Map()
@@ -159,7 +189,7 @@ function absoluteArc(world: World, index: number): [number, number][] {
  * index means "this arc, walked backwards" (that's how a shared border serves
  * both of its countries), and consecutive arcs repeat the point they meet at.
  */
-function ringOf(world: World, arcIndexes: number[]): [number, number][] {
+function ringOf(world: Boundaries, arcIndexes: number[]): [number, number][] {
   const out: [number, number][] = []
   for (const index of arcIndexes) {
     const reversed = index < 0
@@ -195,7 +225,7 @@ const KM_PER_DEGREE = 111.32
  * arithmetic. `ceiling` lets a ring bail as soon as it cannot win.
  */
 function ringDistanceKm(
-  world: World,
+  world: Boundaries,
   ring: [number, number][],
   latitude: number,
   longitude: number,
@@ -245,7 +275,7 @@ function ringDistanceKm(
   return best
 }
 
-function toDegrees(world: World, ring: [number, number][]): LonLat[] {
+function toDegrees(world: Boundaries, ring: [number, number][]): LonLat[] {
   const { scale, translate } = world.transform
   return ring.map(([x, y]) => [x * scale[0] + translate[0], y * scale[1] + translate[1]])
 }
@@ -263,107 +293,231 @@ function boundsOf(rings: LonLat[][]): [number, number, number, number] {
   return [w, s, e, n]
 }
 
+let regionFiles: Record<string, () => Promise<string>> | null = null
+
 /**
- * Names the country a coordinate falls in and returns that country's outline
- * to draw it on. Falls back to the whole world when nothing matches, so a
- * point at sea still gets a picture rather than an empty box.
+ * Every country's region file, as lazy loaders keyed by path. Vite turns each
+ * into its own chunk at build time, so naming one here does not pull in the
+ * other two hundred.
  *
- * Entirely offline: no request is made, here or anywhere it is called from.
+ * ⚠️ Resolved on first use rather than at module scope, and that is load-
+ * bearing: `import.meta.glob` is a Vite transform with no meaning to anything
+ * else, so evaluating it at the top level would make this module unimportable
+ * in plain Node — which is exactly how `scripts/geo.test.mjs` runs. Inside a
+ * function it is still rewritten at build time and simply never reached by the
+ * tests, which supply their boundary sets directly.
  */
-export async function locatePoint(latitude: number, longitude: number): Promise<LocatedPoint> {
-  return locateIn(await loadWorld(), latitude, longitude)
+function regionLoaders(): Record<string, () => Promise<string>> {
+  regionFiles ??= import.meta.glob('../data/regions/*.json', {
+    query: '?raw',
+    import: 'default',
+  }) as Record<string, () => Promise<string>>
+  return regionFiles
 }
 
-/** `locatePoint` with the world supplied — the seam the tests use. */
-export function locateIn(world: World, latitude: number, longitude: number): LocatedPoint {
-  const { scale, translate } = world.transform
+const regionCache = new Map<string, Promise<Boundaries | null>>()
+
+/**
+ * Loads one country's regions, by ISO alpha-3.
+ *
+ * ⚠️ This is the one part of the panel that makes a request. It is to this
+ * app's own origin, for a static asset, and it says only which country — never
+ * the coordinates, which never leave the tab. But it is a request, and a server
+ * log could infer the country from it, so it is worth knowing that the
+ * country-level map above is drawn before this is ever called and does not
+ * depend on it. See PRIVACY.md.
+ */
+function loadRegions(code: string): Promise<Boundaries | null> {
+  const path = `../data/regions/${code.toLowerCase()}.json`
+  const load = regionLoaders()[path]
+  // Perfectly normal: 29 countries have no admin-1 subdivisions worth the file.
+  if (!load) return Promise.resolve(null)
+
+  if (!regionCache.has(code)) {
+    regionCache.set(
+      code,
+      load()
+        .then((raw) => JSON.parse(raw) as Boundaries)
+        // Offline on a first visit, or the chunk 404s after a redeploy. The
+        // country map is already drawn; losing the zoom is not worth an error.
+        .catch(() => null)
+    )
+  }
+  return regionCache.get(code)!
+}
+
+/**
+ * Names where a coordinate is and returns the outline to draw it on: the
+ * county, state or province when that country's regions are available, and the
+ * country itself otherwise. Falls back to the whole world when nothing matches,
+ * so a point at sea still gets a picture rather than an empty box.
+ *
+ * The coordinates themselves are never sent anywhere — every answer here is
+ * computed in this tab. See `loadRegions` for the one request involved.
+ */
+export async function locatePoint(latitude: number, longitude: number): Promise<LocatedPoint> {
+  const world = await loadWorld()
+  const base = locateIn(world, latitude, longitude)
+  if (base.country === null) return base
+
+  const code = world.codes[world.names.indexOf(base.country)]
+  const regions = code ? await loadRegions(code) : null
+  return regions ? refineToRegion(world, regions, base, latitude, longitude) : base
+}
+
+/**
+ * Which polygon of a boundary set a point falls in — or, failing that, the
+ * nearest one within `nearKm`.
+ *
+ * Shared by both layers, because the question is identical whether the
+ * polygons are countries or counties.
+ */
+function findPolygon(
+  boundaries: Boundaries,
+  latitude: number,
+  longitude: number,
+  nearKm: number
+): { index: number; poly: Boundaries['polys'][number]; offshoreKm: number } | null {
+  const { scale, translate } = boundaries.transform
   const x = (longitude - translate[0]) / scale[0]
   const y = (latitude - translate[1]) / scale[1]
 
-  let match: number | null = null
-  /** The single polygon the point landed in or nearest to — what to frame on. */
-  let matched: World['polys'][number] | null = null
-  let approximate = false
-  let offshoreKm = 0
-
   // Pass one: which border actually encloses the point.
-  for (const poly of world.polys) {
+  for (const poly of boundaries.polys) {
     // The bbox check is why this stays instant: it rejects all but a handful
-    // of the world's 1,500-odd polygons before any ring is decoded.
+    // of the polygons before any ring is decoded.
     const [minX, minY, maxX, maxY] = poly.b
     if (x < minX || x > maxX || y < minY || y > maxY) continue
 
     const [outer, ...holes] = poly.r
-    if (!contains(ringOf(world, outer), x, y)) continue
-    // A hole is a lake or an enclave — inside the outline, outside the country.
-    if (holes.some((hole) => contains(ringOf(world, hole), x, y))) continue
+    if (!contains(ringOf(boundaries, outer), x, y)) continue
+    // A hole is a lake or an enclave — inside the outline, outside the place.
+    if (holes.some((hole) => contains(ringOf(boundaries, hole), x, y))) continue
 
-    match = poly.c
-    matched = poly
-    break
+    return { index: poly.c, poly, offshoreKm: 0 }
   }
 
-  // Pass two, only when pass one found nothing: the nearest border within
-  // `NEAR_SHORE_KM`. This is what rescues the harbours, islands and
-  // microstates that 1:50m draws as water — and it runs over the handful of
-  // polygons whose bbox is within the margin, not over the world.
-  if (match === null) {
-    const marginY = NEAR_SHORE_KM / KM_PER_DEGREE / scale[1]
-    const marginX = marginY * (scale[1] / scale[0]) / Math.max(0.02, Math.cos((latitude * Math.PI) / 180))
-    let best = NEAR_SHORE_KM
+  // Pass two: the nearest border within the margin. This is what rescues the
+  // harbours, islands and microstates that a simplified coastline draws as
+  // water — and it runs over the handful of polygons whose bbox is within the
+  // margin, not over the whole set.
+  const marginY = nearKm / KM_PER_DEGREE / scale[1]
+  const marginX =
+    (marginY * scale[1]) / scale[0] / Math.max(0.02, Math.cos((latitude * Math.PI) / 180))
+  let best = nearKm
+  let winner: { index: number; poly: Boundaries['polys'][number]; offshoreKm: number } | null = null
 
-    for (const poly of world.polys) {
-      const [minX, minY, maxX, maxY] = poly.b
-      if (x < minX - marginX || x > maxX + marginX) continue
-      if (y < minY - marginY || y > maxY + marginY) continue
+  for (const poly of boundaries.polys) {
+    const [minX, minY, maxX, maxY] = poly.b
+    if (x < minX - marginX || x > maxX + marginX) continue
+    if (y < minY - marginY || y > maxY + marginY) continue
 
-      for (const arcIndexes of poly.r) {
-        const km = ringDistanceKm(world, ringOf(world, arcIndexes), latitude, longitude, best)
-        if (km < best) {
-          best = km
-          match = poly.c
-          matched = poly
-        }
+    for (const arcIndexes of poly.r) {
+      const km = ringDistanceKm(
+        boundaries,
+        ringOf(boundaries, arcIndexes),
+        latitude,
+        longitude,
+        best
+      )
+      if (km < best) {
+        best = km
+        winner = { index: poly.c, poly, offshoreKm: km }
       }
     }
-    approximate = match !== null
-    offshoreKm = approximate ? best : 0
   }
+  return winner
+}
 
-  const wanted =
-    match === null ? world.polys : world.polys.filter((poly) => poly.c === match)
-  const rings = wanted.flatMap((poly) =>
-    poly.r.map((arcIndexes) => toDegrees(world, ringOf(world, arcIndexes)))
-  )
+/** Every ring of every polygon belonging to one entry of a boundary set. */
+function ringsOf(boundaries: Boundaries, index: number): LonLat[][] {
+  return boundaries.polys
+    .filter((poly) => poly.c === index)
+    .flatMap((poly) => poly.r.map((arcs) => toDegrees(boundaries, ringOf(boundaries, arcs))))
+}
 
-  const bounds = matched ? degreeBox(world, matched.b) : boundsOf(rings)
-  const view = match === null ? bounds : viewFor(bounds)
+/** Rings of everything in a boundary set that is not `index` and is in view. */
+function contextRings(
+  boundaries: Boundaries,
+  index: number | null,
+  view: [number, number, number, number]
+): LonLat[][] {
+  return boundaries.polys
+    .filter((poly) => poly.c !== index && intersects(degreeBox(boundaries, poly.b), view))
+    .flatMap((poly) => poly.r.map((arcs) => toDegrees(boundaries, ringOf(boundaries, arcs))))
+}
 
-  // Neighbours are only worth decoding when there is a country to put in
-  // context; the world fallback is already showing everything.
-  const context =
+/** `locatePoint`'s country layer, with the world supplied — the tests' seam. */
+export function locateIn(world: World, latitude: number, longitude: number): LocatedPoint {
+  const hit = findPolygon(world, latitude, longitude, NEAR_SHORE_KM)
+  const match = hit ? hit.index : null
+
+  const rings =
     match === null
-      ? []
-      : world.polys
-          .filter((poly) => poly.c !== match && intersects(degreeBox(world, poly.b), view))
-          .flatMap((poly) =>
-            poly.r.map((arcIndexes) => toDegrees(world, ringOf(world, arcIndexes)))
-          )
+      ? world.polys.flatMap((poly) =>
+          poly.r.map((arcs) => toDegrees(world, ringOf(world, arcs)))
+        )
+      : ringsOf(world, match)
+
+  const bounds = hit ? degreeBox(world, hit.poly.b) : boundsOf(rings)
+  const view = match === null ? bounds : viewFor(bounds, MIN_VIEW_SPAN_DEGREES)
 
   return {
     country: match === null ? null : world.names[match],
+    region: null,
     rings,
-    context,
+    // Neighbours are only worth decoding when there is a country to put in
+    // context; the world fallback is already showing everything.
+    context: match === null ? [] : contextRings(world, match, view),
     bounds,
     view,
     isWorld: match === null,
-    approximate,
-    offshoreKm,
+    approximate: !!hit && hit.offshoreKm > 0,
+    offshoreKm: hit ? hit.offshoreKm : 0,
+  }
+}
+
+/**
+ * Narrows a country-level result to the county, state or province the point is
+ * in, given that country's region set.
+ *
+ * The country layer stays visible underneath: the regions of one country stop
+ * at its border, so without it a county on a national frontier would have open
+ * sea drawn where its neighbour ought to be.
+ */
+export function refineToRegion(
+  world: World,
+  regions: Boundaries,
+  base: LocatedPoint,
+  latitude: number,
+  longitude: number
+): LocatedPoint {
+  const hit = findPolygon(regions, latitude, longitude, NEAR_REGION_KM)
+  if (!hit) return base
+
+  const bounds = degreeBox(regions, hit.poly.b)
+  const view = viewFor(bounds, MIN_REGION_VIEW_SPAN_DEGREES)
+
+  return {
+    ...base,
+    region: regions.names[hit.index],
+    rings: ringsOf(regions, hit.index),
+    // Sibling regions first, then land belonging to other countries — without
+    // the second, everything across the border reads as water.
+    context: [
+      ...contextRings(regions, hit.index, view),
+      ...contextRings(world, base.isWorld ? null : world.names.indexOf(base.country!), view),
+    ],
+    bounds,
+    view,
   }
 }
 
 /** `bounds` with margin added, and widened if the country is very small. */
-function viewFor(bounds: [number, number, number, number]): [number, number, number, number] {
+function viewFor(
+  bounds: [number, number, number, number],
+  minSpanDegrees: number
+): [number, number, number, number] {
   const [w, s, e, n] = bounds
   const midLon = (w + e) / 2
   const midLat = (s + n) / 2
@@ -372,17 +526,17 @@ function viewFor(bounds: [number, number, number, number]): [number, number, num
   // latitude shrunk by the cosine of where you are, so a country is "as tall
   // as it is wide" only after that correction.
   const lonScale = Math.max(0.02, Math.cos((midLat * Math.PI) / 180))
-  const halfLat = Math.max(((n - s) / 2) * (1 + VIEW_PADDING), MIN_VIEW_SPAN_DEGREES / 2)
+  const halfLat = Math.max(((n - s) / 2) * (1 + VIEW_PADDING), minSpanDegrees / 2)
   const halfLon = Math.max(
     ((e - w) / 2) * (1 + VIEW_PADDING),
-    MIN_VIEW_SPAN_DEGREES / 2 / lonScale
+    minSpanDegrees / 2 / lonScale
   )
 
   return [midLon - halfLon, midLat - halfLat, midLon + halfLon, midLat + halfLat]
 }
 
 function degreeBox(
-  world: World,
+  world: Boundaries,
   box: [number, number, number, number]
 ): [number, number, number, number] {
   const { scale, translate } = world.transform

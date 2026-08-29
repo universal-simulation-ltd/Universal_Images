@@ -19,3 +19,6 @@ release
 
 # Internal project notes — not published (matches the other Universal Apps repos)
 CLAUDE.md
+
+# Natural Earth source downloads for scripts/build-region-data.mjs (40 MB).
+.cache/

@@ -15,7 +15,7 @@
 // point of the build step: a point-in-polygon test over every ring on earth is
 // wasteful when a cheap integer bbox check rejects almost all of them first.
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
@@ -25,6 +25,36 @@ const root = resolve(here, '..')
 const topo = JSON.parse(
   readFileSync(resolve(root, 'node_modules/world-atlas/countries-50m.json'), 'utf8')
 )
+
+// Each country also gets its ISO alpha-3 code, which is what
+// `src/data/regions/*.json` are named after and what the runtime looks one up
+// by. Names are NOT usable as a key across the two Natural Earth layers: the
+// admin-0 set this is built from says "Serbia", "Tanzania", "Bahamas" while the
+// admin-1 set says "Republic of Serbia", "United Republic of Tanzania", "The
+// Bahamas". Matching on those silently dropped 61 countries' regions, and the
+// near misses are the dangerous kind — "Congo" and "Dem. Rep. Congo" are
+// different countries.
+//
+// The codes come from the same Natural Earth admin-0 release `world-atlas` is
+// built from, so `NAME` lines up exactly. See `scripts/build-region-data.mjs`
+// for the download; it is cached, and this build needs it present.
+const admin0Path = resolve(root, '.cache/ne_50m_admin_0_countries.geojson')
+if (!existsSync(admin0Path)) {
+  throw new Error(
+    'Missing .cache/ne_50m_admin_0_countries.geojson — run ' +
+      '`node scripts/build-region-data.mjs` first, which downloads and caches it.'
+  )
+}
+const codeByName = new Map(
+  JSON.parse(readFileSync(admin0Path, 'utf8')).features.map((f) => [
+    f.properties.NAME,
+    f.properties.ADM0_A3,
+  ])
+)
+// `world-atlas` 2.0.2 predates the 2019 rename, so its name for MKD is the old
+// one. Anything else that fails to resolve is a hard error rather than a
+// country quietly losing its regions.
+codeByName.set('Macedonia', 'MKD')
 
 const { transform, arcs } = topo
 const geometries = topo.objects.countries.geometries
@@ -42,6 +72,7 @@ const arcPoints = arcs.map((arc) => {
 })
 
 const names = []
+const codes = []
 const polys = []
 
 for (const geom of geometries) {
@@ -58,7 +89,10 @@ for (const geom of geometries) {
     : null
   if (!rings) continue
 
+  const code = codeByName.get(name)
+  if (!code) throw new Error(`no ISO alpha-3 code for "${name}" — add an alias above`)
   const c = names.push(name) - 1
+  codes.push(code)
 
   // One entry per polygon, not per country: Russia and the US straddle the
   // antimeridian, so a single country-wide bbox would span the globe and
@@ -82,6 +116,8 @@ const out = {
   transform,
   arcs,
   names,
+  /** ISO alpha-3 per country, parallel to `names`. Keys the region files. */
+  codes,
   polys,
 }
 

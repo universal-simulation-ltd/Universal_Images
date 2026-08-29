@@ -22,6 +22,7 @@ happens on your machine:
 | Resizing, cropping and re-encoding | your browser's own canvas | [`src/lib/imageResize.ts`](src/lib/imageResize.ts) |
 | Reading and stripping EXIF/GPS metadata | your browser | [`src/lib/metadata.ts`](src/lib/metadata.ts) |
 | Naming the country and drawing the location map | your browser, on boundaries bundled with the app | [`src/lib/geo.ts`](src/lib/geo.ts) |
+| Naming the county and zooming to it | your browser, on one county file fetched from this app (see below) | [`src/lib/geo.ts`](src/lib/geo.ts) |
 | Removing a background | your browser, on a downloaded AI model | [`src/lib/backgroundRemoval.ts`](src/lib/backgroundRemoval.ts) |
 | Blurring faces | your browser, on a downloaded AI model | [`src/lib/faceBlur.ts`](src/lib/faceBlur.ts) |
 | Saving the result | your browser's download | [`src/lib/download.ts`](src/lib/download.ts) |
@@ -42,12 +43,39 @@ country and drawing the outline are arithmetic your browser does on that file
 ([`src/lib/geo.ts`](src/lib/geo.ts)). Open your Network tab and put a geotagged
 photo in: nothing goes out. Turn the network off entirely and it still works.
 
-What that costs is precision, and the app would rather be honest about it than
-buy accuracy with your location: you get the country and a dot on it, never a
-street address. A street address cannot be worked out from a file small enough
-to bundle — it needs somebody else's server, which is the whole point. The
-coordinates themselves are printed in full above the map, and there is a
-**Copy** button, so sending them somewhere stays a thing you choose to do.
+### The one request the map does make
+
+The map then zooms in to name the **county, state or province** too, and that
+part is worth being exact about, because it is not free.
+
+County outlines for every country come to about 1.7 MB — too much to hand every
+visitor to answer a question about one country. So they are split into one file
+per country ([`src/data/regions/`](src/data/regions/)), and your browser fetches
+only the one it needs. **That fetch is a request, and it is the only one this
+panel makes.** Specifically:
+
+- It goes to **this app's own server**, not a third party. There is no geocoder
+  and no tile server involved, and no other company learns anything.
+- It asks for one file named after a country — `gbr`, `fra`, `usa`. Somebody
+  reading the server log could infer **which country** your photo is from.
+- It does **not** carry your coordinates, your county, or anything about the
+  photo. Those never leave the tab, and nothing is sent back.
+- It happens only after you open the Metadata panel on a geotagged photo, and
+  only once per country — after that it is cached, including offline.
+- The country-level map is drawn **before** this and does not depend on it. If
+  you are offline, or it fails, you still get the country map and no request.
+
+The panel says which of the two you are looking at, under the map. That is a
+narrower promise than "nothing is sent", and it is narrower on purpose: a claim
+your own Network tab can disprove in one click is worse than no claim.
+
+### What it still will not do
+
+You get a county and a dot, never a **street address**. That cannot be worked
+out from a file small enough to bundle — it needs somebody else's server, which
+is the whole point. The coordinates themselves are printed in full above the
+map, and there is a **Copy** button, so sending them somewhere stays a thing you
+choose to do.
 
 ---
 
