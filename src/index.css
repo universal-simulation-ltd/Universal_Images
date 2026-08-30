@@ -11,6 +11,42 @@ body {
   overscroll-behavior: none;
 }
 
+/* ---------- iOS: don't zoom the page when a field is focused ----------
+   Safari and WKWebView zoom the whole page in the instant you tap an input
+   whose COMPUTED font-size is under 16px, and there is no matching zoom back
+   out — the page is simply left scaled, with half of it off-screen. Every
+   text field in this app was under the line: the filename rename box is
+   `text-xs` (12px) and the custom width/height boxes are `text-sm` (14px).
+
+   The fix is the font size, NOT the viewport. `maximum-scale=1` /
+   `user-scalable=no` would also stop the zoom, by taking pinch-zoom away from
+   everyone who needs it; `index.html` deliberately stays
+   `width=device-width, initial-scale=1.0, viewport-fit=cover`.
+
+   Scoped to touch-only pointers so the desktop type scale is untouched, and
+   written as `max(16px, 1em)` so a field that is already bigger keeps its size.
+   Deliberately unlayered: Tailwind's utilities live in `@layer utilities`, and
+   an unlayered rule outranks any layered one whatever its specificity — which
+   is what lets a plain element selector beat `.text-xs`.
+
+   The non-text input types are excluded because they are not what the rule is
+   for: `range` and `color` here are a blur-strength slider and a swatch, and
+   neither opens a keyboard or triggers the zoom. */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type='range']):not([type='color']):not([type='checkbox']):not([type='radio']):not([type='file']):not([type='submit']):not([type='button']),
+  textarea,
+  select {
+    /* ⚠️ `!important` is here for ONE control we do not own: the language
+       `<select>` in the SDK's profile dropdown carries an INLINE
+       `fontSize: 12` (`UserProfile.js` → `languageSelectStyle`), and an inline
+       style beats an unlayered rule however specific. iOS zooms for a small
+       `<select>` exactly as it does for a text box, so leaving it would leave
+       the trap in the app by another door. Reported upstream — when the SDK
+       floors it, this can go back to a plain declaration. */
+    font-size: max(16px, 1em) !important;
+  }
+}
+
 /* Subtle checkerboard for transparency previews */
 .checker-bg {
   background-image:

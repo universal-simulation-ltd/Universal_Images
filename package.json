@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test:hosted-paths": "node --experimental-strip-types scripts/hostedPath.test.mjs",
+    "test:mobile-ui": "node scripts/mobileUi.test.mjs",
     "electron": "electron .",
     "dist": "npm run build:desktop && electron-builder",
     "dist:win": "npm run build:desktop && electron-builder --win",

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useImageStore } from '../../stores/imageStore'
 import type { ScrubResult } from '../../lib/metadata'
+import { DIALOG_BODY, DIALOG_FOOTER, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../../lib/dialog'
 import LocationMap from './LocationMap'
 
 // The "Metadata (identification)" panel. Opened from the badge above the
@@ -57,13 +58,13 @@ export default function MetadataDialog({ onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className={`${DIALOG_OVERLAY} bg-black/50`}
       onClick={(e) => {
         if (e.target === e.currentTarget && !scrubbing) onClose()
       }}
     >
-      <div className="bg-white rounded-xl shadow-2xl p-5 w-full max-w-md max-h-[85vh] flex flex-col">
-        <div className="flex items-start justify-between gap-3 mb-1">
+      <div className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl max-w-md sm:max-h-[85dvh]`}>
+        <div className={`${DIALOG_HEADER} flex items-start justify-between gap-3 border-b border-slate-100 px-5 pt-5 pb-3`}>
           <div className="min-w-0">
             <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
               <span aria-hidden="true">🏷</span>
@@ -84,34 +85,39 @@ export default function MetadataDialog({ onClose }: Props) {
           )}
         </div>
 
-        {/* "What is metadata?" behind a small (i) — the panel should be about
-            this photo, not a lecture, for anyone who already knows. */}
-        <div className="my-3">
-          <button
-            type="button"
-            onClick={() => setInfoOpen((v) => !v)}
-            aria-expanded={infoOpen}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-orange-700 transition-colors"
-          >
-            <span
-              aria-hidden="true"
-              className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[10px] font-serif italic leading-none"
+        {/* Everything from here down scrolls; the title above and the actions
+            below stay put. The "What is metadata?" disclosure moved INSIDE the
+            scroller when the panel was capped to the visible viewport — it is
+            content, not chrome, and pinning it cost the fields their room on a
+            phone. */}
+        <div className={`${DIALOG_BODY} px-5 pb-1 pt-1`}>
+          {/* "What is metadata?" behind a small (i) — the panel should be about
+              this photo, not a lecture, for anyone who already knows. */}
+          <div className="my-3">
+            <button
+              type="button"
+              onClick={() => setInfoOpen((v) => !v)}
+              aria-expanded={infoOpen}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-orange-700 transition-colors"
             >
-              i
-            </span>
-            What is metadata?
-          </button>
-          {infoOpen && (
-            <p className="mt-2 text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5">
-              Your camera writes a hidden note into every photo: where you were,
-              the moment you pressed the shutter, and which phone or camera took
-              it. It stays in the file when you send or post it. Stripping it
-              removes the note and leaves the picture exactly as it is.
-            </p>
-          )}
-        </div>
+              <span
+                aria-hidden="true"
+                className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-[10px] font-serif italic leading-none"
+              >
+                i
+              </span>
+              What is metadata?
+            </button>
+            {infoOpen && (
+              <p className="mt-2 text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5">
+                Your camera writes a hidden note into every photo: where you were,
+                the moment you pressed the shutter, and which phone or camera took
+                it. It stays in the file when you send or post it. Stripping it
+                removes the note and leaves the picture exactly as it is.
+              </p>
+            )}
+          </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto">
           {error && (
             <div className="rounded-lg bg-red-50 text-red-700 px-4 py-3 text-sm mb-3">{error}</div>
           )}
@@ -225,7 +231,7 @@ export default function MetadataDialog({ onClose }: Props) {
           )}
         </div>
 
-        <div className="mt-4 flex items-center gap-2 justify-end shrink-0">
+        <div className={`${DIALOG_FOOTER} flex items-center gap-2 justify-end border-t border-slate-100 px-5 py-4`}>
           <button
             onClick={onClose}
             disabled={scrubbing}

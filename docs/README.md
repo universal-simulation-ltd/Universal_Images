@@ -150,6 +150,87 @@ for the same "Object not found".
 The same landmine was fixed in Universal PDF (`ffae15b`), QR, Exports and
 Recorder — all five had copies of the identical three-step flow.
 
+## Phone and iPhone-app layout rules
+
+Three faults reported by the owner on 2026-08-30, all of which only exist below
+`lg` and none of which a desktop screenshot or `tsc` can see. Pinned in source
+by `npm run test:mobile-ui`, and verified rendered in Playwright at 390×844 with
+touch emulation.
+
+### The navbar edit shortcuts are icon-only on a phone
+
+`EditShortcuts.tsx` fills the SDK navbar's `centre` slot with **Remove bg** and
+**Blur faces** — the two tools that are otherwise several scrolls down the side
+panel. It used to be `hidden lg:flex`, which meant the iPhone app, where that
+panel *is* the whole screen, had neither.
+
+Dropping the breakpoint alone does not work: at 390px the bar has roughly 160px
+of slack between the home button and the Actions/profile cluster, and the two
+labelled buttons want ~190px. So below `lg` the label is dropped and each button
+becomes a 38px square — the size and the chrome (white fill, slate hairline) the
+SDK gives the bar's own home button, and for the reason its source gives: a bare
+glyph on a white bar does not read as something you can press.
+
+Everything the label was carrying has to survive that:
+
+| State | Desktop | Phone |
+|---|---|---|
+| idle | "Remove bg" / "Blur faces" | icon, `aria-label`, `title` |
+| running | "Removing…" / "Detecting…" | **spinner replaces the icon**, `aria-busy` |
+| background removed | "Restore bg" + orange pressed fill | orange pressed fill, `aria-label` |
+| faces blurred | "Faces · 3" | **count badge** on the corner, `aria-label` |
+
+`aria-label` is the state and `title` is `"<state> — <explanation>"`, so the
+label text is never the only place a state is written down.
+
+### Dialogs: `src/lib/dialog.ts`
+
+Every modal is built from the shared shell there, and a new one must be too
+(the test fails on any hand-rolled `fixed inset-0` class). Three rules, each of
+which was broken:
+
+1. **`z-[1100]`.** `UniversalAppsNavBar` sets an INLINE `zIndex: 1000`. Tailwind
+   stops at `z-50` and an inline style beats a class regardless, so a dialog
+   below it leaves the bar brightly lit on top of its own backdrop — and a tall
+   one slides its own header, title and close button included, underneath the
+   bar. This is a suite-wide landmine, not an Images one.
+2. **`100dvh`, not `vh`.** `vh` on iOS is the LARGE viewport, measured with the
+   browser toolbars hidden whether or not they are, so `max-h-[85vh]` is 85% of
+   a box taller than the one the user can see. The panel takes `max-h-full` of
+   the padded overlay, so the two numbers cannot drift apart.
+3. **Safe-area insets.** The Capacitor build runs full-screen under the Dynamic
+   Island (`viewport-fit=cover`) and a `position: fixed` box is laid out against
+   the whole SCREEN. `env(safe-area-inset-*)` is 0 in a browser, so this costs
+   web and desktop nothing.
+
+The panel is a flex column and **only the body scrolls**, so the title and the
+action row stay pinned. `HostedStoreDialog` used to scroll the whole panel,
+which hid "Back up this image" and its close button as soon as the tier cards
+outgrew the screen.
+
+### Fields are floored at 16px on touch
+
+iOS Safari and WKWebView zoom the whole page in the instant you focus an input
+whose **computed** `font-size` is under 16px, and there is no matching zoom back
+out — the page is simply left scaled with half of it off-screen. Every text
+field here was under the line (the rename box is `text-xs`, the custom
+width/height boxes `text-sm`).
+
+The fix is in `src/index.css`, under `@media (hover: none) and (pointer: coarse)`
+so the desktop type scale is untouched, written `font-size: max(16px, 1em)` so a
+field that is already larger keeps its size. It is deliberately **unlayered** —
+Tailwind's utilities live in `@layer utilities`, and an unlayered rule outranks
+a layered one whatever its specificity, which is what lets a plain element
+selector beat `.text-xs`. The `!important` on it is for one control this repo
+does not own: the language `<select>` in the SDK's profile dropdown carries an
+inline `fontSize: 12`, and iOS zooms for a small `<select>` exactly as it does
+for a text box.
+
+⚠️ **Do not "fix" this with `maximum-scale=1` or `user-scalable=no`.** Pinch-zoom
+is an accessibility feature; `index.html` stays
+`width=device-width, initial-scale=1.0, viewport-fit=cover`, and the test asserts
+that it does.
+
 ## Suite context
 
 This repo is one part of the **Universal Simulation suite** (the open-source

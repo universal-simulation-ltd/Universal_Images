@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
 import { useImageStore } from '../stores/imageStore'
+import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib/dialog'
 import { storeCurrentImage, deleteHostedImage, openHostedImage, HostedObjectMissingError } from '../lib/hostedStore'
 import { downloadBackup, importBackup } from '../lib/imageBackup'
 
@@ -141,18 +142,21 @@ export default function HostedStoreDialog() {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/50 p-4"
+      className={`${DIALOG_OVERLAY} bg-slate-900/50`}
       onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}
     >
-      <div className="w-full max-w-lg max-h-[88vh] overflow-y-auto rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+      <div className={`${DIALOG_PANEL} max-w-lg rounded-2xl bg-white shadow-xl sm:max-h-[88dvh]`}>
+        <div className={`${DIALOG_HEADER} flex items-center justify-between border-b border-slate-200 px-5 py-4`}>
           <h2 className="text-base font-bold text-slate-900">Back up this image</h2>
           <button onClick={close} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
             <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" /></svg>
           </button>
         </div>
 
-        <div className="space-y-4 p-5">
+        {/* Only the body scrolls. It used to be the whole panel, so on a phone
+            the "Back up this image" title and its close button scrolled away
+            the moment the tier cards outgrew the screen. */}
+        <div className={`${DIALOG_BODY} space-y-4 p-5`}>
           {/* Tier 1 — On this device: free local resize + Download the result. */}
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center gap-2">
