@@ -15,10 +15,6 @@ release
 # Capacitor's own ios/.gitignore already excludes the genuinely generated parts
 # (App/build, App/Pods, the copied web assets under App/App/public, and the
 # generated App/App/capacitor.config.json).
-#
-# `android/` stays ignored only because no Android project has been added yet.
-# Un-ignore it the same way when one is.
-/android
 
 # TypeScript incremental build artifacts
 *.tsbuildinfo
