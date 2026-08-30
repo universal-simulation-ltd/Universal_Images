@@ -85,7 +85,7 @@ export default function App() {
       {/* Renders nothing until this tab is genuinely running superseded code.
           See the SDK's useAppUpdate: an autoUpdate PWA hands the new worker
           control but leaves the running page on its old JavaScript. */}
-      <div className={`${hasImages ? EDITOR_CONTAINER : CONTAINER} pt-4`}>
+      <div className={`${hasImages ? EDITOR_CONTAINER : CONTAINER} pt-4 empty:hidden`}>
         <UpdateNotice />
         <LoadErrorNotice />
       </div>
