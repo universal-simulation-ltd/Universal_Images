@@ -46,7 +46,11 @@ export default function LoadErrorNotice() {
           aria-label="Dismiss"
           className="shrink-0 rounded px-1.5 text-amber-700 hover:bg-amber-100 hover:text-amber-900 transition-colors"
         >
-          ✕
+          {/* SVG, not `✕`: U+2715 has no glyph in iOS's system font and draws
+              as a hollow ▯?▯ box, which is the only way to dismiss this. */}
+          <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+            <path d="m4 4 8 8M12 4l-8 8" />
+          </svg>
         </button>
       </div>
     </div>

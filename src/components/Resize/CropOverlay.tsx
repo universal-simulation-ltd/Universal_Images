@@ -399,7 +399,12 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
             className="absolute w-7 h-7 rounded-full bg-white text-slate-700 hover:bg-slate-100 shadow-md ring-1 ring-slate-300 flex items-center justify-center text-sm"
             style={{ left: editRect.left + editRect.width - 14, top: editRect.top - 14 }}
           >
-            ✕
+            {/* ⚠️ An SVG, not `✕`: U+2715 has no glyph in iOS's system font
+                and WebKit will not fall back, so this drew as ▯?▯ — on the one
+                control that gets rid of the crop. Matches the tick above. */}
+            <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5.5 5.5l9 9M14.5 5.5l-9 9" />
+            </svg>
           </button>
         </>
       )}
@@ -484,7 +489,12 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
             className="absolute w-7 h-7 rounded-full bg-white text-slate-700 hover:bg-slate-100 shadow-md ring-1 ring-slate-300 flex items-center justify-center text-sm"
             style={{ left: subRect.left + subRect.width - 14, top: subRect.top - 14 }}
           >
-            ✕
+            {/* ⚠️ An SVG, not `✕`: U+2715 has no glyph in iOS's system font
+                and WebKit will not fall back, so this drew as ▯?▯ — on the one
+                control that gets rid of the crop. Matches the tick above. */}
+            <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5.5 5.5l9 9M14.5 5.5l-9 9" />
+            </svg>
           </button>
         </>
       )}

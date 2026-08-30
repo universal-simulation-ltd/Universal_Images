@@ -626,7 +626,10 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     onClick={clearCrop}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 transition-colors"
                   >
-                    <span aria-hidden="true">✕</span>
+                    {/* SVG, not `✕` — U+2715 is a ▯?▯ box on iOS. */}
+                    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+                      <path d="m4 4 8 8M12 4l-8 8" />
+                    </svg>
                     <span className="flex-1 text-left">Remove crop</span>
                     <span className="text-[10px] uppercase tracking-wide text-orange-500">Esc</span>
                   </button>

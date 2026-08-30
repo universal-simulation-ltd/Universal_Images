@@ -83,7 +83,12 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                       }}
                       className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-slate-900/70 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-600 transition-all cursor-pointer"
                     >
-                      ✕
+                      {/* ⚠️ An SVG, not `✕` — U+2715 has no glyph in iOS's
+                          system font and WebKit does not fall back, so the
+                          remove badge drew as a hollow ▯?▯ box on the phone. */}
+                      <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                        <path d="m4 4 8 8M12 4l-8 8" />
+                      </svg>
                     </span>
                   </button>
                 </li>
@@ -142,7 +147,10 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                   }}
                   className="absolute top-1 right-1 w-6 h-6 rounded-full bg-slate-900/70 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-600 transition-all cursor-pointer"
                 >
-                  ✕
+                  {/* SVG, not `✕` — see the note on the badge above. */}
+                  <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <path d="m4 4 8 8M12 4l-8 8" />
+                  </svg>
                 </span>
               </button>
             </li>
