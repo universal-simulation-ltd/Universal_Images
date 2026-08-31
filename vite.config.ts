@@ -66,7 +66,15 @@ export default defineConfig(({ mode }) => {
       // `file://` origin it cannot register and is unnecessary, so skip it.
       ...(isDesktop ? [] : [VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'],
+        // ⚠️ `unisim-icon.png` is RENDERED by the app (the suite-switcher mark
+        // in the header — see App.tsx), so it has to be precached or it comes
+        // back as a broken image with the network off. Found 2026-08-31 when
+        // the offline map claim was proved on a real service worker: the map
+        // drew perfectly and the header icon next to it did not.
+        // `og-image.png` is deliberately NOT here — it is referenced only from
+        // the og:image/twitter:image meta tags as an absolute URL, is never
+        // fetched by the app itself, and precaching it would just cost cache.
+        includeAssets: ['favicon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png', 'unisim-icon.png'],
         manifest: {
           name: 'Universal Images',
           short_name: 'UniImg',
