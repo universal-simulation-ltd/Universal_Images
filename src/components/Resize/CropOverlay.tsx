@@ -51,6 +51,60 @@ function toScreen(v: View, r: SourceCrop) {
 }
 
 /**
+ * The size a ratio-locked gesture wants: take the larger of the two dragged
+ * extents so the rectangle follows whichever axis the pointer led with, derive
+ * the other from `ratio` (w/h), then shrink both — ratio intact — to whatever
+ * room is left between the anchor and the edge of the region being cropped.
+ * Shrinking rather than clipping is what stops a locked drag from silently
+ * changing shape when it runs into the edge of the picture.
+ */
+function lockedSize(w0: number, h0: number, ratio: number, maxW: number, maxH: number) {
+  let w = Math.max(w0, h0 * ratio, MIN, MIN * ratio)
+  let h = w / ratio
+  const k = Math.min(1, maxW / w, maxH / h)
+  if (k < 1) { w *= k; h *= k }
+  return { w, h }
+}
+
+/**
+ * A resize with the ratio locked. A corner pivots on the opposite corner, the
+ * way it does unlocked. An EDGE has no opposite corner to pivot on, so the
+ * dragged edge still moves against the far edge and the perpendicular axis
+ * grows symmetrically about the rectangle's centre — otherwise dragging the
+ * right edge would also march the whole rectangle downwards.
+ */
+function lockedResize(mode: Handle, r: SourceCrop, pt: { x: number; y: number }, ratio: number, b: SourceCrop): SourceCrop {
+  const horiz = mode.includes('w') || mode.includes('e')
+  const vert = mode.includes('n') || mode.includes('s')
+  if (horiz && vert) {
+    const ax = mode.includes('w') ? r.x + r.width : r.x
+    const ay = mode.includes('n') ? r.y + r.height : r.y
+    const dirX = pt.x < ax ? -1 : 1
+    const dirY = pt.y < ay ? -1 : 1
+    const maxW = dirX > 0 ? b.x + b.width - ax : ax - b.x
+    const maxH = dirY > 0 ? b.y + b.height - ay : ay - b.y
+    const { w, h } = lockedSize(Math.abs(pt.x - ax), Math.abs(pt.y - ay), ratio, maxW, maxH)
+    return { x: dirX > 0 ? ax : ax - w, y: dirY > 0 ? ay : ay - h, width: w, height: h }
+  }
+  if (horiz) {
+    const ax = mode.includes('w') ? r.x + r.width : r.x
+    const dirX = pt.x < ax ? -1 : 1
+    const cy = r.y + r.height / 2
+    const maxW = dirX > 0 ? b.x + b.width - ax : ax - b.x
+    const maxH = 2 * Math.min(cy - b.y, b.y + b.height - cy)
+    const { w, h } = lockedSize(Math.abs(pt.x - ax), 0, ratio, maxW, maxH)
+    return { x: dirX > 0 ? ax : ax - w, y: cy - h / 2, width: w, height: h }
+  }
+  const ay = mode.includes('n') ? r.y + r.height : r.y
+  const dirY = pt.y < ay ? -1 : 1
+  const cx = r.x + r.width / 2
+  const maxH = dirY > 0 ? b.y + b.height - ay : ay - b.y
+  const maxW = 2 * Math.min(cx - b.x, b.x + b.width - cx)
+  const { w, h } = lockedSize(0, Math.abs(pt.y - ay), ratio, maxW, maxH)
+  return { x: cx - w / 2, y: dirY > 0 ? ay : ay - h, width: w, height: h }
+}
+
+/**
  * Live, non-destructive crop layer. There is no separate "crop mode": this sits
  * over the preview, and
  *   - with no crop yet, a mouse drag draws one;
@@ -72,7 +126,12 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
   // degenerate (1×1) crop — which the store would otherwise clamp up from 0×0
   // and then lock the export target to. It is also what keeps a stray click on
   // an accepted crop from disturbing it.
-  const gesture = useRef<{ mode: Mode; subject: Subject; view: View; startPt: { x: number; y: number }; startRect: SourceCrop; started: boolean } | null>(null)
+  // `ratio` is the aspect the gesture keeps while Shift is held, frozen at
+  // pointer-down: resizing keeps the rectangle's own shape, drawing keeps the
+  // shape of what is being cropped (the accepted crop for a crop-within-a-crop,
+  // otherwise the whole photo). Reading it live would let the lock chase the
+  // shape it is itself changing.
+  const gesture = useRef<{ mode: Mode; subject: Subject; view: View; startPt: { x: number; y: number }; startRect: SourceCrop; started: boolean; ratio: number } | null>(null)
   // A crop drawn INSIDE an accepted crop, held locally until accepted: emitting
   // it live would re-encode the preview underneath the very rectangle being
   // drawn, so the picture would zoom away mid-drag. Accepting just replaces the
@@ -193,7 +252,13 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
     // A move/resize gesture is "started" immediately (it edits an existing rect);
     // a draw only starts once the pointer moves past MIN (see onPointerMove), so
     // a click never spawns a crop — nor disturbs one that has been accepted.
-    gesture.current = { mode, subject, view, startPt, startRect, started: mode !== 'draw' }
+    const startBounds = subject === 'sub' && crop ? crop : whole
+    const ratioOf = (r: SourceCrop) => (r.width > 0 && r.height > 0 ? r.width / r.height : 1)
+    gesture.current = {
+      mode, subject, view, startPt, startRect,
+      started: mode !== 'draw',
+      ratio: ratioOf(mode === 'draw' ? startBounds : startRect)
+    }
     // Adjusting an accepted crop brings the source back, anchored to the result.
     if (onResult && subject === 'crop') setAdjustView(view)
   }
@@ -213,6 +278,22 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
       // until the pointer has genuinely dragged.
       if (!g.started && w < MIN && h < MIN) return
       g.started = true
+      if (e.shiftKey) {
+        // Locked: the pointer-down point anchors and the box grows towards the
+        // pointer, in whichever of the four directions it went.
+        const dirX = pt.x < g.startPt.x ? -1 : 1
+        const dirY = pt.y < g.startPt.y ? -1 : 1
+        const maxW = dirX > 0 ? bounds.x + bounds.width - g.startPt.x : g.startPt.x - bounds.x
+        const maxH = dirY > 0 ? bounds.y + bounds.height - g.startPt.y : g.startPt.y - bounds.y
+        const locked = lockedSize(w, h, g.ratio, maxW, maxH)
+        emit({
+          x: dirX > 0 ? g.startPt.x : g.startPt.x - locked.w,
+          y: dirY > 0 ? g.startPt.y : g.startPt.y - locked.h,
+          width: locked.w,
+          height: locked.h
+        })
+        return
+      }
       emit({
         x: Math.min(g.startPt.x, pt.x),
         y: Math.min(g.startPt.y, pt.y),
@@ -228,6 +309,12 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
       const x = Math.max(bounds.x, Math.min(bounds.x + bounds.width - g.startRect.width, g.startRect.x + dx))
       const y = Math.max(bounds.y, Math.min(bounds.y + bounds.height - g.startRect.height, g.startRect.y + dy))
       emit({ x, y, width: g.startRect.width, height: g.startRect.height })
+      return
+    }
+
+    // Resize with Shift: keep the shape the rectangle had when the drag began.
+    if (e.shiftKey) {
+      emit(lockedResize(g.mode, g.startRect, pt, g.ratio, bounds))
       return
     }
 
@@ -523,7 +610,7 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
           </button>
           <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 hidden md:block">
             <div className="bg-slate-900/80 text-white text-[11px] px-3 py-1.5 rounded-full">
-              Drag a handle to adjust · drag inside to crop again
+              Drag a handle to adjust · drag inside to crop again · hold Shift to keep the ratio
             </div>
           </div>
         </>
@@ -532,7 +619,7 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
       {!crop && (
         <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 hidden md:block">
           <div className="bg-slate-900/80 text-white text-[11px] px-3 py-1.5 rounded-full">
-            Drag to crop
+            Drag to crop · hold Shift to keep the ratio
           </div>
         </div>
       )}
