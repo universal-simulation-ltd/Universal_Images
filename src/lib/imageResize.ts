@@ -4,14 +4,74 @@ const HEIC_EXT_RE = /\.(heic|heif)$/i
 const HEIC_MIME = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'])
 
 /**
- * Is this the thing an iPhone hands you?
+ * Is this the thing an iPhone hands you, judged by what it's CALLED?
  *
- * ⚠️ The extension test is not belt-and-braces, it is the one that fires. A
- * `.heic` copied off a phone routinely arrives with `file.type === ''` on
- * Windows, because the OS has no MIME registered for it.
+ * ⚠️ The extension test is not belt-and-braces, it is the one that fires on a
+ * desktop. A `.heic` copied off a phone routinely arrives with `file.type ===
+ * ''` on Windows, because the OS has no MIME registered for it.
+ *
+ * Neither half can be relied on inside the Android app, which is what
+ * `heicFromBytes` is for.
  */
-function isHeic(file: File) {
+function isHeicByName(file: File) {
   return HEIC_MIME.has(file.type.toLowerCase()) || HEIC_EXT_RE.test(file.name)
+}
+
+/**
+ * Is this the thing a phone hands you, judged by what it IS?
+ *
+ * Because on Android neither the name nor the type is dependable. A file picked
+ * out of Google Photos or a third-party file manager reaches the page with a
+ * display name that may carry no extension at all (`1000012345`) and a MIME
+ * from whichever app owns it — usually right, sometimes `image/*`, sometimes
+ * `application/octet-stream`. Get both wrong and a HEIC goes down the ordinary
+ * path and dies at `createImageBitmap`, which is the failure this app's HEIC
+ * support exists to prevent. This matters more here than on the web: Universal
+ * Images ships as a native Android app, where that picker is the only one.
+ *
+ * HEIC is an ISO-BMFF file: a `ftyp` box at offset 4, a major brand at 8, then
+ * a list of compatible brands. AVIF shares the container and every browser this
+ * runs in decodes it natively, so it is excluded rather than converted — a slow,
+ * lossy round-trip through libheif for a picture Chrome was about to draw free.
+ *
+ * Exported for its test. `bytes` is the head of the file; 32 covers the usual
+ * compatible-brand list.
+ */
+export function heicFromBytes(bytes: Uint8Array): boolean {
+  if (bytes.length < 12) return false
+  const ascii = (from: number, to: number) =>
+    String.fromCharCode(...bytes.subarray(from, Math.min(to, bytes.length)))
+  if (ascii(4, 8) !== 'ftyp') return false
+  const brands = new Set<string>()
+  for (let at = 8; at + 4 <= bytes.length; at += 4) brands.add(ascii(at, at + 4))
+  if (brands.has('avif') || brands.has('avis')) return false
+  for (const brand of ['heic', 'heix', 'heim', 'heis', 'hevc', 'hevx', 'mif1', 'msf1']) {
+    if (brands.has(brand)) return true
+  }
+  return false
+}
+
+/**
+ * The head of a file, or a refusal that says it couldn't be read at all.
+ *
+ * That distinction is the point. On Android a photo picked out of Google Photos
+ * can be a placeholder for something that still lives in the cloud and was
+ * never downloaded — every read of it fails, and "this image couldn't be
+ * decoded" is then true, useless, and blames the picture.
+ */
+async function head(file: File, n = 32): Promise<Uint8Array> {
+  if (file.size === 0) throw new Error(`${file.name} came through empty — try adding it again`)
+  try {
+    return new Uint8Array(await file.slice(0, n).arrayBuffer())
+  } catch {
+    throw new Error(
+      `${file.name} could not be read from this device — if it lives in the cloud, open it in your photos app first so it downloads`,
+    )
+  }
+}
+
+async function isHeic(file: File): Promise<boolean> {
+  return isHeicByName(file) || heicFromBytes(await head(file))
 }
 
 // The rest of this app is File-based — the store keeps the file, shows its size
@@ -49,7 +109,7 @@ const HEIC_JPEG_QUALITY = 0.92
  * fails outright on workbox's file-size cap.
  */
 export async function decodeHeicIfNeeded(file: File): Promise<File> {
-  if (!isHeic(file)) return file
+  if (!(await isHeic(file))) return file
   const { heicTo } = await import('heic-to')
   let blob: Blob
   try {
