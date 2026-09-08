@@ -1,0 +1,254 @@
+{
+  "app": "universal-images",
+  "appVersion": "0.1.0",
+  "generated": "2026-09-08",
+  "noticesCount": 122,
+  "ships": [
+    {
+      "name": "@capacitor/*",
+      "title": "Capacitor",
+      "licence": "MIT",
+      "repo": "https://github.com/ionic-team/capacitor",
+      "description": "wraps the web app as a real iPhone and Android app",
+      "authors": [
+        "Ionic Team"
+      ],
+      "source": "overlay"
+    },
+    {
+      "name": "@imgly/background-removal",
+      "version": "1.7.0",
+      "licence": "SEE LICENSE IN LICENSE.md",
+      "repo": "https://github.com/imgly/background-removal-js",
+      "homepage": "https://img.ly/showcases/cesdk/web/background-removal",
+      "authors": [
+        "IMG.LY GmbH"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "@mediapipe/tasks-vision",
+      "version": "0.10.35",
+      "licence": "Apache-2.0",
+      "homepage": "http://mediapipe.dev",
+      "authors": [
+        "mediapipe@google.com"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "@types/*",
+      "title": "DefinitelyTyped",
+      "licence": "MIT",
+      "repo": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "description": "the community type definitions TypeScript builds against",
+      "authors": [
+        "Boris Yankov"
+      ],
+      "source": "overlay"
+    },
+    {
+      "name": "exifr",
+      "version": "7.1.3",
+      "licence": "MIT",
+      "repo": "https://github.com/MikeKovarik/exifr",
+      "homepage": "https://mutiny.cz/exifr/",
+      "authors": [
+        "Mike Kovarik"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "heic-to",
+      "version": "1.5.2",
+      "licence": "LGPL-3.0",
+      "repo": "https://github.com/hoppergee/heic-to",
+      "homepage": "https://github.com/hoppergee/heic-to",
+      "description": "opens iPhone HEIC photos",
+      "authors": [
+        "Hopper Gee"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "jszip",
+      "title": "JSZip",
+      "version": "3.10.1",
+      "licence": "(MIT OR GPL-3.0-or-later)",
+      "repo": "https://github.com/Stuk/jszip",
+      "description": "reads and writes ZIP archives — how .docx and .odt are opened offline",
+      "authors": [
+        "Stuart Knightley"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "react",
+      "title": "React",
+      "version": "18.3.1",
+      "licence": "MIT",
+      "repo": "https://github.com/facebook/react",
+      "homepage": "https://reactjs.org/",
+      "description": "the UI library every Universal App is built from",
+      "authors": [
+        "Jordan Walke"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "react-dom",
+      "title": "React DOM",
+      "version": "18.3.1",
+      "licence": "MIT",
+      "repo": "https://github.com/facebook/react",
+      "homepage": "https://reactjs.org/",
+      "description": "renders React to the browser DOM",
+      "authors": [
+        "Jordan Walke"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "zustand",
+      "title": "Zustand",
+      "version": "5.0.13",
+      "licence": "MIT",
+      "repo": "https://github.com/pmndrs/zustand",
+      "homepage": "https://github.com/pmndrs/zustand",
+      "description": "holds the editor's state",
+      "authors": [
+        "Paul Henschel"
+      ],
+      "source": "node_modules"
+    }
+  ],
+  "builds": [
+    {
+      "name": "@types/*",
+      "title": "DefinitelyTyped",
+      "licence": "MIT",
+      "repo": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+      "description": "the community type definitions TypeScript builds against",
+      "authors": [
+        "Boris Yankov"
+      ],
+      "source": "overlay"
+    },
+    {
+      "name": "electron",
+      "title": "Electron",
+      "version": "33.4.11",
+      "licence": "MIT",
+      "repo": "https://github.com/electron/electron",
+      "authors": [
+        "OpenJS Foundation"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "electron-builder",
+      "title": "electron-builder",
+      "version": "25.1.8",
+      "licence": "MIT",
+      "repo": "https://github.com/electron-userland/electron-builder",
+      "homepage": "https://github.com/electron-userland/electron-builder",
+      "authors": [
+        "Vladimir Krivosheev"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "tailwindcss",
+      "title": "Tailwind CSS",
+      "version": "4.3.0",
+      "licence": "MIT",
+      "repo": "https://github.com/tailwindlabs/tailwindcss",
+      "homepage": "https://tailwindcss.com",
+      "description": "the CSS framework the interfaces are styled with",
+      "authors": [
+        "Adam Wathan"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "topojson-client",
+      "version": "3.1.0",
+      "licence": "ISC",
+      "repo": "https://github.com/topojson/topojson-client",
+      "homepage": "https://github.com/topojson/topojson-client",
+      "authors": [
+        "Mike Bostock"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "topojson-server",
+      "version": "3.0.1",
+      "licence": "ISC",
+      "repo": "https://github.com/topojson/topojson-server",
+      "homepage": "https://github.com/topojson/topojson-server",
+      "authors": [
+        "Mike Bostock"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "topojson-simplify",
+      "version": "3.0.3",
+      "licence": "ISC",
+      "repo": "https://github.com/topojson/topojson-simplify",
+      "homepage": "https://github.com/topojson/topojson-simplify",
+      "authors": [
+        "Mike Bostock"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "typescript",
+      "title": "TypeScript",
+      "version": "5.9.3",
+      "licence": "Apache-2.0",
+      "repo": "https://github.com/microsoft/TypeScript",
+      "homepage": "https://www.typescriptlang.org/",
+      "authors": [
+        "Microsoft"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "vite",
+      "title": "Vite",
+      "version": "6.4.2",
+      "licence": "MIT",
+      "repo": "https://github.com/vitejs/vite",
+      "homepage": "https://vite.dev",
+      "description": "the build tool and dev server behind every web app in the suite",
+      "authors": [
+        "Evan You"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "vite-plugin-pwa",
+      "title": "vite-plugin-pwa",
+      "version": "0.21.2",
+      "licence": "MIT",
+      "repo": "https://github.com/vite-pwa/vite-plugin-pwa",
+      "homepage": "https://github.com/vite-pwa/vite-plugin-pwa#readme",
+      "authors": [
+        "Anthony Fu"
+      ],
+      "source": "node_modules"
+    },
+    {
+      "name": "world-atlas",
+      "version": "2.0.2",
+      "licence": "ISC",
+      "repo": "https://github.com/topojson/world-atlas",
+      "authors": [
+        "Mike Bostock"
+      ],
+      "source": "node_modules"
+    }
+  ]
+}

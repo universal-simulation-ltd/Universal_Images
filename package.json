@@ -12,6 +12,7 @@
     "build:desktop": "tsc -b && vite build --mode desktop",
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
+    "credits": "node ../scripts/gen-credits.mjs . --repo https://github.com/universal-simulation-ltd/Universal_Images",
     "test:hosted-paths": "node --experimental-strip-types scripts/hostedPath.test.mjs",
     "test:mobile-ui": "node scripts/mobileUi.test.mjs",
     "electron": "electron .",
