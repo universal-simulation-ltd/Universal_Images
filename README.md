@@ -108,4 +108,4 @@ Regenerate with `node scripts/build-world-data.mjs` and
 
 ## License
 
-[MIT](./LICENSE). The bundled data is under its own licences — see above.
+[AGPL-3.0-or-later](./LICENSE), with an added permission for app-store distribution. The bundled data is under its own licences — see above.
