@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { UniversalProvider } from '@unisim/sdk'
 import App from './App'
-import UsageTracker from './UsageTracker'
+import { UsageTracker } from '@unisim/sdk'
 import { useImageStore } from './stores/imageStore'
 import './index.css'
 

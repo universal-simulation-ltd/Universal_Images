@@ -1,5 +1,5 @@
 import { useImageStore } from '../stores/imageStore'
-import { saveBlob } from './saveFile'
+import { saveBlob } from '@unisim/media/save'
 import type { ResizeTarget, SourceCrop } from '../types/image'
 
 // "Save to desktop" backup for Universal Images — the editable middle tier
