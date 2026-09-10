@@ -1,8 +1,8 @@
 {
   "app": "universal-images",
   "appVersion": "0.1.0",
-  "generated": "2026-09-08",
-  "noticesCount": 122,
+  "generated": "2026-09-10",
+  "noticesCount": 124,
   "ships": [
     {
       "name": "@capacitor/*",
@@ -18,7 +18,9 @@
     {
       "name": "@imgly/background-removal",
       "version": "1.7.0",
-      "licence": "SEE LICENSE IN LICENSE.md",
+      "licence": "AGPL-3.0",
+      "licenceDeclared": "SEE LICENSE IN LICENSE.md",
+      "licenceFrom": "LICENSE.md",
       "repo": "https://github.com/imgly/background-removal-js",
       "homepage": "https://img.ly/showcases/cesdk/web/background-removal",
       "authors": [

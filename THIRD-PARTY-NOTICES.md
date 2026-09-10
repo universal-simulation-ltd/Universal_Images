@@ -9,6 +9,24 @@ Most of what this app includes is permissive (MIT, Apache-2.0, BSD) and asks
 only that its notice travels with it. The components below are different:
 they are copyleft, and they give you rights this section has to state plainly.
 
+### @imgly/background-removal 1.7.0 — AGPL-3.0
+
+@imgly/background-removal is used unmodified, as a library. **You may modify it, or replace it
+with your own version, and use the result with this app.** Concretely:
+
+* Its source is at <https://github.com/imgly/background-removal-js>, under AGPL-3.0.
+* The complete source of THIS app is at <https://github.com/universal-simulation-ltd/Universal_Images>, published under a
+  permissive licence, so you can change which version is used and rebuild.
+* It is loaded as its own module at run time rather than being fused into
+  the rest of the code, so replacing it does not mean rebuilding everything.
+* AGPL-3.0 is a strong copyleft licence: unlike the LGPL, its conditions
+  cover the work this component is combined with, not only the component.
+  This app's own licence permits that combination, and its complete source
+  is public at the address above.
+* Its package metadata says "SEE LICENSE IN LICENSE.md"; the licence was read
+  from its LICENSE.md, which is the AGPL-3.0.
+* Its full licence text is reproduced below under "@imgly/background-removal".
+
 ### heic-to 1.5.2 — LGPL-3.0
 
 heic-to is used unmodified, as a library. **You may modify it, or replace it
@@ -251,7 +269,7 @@ SOFTWARE.
 
 IMG.LY GmbH et al.
 <https://github.com/imgly/background-removal-js>
-Licence: SEE LICENSE IN LICENSE.md
+Licence: AGPL-3.0 (read from LICENSE.md; package.json says "SEE LICENSE IN LICENSE.md")
 
 ```
 # GNU Affero General Public License
@@ -1078,7 +1096,7 @@ MIT License
     SOFTWARE
 ```
 
-## @unisim/sdk 0.128.1
+## @unisim/sdk 0.139.0
 
 Universal Simulation Ltd et al.
 <https://github.com/universal-simulation-ltd/universal-platform>
@@ -1153,6 +1171,24 @@ Licence: MIT
 MIT License
 
 Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+## astral-regex 2.0.0
+
+Kevin Mårtensson et al.
+<https://github.com/kevva/astral-regex>
+Licence: MIT
+
+```
+MIT License
+
+Copyright (c) Kevin Mårtensson <kevinmartensson@gmail.com> (github.com/kevva)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -4164,6 +4200,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+## slice-ansi 3.0.0
+
+
+<https://github.com/chalk/slice-ansi>
+Licence: MIT
+
+```
+MIT License
+
+Copyright (c) DC <threedeecee@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
 ## split2 4.2.0
