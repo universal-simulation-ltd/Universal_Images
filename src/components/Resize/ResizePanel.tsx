@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useImageStore } from '../../stores/imageStore'
 import {
   computePresets,
@@ -37,6 +37,7 @@ interface ResizePanelProps {
 }
 
 export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
+  const foldId = useId()
   const images = useImageStore((s) => s.images)
   const selectedId = useImageStore((s) => s.selectedId)
   const target = useImageStore((s) => s.target)
@@ -537,6 +538,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               type="button"
               onClick={() => setCustomSizeOpen((v) => !v)}
               aria-expanded={customSizeOpen}
+              aria-controls={`${foldId}-custom-size`}
               className="mt-2 w-full flex items-center justify-between gap-2 py-1 group"
             >
               <span className="text-[11px] font-medium text-slate-500 group-hover:text-slate-700">Custom size (px)</span>
@@ -548,7 +550,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               </span>
             </button>
             {customSizeOpen && (
-              <div className="mt-1.5">
+              <div id={`${foldId}-custom-size`} className="mt-1.5">
                 <div className="flex justify-end mb-2">
                   <button
                     type="button"
@@ -601,6 +603,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               type="button"
               onClick={() => setCropOpen((v) => !v)}
               aria-expanded={cropOpen}
+              aria-controls={`${foldId}-crop`}
               className="w-full flex items-center justify-between gap-2 py-1 group"
             >
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">Crop</span>
@@ -619,7 +622,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               </span>
             </button>
             {cropOpen && (
-              <div className="mt-2">
+              <div id={`${foldId}-crop`} className="mt-2">
                 {crop ? (
                   <button
                     type="button"
@@ -650,6 +653,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   type="button"
                   onClick={() => setAutocropOpen((v) => !v)}
                   aria-expanded={autocropOpen}
+                  aria-controls={`${foldId}-autocrop`}
                   className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
                 >
                   <span aria-hidden="true">🪄</span>
@@ -662,7 +666,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   </span>
                 </button>
                 {autocropOpen && (
-                  <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
+                  <div id={`${foldId}-autocrop`} className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
                     <p className="text-[11px] text-slate-500 leading-snug mb-2">
                       {crop
                         ? 'Find the subject in the whole image and crop to it, replacing your crop.'
@@ -710,6 +714,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               type="button"
               onClick={() => setBgOpen((v) => !v)}
               aria-expanded={bgOpen}
+              aria-controls={`${foldId}-background`}
               className="w-full flex items-center justify-between gap-2 py-1 group"
             >
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">Background</span>
@@ -726,7 +731,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               </span>
             </button>
             {bgOpen && (
-              <div className="mt-2">
+              <div id={`${foldId}-background`} className="mt-2">
                 {bgRemoved ? (
                   <button
                     type="button"
@@ -863,6 +868,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               type="button"
               onClick={() => setFaceOpen((v) => !v)}
               aria-expanded={faceOpen}
+              aria-controls={`${foldId}-faces`}
               className="w-full flex items-center justify-between gap-2 py-1 group"
             >
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">Redact faces</span>
@@ -881,7 +887,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               </span>
             </button>
             {faceOpen && (
-              <div className="mt-2">
+              <div id={`${foldId}-faces`} className="mt-2">
                 {!faceBoxes ? (
                   <button
                     type="button"
@@ -1016,6 +1022,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               type="button"
               onClick={() => setSocialOpen((v) => !v)}
               aria-expanded={socialOpen}
+              aria-controls={`${foldId}-social`}
               className="w-full flex items-center justify-between gap-2 py-1 group"
             >
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">
@@ -1039,7 +1046,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               </span>
             </button>
             {socialOpen && (
-              <div className="mt-2 space-y-2.5">
+              <div id={`${foldId}-social`} className="mt-2 space-y-2.5">
                 {socialCrop && (
                   <button
                     type="button"

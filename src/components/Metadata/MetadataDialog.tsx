@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { useImageStore } from '../../stores/imageStore'
 import type { ScrubResult } from '../../lib/metadata'
 import { DIALOG_BODY, DIALOG_FOOTER, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../../lib/dialog'
@@ -26,6 +26,7 @@ export default function MetadataDialog({ onClose }: Props) {
   const meta = selectedId ? metadataMap[selectedId] ?? null : null
 
   const [infoOpen, setInfoOpen] = useState(false)
+  const infoId = useId()
   const [copied, setCopied] = useState(false)
   const [result, setResult] = useState<ScrubResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -98,6 +99,7 @@ export default function MetadataDialog({ onClose }: Props) {
               type="button"
               onClick={() => setInfoOpen((v) => !v)}
               aria-expanded={infoOpen}
+              aria-controls={infoId}
               className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-orange-700 transition-colors"
             >
               <span
@@ -109,7 +111,7 @@ export default function MetadataDialog({ onClose }: Props) {
               What is metadata?
             </button>
             {infoOpen && (
-              <p className="mt-2 text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5">
+              <p id={infoId} className="mt-2 text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5">
                 Your camera writes a hidden note into every photo: where you were,
                 the moment you pressed the shutter, and which phone or camera took
                 it. It stays in the file when you send or post it. Stripping it
