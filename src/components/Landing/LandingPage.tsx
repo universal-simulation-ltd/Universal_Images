@@ -137,7 +137,7 @@ export default function LandingPage() {
                 Drop one or many. Pick a size, get a smaller file.
               </p>
 
-              <div className="mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6 dark:bg-slate-900 dark:border-slate-800">
+              <div className="@container mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6 dark:bg-slate-900 dark:border-slate-800">
                 {/* The suite's shared drop circle (`DropRing` + `useFileDrop`
                     from @unisim/sdk) rather than a copy, so this is the same
                     front door Universal Compress, PDF and the Converter's All
@@ -231,23 +231,33 @@ export default function LandingPage() {
                     "all free" heading over a list does not answer it the way
                     the word next to each item does.
 
-                    ⚠️ `grid-flow-col` + `grid-rows-3` fills DOWN each column, so
-                    the DOM order below IS the column order. Row-flow would deal
-                    the promises out across the rows and there would be no third
-                    column at all. Three columns only from `sm`, and ONE below
-                    it — measured on a 390px phone, two columns leave ~150px
-                    and four of these wrapped. (Universal PDF's twin keeps two
-                    columns there; its claims are short enough to fit. The
-                    breakpoint follows the copy, not a house rule.)
+                    ⚠️ The layout follows the CARD's width (`@container` on the
+                    card, `@min-[…]` here), not the viewport's. From `lg` the
+                    card is half the page, so a viewport breakpoint handed the
+                    three columns — which need ~552px — to a card with 398px
+                    inside at 1024 and 526px at its widest: they ran out past
+                    the card's right edge on every desktop (2026-09-14). Measured
+                    on the Mac's system font:
+                      - under 24rem (phones): one column, all nine;
+                      - 24rem up (every desktop): the six in two columns, the
+                        three promises on a line of their own beneath — ~383px;
+                      - 36rem up (tablets): three columns, the promises in the
+                        third via `grid-cols-subgrid`, so all three share one
+                        `justify-between` and sit evenly spaced.
 
-                    ⚠️ `auto-cols-max` + `justify-between`, NOT three equal
-                    thirds. This app's claims are much longer than Universal
-                    PDF's — "Redact (AI) image faces for free" is half again the
-                    width of "Sign PDF for free" — and an equal third of this
-                    card is ~135px of text, so every item in the middle column
-                    broke onto a second line. Content-sized columns, spread to
-                    the edges, fit all nine on one line each. */}
-                <ul className="mt-5 grid grid-cols-1 sm:grid-cols-none sm:auto-cols-max sm:grid-rows-3 sm:grid-flow-col sm:justify-between gap-x-3 gap-y-2 text-xs text-slate-600 dark:text-slate-300">
+                    ⚠️ `auto` tracks + `justify-between`, NOT `max-content` and
+                    NOT equal thirds. This app's claims are much longer than
+                    Universal PDF's — "Redact (AI) image faces for free" is half
+                    again "Sign PDF for free" — so equal thirds broke the middle
+                    column onto two lines, and `max-content` never shrinks, which
+                    is how it overflowed. `auto` sizes to the text when it fits
+                    and wraps instead of overflowing when a wider font (Segoe UI
+                    on Windows) doesn't.
+
+                    ⚠️ `grid-flow-col` + `grid-rows-3` fills DOWN each column, so
+                    the DOM order below IS the column order. */}
+                <div className="mt-5 grid gap-x-3 gap-y-2 text-xs text-slate-600 dark:text-slate-300 @min-[36rem]:grid-cols-[repeat(3,auto)] @min-[36rem]:justify-between">
+                <ul className="grid gap-x-3 gap-y-2 @min-[24rem]:grid-cols-[repeat(2,auto)] @min-[24rem]:grid-rows-3 @min-[24rem]:grid-flow-col @min-[24rem]:justify-between @min-[36rem]:col-span-2 @min-[36rem]:grid-cols-subgrid">
                   {[
                     'Edit images for free',
                     'Resize images for free',
@@ -256,13 +266,15 @@ export default function LandingPage() {
                     'Redact (AI) image faces for free',
                     'Strips image metadata for free'
                   ].map((claim) => (
-                    <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
+                    <li key={claim} className="flex items-center gap-2 pl-2 @min-[36rem]:pl-4">
                       <span className="text-orange-700 dark:text-orange-400" aria-hidden="true">✓</span>
                       {claim}
                     </li>
                   ))}
+                </ul>
+                <ul className="grid gap-x-3 gap-y-2 @min-[24rem]:flex @min-[24rem]:justify-between @min-[36rem]:grid">
                   {PROMISES.map(({ claim, paths }) => (
-                    <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
+                    <li key={claim} className="flex items-center gap-2 pl-2 @min-[36rem]:pl-4">
                       <svg
                         viewBox="0 0 24 24"
                         className="w-3.5 h-3.5 shrink-0 text-orange-700 dark:text-orange-400"
@@ -279,6 +291,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
+                </div>
               </div>
 
               {/* Under the card, outside the box — the suite's placement.
