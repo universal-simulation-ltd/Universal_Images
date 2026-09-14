@@ -64,14 +64,14 @@ export default function MetadataDialog({ onClose }: Props) {
         if (e.target === e.currentTarget && !scrubbing) onClose()
       }}
     >
-      <div className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl max-w-md sm:max-h-[85dvh]`}>
-        <div className={`${DIALOG_HEADER} flex items-start justify-between gap-3 border-b border-slate-100 px-5 pt-5 pb-3`}>
+      <div className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl max-w-md sm:max-h-[85dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
+        <div className={`${DIALOG_HEADER} flex items-start justify-between gap-3 border-b border-slate-100 px-5 pt-5 pb-3 dark:border-slate-800`}>
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
               <span aria-hidden="true">🏷</span>
               Metadata
             </h2>
-            <p className="text-xs text-slate-500 truncate" title={selected.name}>
+            <p className="text-xs text-slate-500 truncate dark:text-slate-400" title={selected.name}>
               {selected.name}
             </p>
           </div>
@@ -79,7 +79,7 @@ export default function MetadataDialog({ onClose }: Props) {
             <button
               onClick={onClose}
               aria-label="Close"
-              className="shrink-0 text-slate-400 hover:text-slate-700 text-2xl leading-none w-8 h-8 flex items-center justify-center"
+              className="shrink-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-2xl leading-none w-8 h-8 flex items-center justify-center"
             >
               ×
             </button>
@@ -100,7 +100,7 @@ export default function MetadataDialog({ onClose }: Props) {
               onClick={() => setInfoOpen((v) => !v)}
               aria-expanded={infoOpen}
               aria-controls={infoId}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-orange-700 transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-orange-700 dark:text-slate-400 dark:hover:text-orange-400 transition-colors"
             >
               <span
                 aria-hidden="true"
@@ -111,7 +111,7 @@ export default function MetadataDialog({ onClose }: Props) {
               What is metadata?
             </button>
             {infoOpen && (
-              <p id={infoId} className="mt-2 text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5">
+              <p id={infoId} className="mt-2 text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-lg px-3 py-2.5 dark:text-slate-300 dark:bg-slate-800/60">
                 Your camera writes a hidden note into every photo: where you were,
                 the moment you pressed the shutter, and which phone or camera took
                 it. It stays in the file when you send or post it. Stripping it
@@ -121,20 +121,20 @@ export default function MetadataDialog({ onClose }: Props) {
           </div>
 
           {error && (
-            <div className="rounded-lg bg-red-50 text-red-700 px-4 py-3 text-sm mb-3">{error}</div>
+            <div className="rounded-lg bg-red-50 text-red-700 px-4 py-3 text-sm mb-3 dark:bg-red-950/40 dark:text-red-300">{error}</div>
           )}
 
           {scrubbed && (
-            <div className="rounded-lg bg-emerald-50 text-emerald-700 px-4 py-3 text-sm font-medium mb-3">
+            <div className="rounded-lg bg-emerald-50 text-emerald-700 px-4 py-3 text-sm font-medium mb-3 dark:bg-emerald-950/40 dark:text-emerald-300">
               Metadata removed — {result!.removedBytes.toLocaleString()} bytes dropped.
-              <span className="block text-[11px] font-normal text-emerald-600 mt-0.5">
+              <span className="block text-[11px] font-normal text-emerald-600 mt-0.5 dark:text-emerald-400">
                 The picture itself wasn’t re-compressed, so there’s no quality loss.
               </span>
             </div>
           )}
 
           {unsupported && (
-            <div className="rounded-lg bg-amber-50 text-amber-800 px-4 py-3 text-sm mb-3">
+            <div className="rounded-lg bg-amber-50 text-amber-800 px-4 py-3 text-sm mb-3 dark:bg-amber-950/40 dark:text-amber-200">
               Metadata can’t be stripped in place from this file type.
               <span className="block text-[11px] mt-0.5">
                 Every image you export from Universal Images is re-encoded, which drops
@@ -144,7 +144,7 @@ export default function MetadataDialog({ onClose }: Props) {
           )}
 
           {selected.converted && (
-            <p className="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2.5 mb-3">
+            <p className="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2.5 mb-3 dark:text-slate-300 dark:bg-slate-800/60">
               This file was converted when you added it, so the copy Universal Images
               holds has already lost the original’s metadata. What’s below is what the
               file you dropped in was carrying.
@@ -152,7 +152,7 @@ export default function MetadataDialog({ onClose }: Props) {
           )}
 
           {!meta && !scrubbed && (
-            <div className="rounded-lg bg-slate-50 text-slate-600 px-4 py-3 text-sm">
+            <div className="rounded-lg bg-slate-50 text-slate-600 px-4 py-3 text-sm dark:bg-slate-800/60 dark:text-slate-300">
               No metadata found in this image. Nothing to strip.
             </div>
           )}
@@ -160,27 +160,27 @@ export default function MetadataDialog({ onClose }: Props) {
           {meta && (
             <>
               {meta.identifyingCount > 0 && !scrubbed && (
-                <div className="rounded-lg bg-amber-50 text-amber-800 px-3 py-2 text-xs mb-3">
+                <div className="rounded-lg bg-amber-50 text-amber-800 px-3 py-2 text-xs mb-3 dark:bg-amber-950/40 dark:text-amber-200">
                   {meta.identifyingCount} of these {meta.identifyingCount === 1 ? 'field' : 'fields'}{' '}
                   could identify you, your location or your device.
                 </div>
               )}
 
-              <dl className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden">
+              <dl className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden dark:divide-slate-800 dark:border-slate-700">
                 {meta.fields.map((f) => (
-                  <div key={f.key} className="px-3 py-2 bg-white">
+                  <div key={f.key} className="px-3 py-2 bg-white dark:bg-slate-900">
                     <dt className="text-[11px] uppercase tracking-wide text-slate-400 font-medium flex items-center gap-1.5">
                       {f.label}
                       {f.identifying && (
-                        <span className="text-amber-600 normal-case tracking-normal" title="Can identify you">
+                        <span className="text-amber-600 normal-case tracking-normal dark:text-amber-400" title="Can identify you">
                           ⚠
                         </span>
                       )}
                     </dt>
-                    <dd className="text-sm text-slate-800 break-words tabular-nums">{f.value}</dd>
+                    <dd className="text-sm text-slate-800 break-words tabular-nums dark:text-slate-100">{f.value}</dd>
                     {f.key === 'gps' && meta.gps && (
                       <dd className="mt-0.5">
-                        <span className="text-[11px] text-slate-500">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
                           Accurate to within a few metres — usually a home, school or workplace.
                         </span>
                         {/* The map is drawn offline; the button is the only way
@@ -189,7 +189,7 @@ export default function MetadataDialog({ onClose }: Props) {
                         <button
                           type="button"
                           onClick={() => onCopyCoordinates(meta.gps!)}
-                          className="ml-1 text-[11px] text-blue-600 hover:text-blue-700 underline underline-offset-2"
+                          className="ml-1 text-[11px] text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline underline-offset-2"
                         >
                           {copied ? 'Copied' : 'Copy'}
                         </button>
@@ -202,27 +202,27 @@ export default function MetadataDialog({ onClose }: Props) {
                   </div>
                 ))}
                 {meta.hasThumbnail && (
-                  <div className="px-3 py-2 bg-white">
+                  <div className="px-3 py-2 bg-white dark:bg-slate-900">
                     <dt className="text-[11px] uppercase tracking-wide text-slate-400 font-medium flex items-center gap-1.5">
                       Embedded thumbnail
-                      <span className="text-amber-600 normal-case tracking-normal" title="Can identify you">
+                      <span className="text-amber-600 normal-case tracking-normal dark:text-amber-400" title="Can identify you">
                         ⚠
                       </span>
                     </dt>
-                    <dd className="text-[11px] text-slate-500">
+                    <dd className="text-[11px] text-slate-500 dark:text-slate-400">
                       A small preview saved alongside the photo. It’s made before edits, so it can
                       still show what was cropped or retouched out.
                     </dd>
                   </div>
                 )}
                 {meta.otherCount > 0 && (
-                  <div className="px-3 py-2 bg-white">
+                  <div className="px-3 py-2 bg-white dark:bg-slate-900">
                     <dt className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
                       Other tags
                     </dt>
-                    <dd className="text-sm text-slate-800">
+                    <dd className="text-sm text-slate-800 dark:text-slate-100">
                       {meta.otherCount} further technical {meta.otherCount === 1 ? 'tag' : 'tags'}
-                      <span className="block text-[11px] text-slate-500">
+                      <span className="block text-[11px] text-slate-500 dark:text-slate-400">
                         Exposure, white balance, maker notes and similar — removed too.
                       </span>
                     </dd>
@@ -233,11 +233,11 @@ export default function MetadataDialog({ onClose }: Props) {
           )}
         </div>
 
-        <div className={`${DIALOG_FOOTER} flex items-center gap-2 justify-end border-t border-slate-100 px-5 py-4`}>
+        <div className={`${DIALOG_FOOTER} flex items-center gap-2 justify-end border-t border-slate-100 px-5 py-4 dark:border-slate-800`}>
           <button
             onClick={onClose}
             disabled={scrubbing}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50"
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200"
           >
             {scrubbed ? 'Done' : 'Close'}
           </button>

@@ -17,7 +17,7 @@ export default function LoadErrorNotice() {
   return (
     <div
       role="alert"
-      className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+      className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200"
     >
       <div className="flex items-start gap-3">
         <span aria-hidden="true" className="mt-px">⚠</span>
@@ -28,7 +28,7 @@ export default function LoadErrorNotice() {
               : `Couldn't open ${errors.length} files`}
           </p>
           {errors.length > 1 && (
-            <ul className="mt-1 space-y-0.5 text-amber-800">
+            <ul className="mt-1 space-y-0.5 text-amber-800 dark:text-amber-300">
               {errors.map((e) => (
                 <li key={e.name} className="truncate" title={e.reason}>
                   {e.name} — {e.reason}
@@ -37,14 +37,14 @@ export default function LoadErrorNotice() {
             </ul>
           )}
           {errors.length === 1 && (
-            <p className="mt-0.5 text-amber-800">{errors[0]!.reason}</p>
+            <p className="mt-0.5 text-amber-800 dark:text-amber-300">{errors[0]!.reason}</p>
           )}
         </div>
         <button
           type="button"
           onClick={dismiss}
           aria-label="Dismiss"
-          className="shrink-0 rounded px-1.5 text-amber-700 hover:bg-amber-100 hover:text-amber-900 transition-colors"
+          className="shrink-0 rounded px-1.5 text-amber-700 hover:bg-amber-100 hover:text-amber-900 dark:text-amber-300 dark:hover:bg-amber-900/40 dark:hover:text-amber-100 transition-colors"
         >
           {/* SVG, not `✕`: U+2715 has no glyph in iOS's system font and draws
               as a hollow ▯?▯ box, which is the only way to dismiss this. */}

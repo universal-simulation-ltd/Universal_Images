@@ -139,9 +139,14 @@ function Shortcut({
         'lg:h-8 lg:w-auto lg:rounded-md lg:border-0 lg:bg-transparent lg:px-2.5 lg:text-[13px]',
         'font-medium inline-flex items-center gap-1.5 whitespace-nowrap transition-colors',
         'disabled:cursor-wait disabled:opacity-70',
+        // Dark: the bar is slate-900, so the resting square sits a step up on
+        // slate-800. Each branch carries its OWN dark ground — a shared one
+        // would fight the active tint with nothing deciding the winner — and
+        // the `lg:dark:` values restate the desktop look rather than trusting
+        // variant order to let `lg:` beat `dark:`.
         active
-          ? 'border-orange-200 bg-orange-50 text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100 lg:bg-orange-50'
-          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 lg:hover:bg-slate-100',
+          ? 'border-orange-200 bg-orange-50 text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100 lg:bg-orange-50 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-300 dark:ring-orange-500/40 dark:hover:bg-orange-500/25 lg:dark:bg-orange-500/15'
+          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 lg:hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white lg:dark:bg-transparent lg:dark:hover:bg-slate-800',
       ].join(' ')}
     >
       {busy ? <Spinner /> : <span aria-hidden>{icon}</span>}

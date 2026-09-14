@@ -150,10 +150,10 @@ export default function HostedStoreDialog() {
       className={`${DIALOG_OVERLAY} bg-slate-900/50`}
       onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}
     >
-      <div className={`${DIALOG_PANEL} max-w-lg rounded-2xl bg-white shadow-xl sm:max-h-[88dvh]`}>
-        <div className={`${DIALOG_HEADER} flex items-center justify-between border-b border-slate-200 px-5 py-4`}>
-          <h2 className="text-base font-bold text-slate-900">Back up this image</h2>
-          <button onClick={close} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+      <div className={`${DIALOG_PANEL} max-w-lg rounded-2xl bg-white shadow-xl sm:max-h-[88dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
+        <div className={`${DIALOG_HEADER} flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800`}>
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Back up this image</h2>
+          <button onClick={close} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200">
             <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" /></svg>
           </button>
         </div>
@@ -163,23 +163,23 @@ export default function HostedStoreDialog() {
             the moment the tier cards outgrew the screen. */}
         <div className={`${DIALOG_BODY} space-y-4 p-5`}>
           {/* Tier 1 — On this device: free local resize + Download the result. */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-900">On this device</span>
-              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">Free</span>
+              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">On this device</span>
+              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:bg-slate-700 dark:text-slate-300">Free</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Your images are resized entirely in this browser and never uploaded. Use Download to save the result to your device — free.
             </p>
           </div>
 
           {/* Tier 2 — Save to desktop: a re-importable backup file the guest keeps. */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-900">Save to desktop</span>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600">Re-import later</span>
+              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Save to desktop</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">Re-import later</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Download a backup of your original image plus your crop and size settings. Import it any time — on any device — to carry on editing where you left off.
             </p>
 
@@ -188,7 +188,7 @@ export default function HostedStoreDialog() {
                 type="button"
                 onClick={onDownloadBackup}
                 disabled={!hasImage || importBusy}
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
               >
                 <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5M4 16h12" />
@@ -199,7 +199,7 @@ export default function HostedStoreDialog() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={importBusy}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800"
               >
                 <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M10 17V7m0 0L6.5 10.5M10 7l3.5 3.5M4 4h12" />
@@ -215,32 +215,32 @@ export default function HostedStoreDialog() {
               />
             </div>
             {!hasImage && <p className="mt-2 text-xs text-slate-400">Select an image to back it up — or import a backup to restore one.</p>}
-            {importMsg && <p className="mt-2 text-sm text-emerald-600">{importMsg}</p>}
-            {importErr && <p className="mt-2 text-sm text-rose-600">{importErr}</p>}
+            {importMsg && <p className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">{importMsg}</p>}
+            {importErr && <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{importErr}</p>}
           </div>
 
           {/* Tier 3 — Universal subscription: paid "Hosted by UNI·SIM" cloud. */}
-          <div className="rounded-xl border border-orange-200 bg-white p-4">
+          <div className="rounded-xl border border-orange-200 bg-white p-4 dark:border-orange-500/40 dark:bg-slate-900">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-900">Hosted by UNI SIM</span>
-              <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700">Universal subscription</span>
+              <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Hosted by UNI SIM</span>
+              <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">Universal subscription</span>
             </div>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Keep this resized image online against your Universal ID. One token per upload — delete it and your token comes straight back.
             </p>
 
             {!signedIn ? (
-              <div className="mt-3 rounded-lg bg-slate-50 p-3">
-                <p className="text-sm text-slate-700">Sign in with your <strong>Universal ID</strong> to store images online.</p>
+              <div className="mt-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+                <p className="text-sm text-slate-700 dark:text-slate-200">Sign in with your <strong>Universal ID</strong> to store images online.</p>
                 <a href={SIGNIN_URL} className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
                   Create / sign in with Universal ID →
                 </a>
               </div>
             ) : (
               <div className="mt-3">
-                <div className="flex items-center justify-between rounded-lg bg-orange-50/60 px-3 py-2 text-sm">
-                  <span className="text-slate-600">{user?.email}</span>
-                  <span className="font-semibold text-orange-700">
+                <div className="flex items-center justify-between rounded-lg bg-orange-50/60 px-3 py-2 text-sm dark:bg-orange-500/10">
+                  <span className="text-slate-600 dark:text-slate-300">{user?.email}</span>
+                  <span className="font-semibold text-orange-700 dark:text-orange-300">
                     {freeToken === 'available'
                       ? `Free token${tokens > 0 ? ` + ${tokens} purchased` : ' available'}`
                       : `${tokens} token${tokens === 1 ? '' : 's'}`}
@@ -257,8 +257,8 @@ export default function HostedStoreDialog() {
                       {busy ? 'Backing up…' : justStored ? '✓ Backed up (1 token used)' : 'Back up this image online (1 token)'}
                     </button>
                   ) : freeToken === null ? null : (
-                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                      <p className="text-sm text-amber-800">
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/60 dark:bg-amber-950/40">
+                      <p className="text-sm text-amber-800 dark:text-amber-200">
                         {freeToken === 'held'
                           ? 'Your free Images token is in use — delete the stored image below to get it back, or add tokens.'
                           : 'You have no tokens left.'}
@@ -269,14 +269,14 @@ export default function HostedStoreDialog() {
                     </div>
                   )
                 ) : (
-                  <p className="mt-3 text-xs text-slate-500">Select an image to back it up.</p>
+                  <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Select an image to back it up.</p>
                 )}
 
-                {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
+                {error && <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
 
                 {/* The user's hosted images */}
                 <div className="mt-4">
-                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">Your backups</p>
+                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Your backups</p>
                   {listLoading ? (
                     <p className="text-xs text-slate-400">Loading…</p>
                   ) : uploads.length === 0 ? (
@@ -284,14 +284,14 @@ export default function HostedStoreDialog() {
                   ) : (
                     <ul className="space-y-2">
                       {uploads.map((u) => (
-                        <li key={u.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                        <li key={u.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800/50">
                           <div className="flex items-center gap-2">
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-xs font-medium text-slate-700">{u.file_name || 'image'}</span>
+                              <span className="block truncate text-xs font-medium text-slate-700 dark:text-slate-200">{u.file_name || 'image'}</span>
                               <span className="block text-[10px] text-slate-400">{new Date(u.created_at).toLocaleDateString()}</span>
                             </span>
                             <button onClick={() => onOpen(u)} disabled={busy} className="shrink-0 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-800 disabled:opacity-50">Open</button>
-                            <button onClick={() => onDelete(u)} disabled={busy} className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 disabled:opacity-50" title="Delete and refund the token">Delete</button>
+                            <button onClick={() => onDelete(u)} disabled={busy} className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 disabled:opacity-50" title="Delete and refund the token">Delete</button>
                           </div>
 
                           {/* A backup with nothing behind it. Say which file,
@@ -305,9 +305,9 @@ export default function HostedStoreDialog() {
                             <div
                               role="alert"
                               data-testid="hosted-missing"
-                              className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2"
+                              className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 dark:border-amber-800/60 dark:bg-amber-950/40"
                             >
-                              <p className="text-[11px] leading-snug text-amber-900">
+                              <p className="text-[11px] leading-snug text-amber-900 dark:text-amber-200">
                                 <strong className="font-semibold">{u.file_name || 'image'}</strong> is listed here,
                                 but there is no file behind it — this upload never finished, so nothing was ever stored.
                                 Your token is still being held for it.

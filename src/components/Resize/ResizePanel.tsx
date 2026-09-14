@@ -398,15 +398,15 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
           and let the column scroll — otherwise flexbox shrinks it and the
           fixed-height preview overflows on top of the controls below.
           min-h-0 is still needed for the lg grid layout. */}
-      <div className="flex flex-col bg-slate-100 shrink-0 lg:shrink lg:min-h-0">
-        <div className="px-3 py-2 border-b border-slate-200 bg-white flex items-center gap-2 text-xs text-slate-500">
+      <div className="flex flex-col bg-slate-100 shrink-0 lg:shrink lg:min-h-0 dark:bg-slate-950">
+        <div className="px-3 py-2 border-b border-slate-200 bg-white flex items-center gap-2 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
           {/* Mobile: tap to open image picker overlay */}
           {onShowGrid && (
             <button
               type="button"
               onClick={onShowGrid}
               title="All images"
-              className="md:hidden shrink-0 inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-md px-2 py-1 text-[11px] font-medium tabular-nums transition-colors"
+              className="md:hidden shrink-0 inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-md px-2 py-1 text-[11px] font-medium tabular-nums transition-colors dark:text-slate-300 dark:hover:text-white dark:border-slate-700 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             >
               <svg viewBox="0 0 12 12" className="w-3 h-3" fill="currentColor" aria-hidden="true">
                 <rect x="0.5" y="0.5" width="4.5" height="4.5" rx="0.75" />
@@ -432,14 +432,14 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 else if (e.key === 'Escape') { e.preventDefault(); setRenaming(false) }
               }}
               aria-label="File name"
-              className="min-w-0 flex-1 max-w-[22rem] font-medium text-slate-800 bg-white border border-orange-400 rounded px-1.5 py-0.5 text-xs outline-none ring-1 ring-orange-500/30"
+              className="min-w-0 flex-1 max-w-[22rem] font-medium text-slate-800 bg-white border border-orange-400 rounded px-1.5 py-0.5 text-xs outline-none ring-1 ring-orange-500/30 dark:text-slate-100 dark:bg-slate-950"
             />
           ) : (
             <button
               type="button"
               onClick={startRename}
               title="Rename — this becomes the name of the file you download"
-              className="min-w-0 inline-flex items-center gap-1 font-medium text-slate-700 truncate rounded px-1 -mx-1 py-0.5 hover:bg-slate-100 hover:text-slate-900 group/name transition-colors"
+              className="min-w-0 inline-flex items-center gap-1 font-medium text-slate-700 truncate rounded px-1 -mx-1 py-0.5 hover:bg-slate-100 hover:text-slate-900 group/name transition-colors dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-white"
             >
               <span className="truncate">{selected.name}</span>
               <span aria-hidden="true" className="shrink-0 text-slate-400 opacity-0 group-hover/name:opacity-100 transition-opacity">✎</span>
@@ -459,7 +459,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 type="button"
                 onClick={() => setMetadataOpen(true)}
                 title="See what this photo reveals about you"
-                className="inline-flex items-center gap-1 text-amber-800 bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 hover:ring-amber-300 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors"
+                className="inline-flex items-center gap-1 text-amber-800 bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100 hover:ring-amber-300 dark:text-amber-200 dark:bg-amber-950/40 dark:ring-amber-800/60 dark:hover:bg-amber-900/40 dark:hover:ring-amber-700 rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors"
               >
                 <span aria-hidden="true">🏷</span>
                 <span>Metadata</span>
@@ -469,12 +469,12 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               </button>
             )}
             {crop && (
-              <span className="inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium">
+              <span className="inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium dark:text-orange-300 dark:bg-orange-500/10 dark:ring-orange-500/30">
                 <span aria-hidden="true">✂</span> {Math.round(crop.width)} × {Math.round(crop.height)} crop
               </span>
             )}
             {!crop && socialCrop && activeSocialLabel && (
-              <span className="inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium">
+              <span className="inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium dark:text-orange-300 dark:bg-orange-500/10 dark:ring-orange-500/30">
                 <span aria-hidden="true">📐</span> {activeSocialLabel}
               </span>
             )}
@@ -491,17 +491,17 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
         />
       </div>
 
-      <div className="border-t lg:border-t-0 lg:border-l border-slate-200 bg-white shrink-0 lg:shrink lg:overflow-y-auto">
+      <div className="border-t lg:border-t-0 lg:border-l border-slate-200 bg-white shrink-0 lg:shrink lg:overflow-y-auto dark:border-slate-800 dark:bg-slate-900">
         <div className="p-5 space-y-6">
           {/* Size — presets + custom dimensions, the primary control, pinned to
               the top of the column. Custom width/height is a collapsed disclosure. */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Size</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Size</h2>
               <button
                 type="button"
                 onClick={resetTargetToSelected}
-                className="text-[11px] text-slate-400 hover:text-slate-700"
+                className="text-[11px] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               >
                 Reset
               </button>
@@ -518,14 +518,14 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     className={[
                       'p-3 rounded-lg border text-left transition-colors',
                       isActive
-                        ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500/30'
-                        : 'border-slate-200 hover:border-orange-400 hover:bg-orange-50/40'
+                        ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500/30 dark:bg-orange-500/10'
+                        : 'border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 dark:border-slate-700 dark:hover:border-orange-500 dark:hover:bg-orange-500/10'
                     ].join(' ')}
                   >
-                    <div className={['text-xl font-semibold leading-none', isActive ? 'text-orange-700' : 'text-slate-700'].join(' ')}>
+                    <div className={['text-xl font-semibold leading-none', isActive ? 'text-orange-700 dark:text-orange-400' : 'text-slate-700 dark:text-slate-200'].join(' ')}>
                       {p}
                     </div>
-                    <div className="text-[10px] text-slate-500 mt-1 leading-tight">
+                    <div className="text-[10px] text-slate-500 mt-1 leading-tight dark:text-slate-400">
                       {dim.width}×{dim.height}
                     </div>
                   </button>
@@ -541,10 +541,10 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               aria-controls={`${foldId}-custom-size`}
               className="mt-2 w-full flex items-center justify-between gap-2 py-1 group"
             >
-              <span className="text-[11px] font-medium text-slate-500 group-hover:text-slate-700">Custom size (px)</span>
+              <span className="text-[11px] font-medium text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">Custom size (px)</span>
               <span
                 aria-hidden="true"
-                className={['text-slate-400 group-hover:text-slate-600 text-xs transition-transform', customSizeOpen ? 'rotate-90' : ''].join(' ')}
+                className={['text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300 text-xs transition-transform', customSizeOpen ? 'rotate-90' : ''].join(' ')}
               >
                 ▸
               </span>
@@ -559,8 +559,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     className={[
                       'inline-flex items-center gap-1 text-xs px-2 py-1 rounded ring-1 transition-colors',
                       target.aspectLocked
-                        ? 'bg-orange-50 text-orange-700 ring-orange-300'
-                        : 'bg-slate-100 text-slate-500 ring-slate-300'
+                        ? 'bg-orange-50 text-orange-700 ring-orange-300 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/40'
+                        : 'bg-slate-100 text-slate-500 ring-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-600'
                     ].join(' ')}
                     aria-pressed={target.aspectLocked}
                   >
@@ -570,23 +570,23 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <label className="block">
-                    <span className="block text-[11px] text-slate-500 mb-1">Width</span>
+                    <span className="block text-[11px] text-slate-500 mb-1 dark:text-slate-400">Width</span>
                     <input
                       type="number"
                       min={1}
                       value={target.width}
                       onChange={(e) => onWidth(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none text-sm"
+                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-[11px] text-slate-500 mb-1">Height</span>
+                    <span className="block text-[11px] text-slate-500 mb-1 dark:text-slate-400">Height</span>
                     <input
                       type="number"
                       min={1}
                       value={target.height}
                       onChange={(e) => onHeight(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none text-sm"
+                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-300 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none text-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                     />
                   </label>
                 </div>
@@ -606,16 +606,16 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               aria-controls={`${foldId}-crop`}
               className="w-full flex items-center justify-between gap-2 py-1 group"
             >
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">Crop</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">Crop</span>
               <span className="flex items-center gap-1.5">
                 {crop && (
-                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 tabular-nums">
+                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/30 tabular-nums">
                     {Math.round(crop.width)}×{Math.round(crop.height)}
                   </span>
                 )}
                 <span
                   aria-hidden="true"
-                  className={['text-slate-400 group-hover:text-slate-600 transition-transform', cropOpen ? 'rotate-90' : ''].join(' ')}
+                  className={['text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300 transition-transform', cropOpen ? 'rotate-90' : ''].join(' ')}
                 >
                   ▶
                 </span>
@@ -627,7 +627,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   <button
                     type="button"
                     onClick={clearCrop}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20 transition-colors"
                   >
                     {/* SVG, not `✕` — U+2715 is a ▯?▯ box on iOS. */}
                     <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
@@ -640,7 +640,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   <button
                     type="button"
                     onClick={addCenteredCrop}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 transition-colors"
                   >
                     <span aria-hidden="true">✂</span>
                     <span className="flex-1 text-left">Manual crop</span>
@@ -654,7 +654,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   onClick={() => setAutocropOpen((v) => !v)}
                   aria-expanded={autocropOpen}
                   aria-controls={`${foldId}-autocrop`}
-                  className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
+                  className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 transition-colors"
                 >
                   <span aria-hidden="true">🪄</span>
                   <span className="flex-1 text-left">Autocrop</span>
@@ -666,8 +666,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   </span>
                 </button>
                 {autocropOpen && (
-                  <div id={`${foldId}-autocrop`} className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 p-2.5">
-                    <p className="text-[11px] text-slate-500 leading-snug mb-2">
+                  <div id={`${foldId}-autocrop`} className="mt-2 rounded-lg border border-slate-200 bg-slate-50/60 dark:border-slate-700 dark:bg-slate-800/40 p-2.5">
+                    <p className="text-[11px] text-slate-500 leading-snug dark:text-slate-400 mb-2">
                       {crop
                         ? 'Find the subject in the whole image and crop to it, replacing your crop.'
                         : 'Trim the blank border around your image.'}
@@ -683,7 +683,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                           type="button"
                           onClick={() => autoCrop(mode)}
                           disabled={autoCropping}
-                          className="flex flex-col items-center gap-0.5 px-2 py-2 rounded-md border border-slate-200 bg-white hover:border-orange-400 hover:bg-orange-50/40 text-slate-700 text-xs font-medium disabled:opacity-60 disabled:cursor-wait transition-colors"
+                          className="flex flex-col items-center gap-0.5 px-2 py-2 rounded-md border border-slate-200 bg-white hover:border-orange-400 hover:bg-orange-50/40 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 text-xs font-medium disabled:opacity-60 disabled:cursor-wait transition-colors"
                         >
                           <span>{label}</span>
                           <span className="text-[9px] uppercase tracking-wide text-slate-400">{hint}</span>
@@ -691,11 +691,11 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                       ))}
                     </div>
                     {autoCropping ? (
-                      <p className="mt-2 text-[11px] text-orange-700">Scanning for whitespace…</p>
+                      <p className="mt-2 text-[11px] text-orange-700 dark:text-orange-400">Scanning for whitespace…</p>
                     ) : autoCropNote ? (
                       // Autocrop left the crop as it was — say so, or a no-op
                       // reads as a broken button.
-                      <p className="mt-2 text-[11px] text-slate-500" role="status">{autoCropNote}</p>
+                      <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400" role="status">{autoCropNote}</p>
                     ) : null}
                   </div>
                 )}
@@ -717,14 +717,14 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               aria-controls={`${foldId}-background`}
               className="w-full flex items-center justify-between gap-2 py-1 group"
             >
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">Background</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">Background</span>
               <span className="flex items-center gap-1.5">
                 {bgRemoved && (
-                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5">Removed</span>
+                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/30">Removed</span>
                 )}
                 <span
                   aria-hidden="true"
-                  className={['text-slate-400 group-hover:text-slate-600 transition-transform', bgOpen ? 'rotate-90' : ''].join(' ')}
+                  className={['text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300 transition-transform', bgOpen ? 'rotate-90' : ''].join(' ')}
                 >
                   ▶
                 </span>
@@ -737,7 +737,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     type="button"
                     onClick={restoreBackground}
                     disabled={removingBg}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 hover:bg-orange-100 disabled:opacity-60 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20 hover:bg-orange-100 disabled:opacity-60 transition-colors"
                   >
                     <span aria-hidden="true">↩</span>
                     <span className="flex-1 text-left">Restore background</span>
@@ -748,7 +748,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     type="button"
                     onClick={onRemoveBackground}
                     disabled={removingBg}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 disabled:opacity-60 disabled:cursor-wait transition-colors"
                   >
                     <span aria-hidden="true">🪄</span>
                     <span className="flex-1 text-left">{removingBg ? 'Removing background…' : 'Remove background'}</span>
@@ -758,13 +758,13 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
 
                 {removingBg && (
                   <div className="mt-2">
-                    <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                    <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden dark:bg-slate-700">
                       <div
                         className="h-full bg-orange-500 transition-[width] duration-200"
                         style={{ width: `${Math.round(bgProgress * 100)}%` }}
                       />
                     </div>
-                    <p className="mt-1.5 text-[11px] text-slate-500 leading-snug">
+                    <p className="mt-1.5 text-[11px] text-slate-500 leading-snug dark:text-slate-400">
                       {bgProgress > 0 && bgProgress < 1
                         ? `Downloading model — ${Math.round(bgProgress * 100)}%`
                         : 'Working on your device…'}
@@ -775,7 +775,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 )}
 
                 {bgError && !removingBg && (
-                  <p className="mt-2 text-[11px] text-red-600 leading-snug">{bgError}</p>
+                  <p className="mt-2 text-[11px] text-red-600 leading-snug dark:text-red-400">{bgError}</p>
                 )}
 
                 {!removingBg && !bgError && (
@@ -789,11 +789,11 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 {/* Background fill — replace a transparent background with a colour */}
                 <div className="mt-3">
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="text-[11px] font-medium text-slate-600">Fill background</span>
+                    <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Fill background</span>
                     {!hasAlpha && (
                       <span
                         title="Requires a transparent background — remove the background first"
-                        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibold cursor-help select-none"
+                        className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300 text-[9px] font-semibold cursor-help select-none"
                       >
                         i
                       </span>
@@ -814,7 +814,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                           className={[
                             'w-7 h-7 rounded-full ring-1 ring-slate-300 transition-all',
                             sw.swatchClass,
-                            active ? 'ring-2 ring-orange-500 ring-offset-1' : 'hover:ring-slate-400',
+                            active ? 'ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-slate-900' : 'hover:ring-slate-400 dark:ring-slate-600 dark:hover:ring-slate-500',
                             !hasAlpha ? 'opacity-40 cursor-not-allowed' : ''
                           ].join(' ')}
                         />
@@ -832,8 +832,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                           aria-pressed={isCustom}
                           style={isCustom ? { backgroundColor: bgFill! } : undefined}
                           className={[
-                            'w-7 h-7 rounded-full ring-1 ring-slate-300 flex items-center justify-center text-slate-500 transition-all',
-                            isCustom ? 'ring-2 ring-orange-500 ring-offset-1' : 'hover:ring-slate-400',
+                            'w-7 h-7 rounded-full ring-1 ring-slate-300 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-all',
+                            isCustom ? 'ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-slate-900' : 'hover:ring-slate-400 dark:ring-slate-600 dark:hover:ring-slate-500',
                             !hasAlpha ? 'opacity-40 cursor-not-allowed' : ''
                           ].join(' ')}
                         >
@@ -871,16 +871,16 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               aria-controls={`${foldId}-faces`}
               className="w-full flex items-center justify-between gap-2 py-1 group"
             >
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">Redact faces</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">Redact faces</span>
               <span className="flex items-center gap-1.5">
                 {faceBlurred && enabledFaceCount > 0 && (
-                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 tabular-nums">
+                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/30 tabular-nums">
                     {enabledFaceCount} blurred
                   </span>
                 )}
                 <span
                   aria-hidden="true"
-                  className={['text-slate-400 group-hover:text-slate-600 transition-transform', faceOpen ? 'rotate-90' : ''].join(' ')}
+                  className={['text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300 transition-transform', faceOpen ? 'rotate-90' : ''].join(' ')}
                 >
                   ▶
                 </span>
@@ -893,20 +893,20 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     type="button"
                     onClick={onDetectFaces}
                     disabled={detectingFaces}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 disabled:opacity-60 disabled:cursor-wait transition-colors"
                   >
                     <span aria-hidden="true">🙈</span>
                     <span className="flex-1 text-left">{detectingFaces ? 'Detecting faces…' : 'Detect & blur faces'}</span>
                     {!detectingFaces && <span className="text-[10px] uppercase tracking-wide text-slate-400">AI</span>}
                   </button>
                 ) : faceBoxes.length === 0 ? (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-                    <p className="text-[11px] text-slate-500 leading-snug">No faces detected in this image.</p>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50/60 dark:border-slate-700 dark:bg-slate-800/40 p-3">
+                    <p className="text-[11px] text-slate-500 leading-snug dark:text-slate-400">No faces detected in this image.</p>
                     <button
                       type="button"
                       onClick={onDetectFaces}
                       disabled={detectingFaces}
-                      className="mt-2 text-[11px] font-medium text-orange-700 hover:text-orange-900 disabled:opacity-60"
+                      className="mt-2 text-[11px] font-medium text-orange-700 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300 disabled:opacity-60"
                     >
                       {detectingFaces ? 'Scanning…' : 'Scan again'}
                     </button>
@@ -918,7 +918,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                       <button
                         type="button"
                         onClick={clearFaceBlur}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 hover:bg-orange-100 transition-colors"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20 hover:bg-orange-100 transition-colors"
                       >
                         <span aria-hidden="true">↩</span>
                         <span className="flex-1 text-left">Remove blur</span>
@@ -928,7 +928,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                       <button
                         type="button"
                         onClick={() => applyFaceBlur()}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 transition-colors"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 transition-colors"
                       >
                         <span aria-hidden="true">🙈</span>
                         <span className="flex-1 text-left">Blur {faceBoxes.length} {faceBoxes.length === 1 ? 'face' : 'faces'}</span>
@@ -947,8 +947,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                             className={[
                               'py-1.5 rounded-lg border text-xs font-medium capitalize transition-colors',
                               isActive
-                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
-                                : 'border-slate-200 text-slate-600 hover:border-orange-400'
+                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300'
+                                : 'border-slate-200 text-slate-600 hover:border-orange-400 dark:border-slate-600 dark:text-slate-300 dark:hover:border-orange-500'
                             ].join(' ')}
                           >
                             {style}
@@ -959,7 +959,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
 
                     {/* Strength */}
                     <div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 dark:text-slate-400">
                         <span>Strength</span>
                         <span className="tabular-nums">{faceBlurStrength}%</span>
                       </div>
@@ -975,7 +975,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
 
                     {/* Per-face toggles */}
                     <div>
-                      <div className="text-[11px] font-medium text-slate-600 mb-1.5">
+                      <div className="text-[11px] font-medium text-slate-600 mb-1.5 dark:text-slate-300">
                         Faces <span className="text-slate-400">— tap to keep one visible</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
@@ -989,8 +989,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                             className={[
                               'inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[11px] font-medium transition-colors',
                               f.enabled
-                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
-                                : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300'
+                                : 'border-slate-200 text-slate-500 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600'
                             ].join(' ')}
                           >
                             <span aria-hidden="true">{f.enabled ? '🙈' : '👁'}</span>
@@ -1003,7 +1003,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 )}
 
                 {faceError && !detectingFaces && (
-                  <p className="mt-2 text-[11px] text-red-600 leading-snug">{faceError}</p>
+                  <p className="mt-2 text-[11px] text-red-600 leading-snug dark:text-red-400">{faceError}</p>
                 )}
 
                 {!faceError && (
@@ -1025,19 +1025,19 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               aria-controls={`${foldId}-social`}
               className="w-full flex items-center justify-between gap-2 py-1 group"
             >
-              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">
                 Social Media Sizes
               </span>
               <span className="flex items-center gap-1.5">
                 {socialCrop && (
-                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5">
+                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/30">
                     Active
                   </span>
                 )}
                 <span
                   aria-hidden="true"
                   className={[
-                    'text-slate-400 group-hover:text-slate-600 transition-transform',
+                    'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300 transition-transform',
                     socialOpen ? 'rotate-90' : ''
                   ].join(' ')}
                 >
@@ -1051,7 +1051,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   <button
                     type="button"
                     onClick={clearSocialCrop}
-                    className="w-full text-left text-[11px] text-orange-700 hover:text-orange-900 bg-orange-50 hover:bg-orange-100 rounded-md px-2 py-1.5 ring-1 ring-orange-200 transition-colors"
+                    className="w-full text-left text-[11px] text-orange-700 hover:text-orange-900 bg-orange-50 hover:bg-orange-100 rounded-md px-2 py-1.5 ring-1 ring-orange-200 dark:text-orange-300 dark:hover:text-orange-200 dark:bg-orange-500/10 dark:hover:bg-orange-500/20 dark:ring-orange-500/30 transition-colors"
                   >
                     Clear social crop · go back to free sizing
                   </button>
@@ -1071,8 +1071,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                             className={[
                               'px-2 py-1 rounded-md border text-[11px] font-medium transition-colors',
                               isActive
-                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
-                                : 'border-slate-200 text-slate-600 hover:border-orange-400 hover:bg-orange-50/40'
+                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300'
+                                : 'border-slate-200 text-slate-600 hover:border-orange-400 hover:bg-orange-50/40 dark:border-slate-700 dark:text-slate-300 dark:hover:border-orange-500 dark:hover:bg-orange-500/10'
                             ].join(' ')}
                           >
                             {p.label}
@@ -1098,22 +1098,22 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               opens the menu and rings the card instead of that section. */}
           <div
             className={[
-              'space-y-2 pt-2 border-t border-slate-200 transition-colors',
-              convertMode ? 'rounded-lg ring-2 ring-orange-500/60 bg-orange-50/50 -mx-1.5 px-1.5 pb-1.5' : ''
+              'space-y-2 pt-2 border-t border-slate-200 transition-colors dark:border-slate-800',
+              convertMode ? 'rounded-lg ring-2 ring-orange-500/60 bg-orange-50/50 -mx-1.5 px-1.5 pb-1.5 dark:bg-orange-500/10' : ''
             ].join(' ')}
           >
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Export</h2>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Export</h2>
               {convertMode && (
-                <span className="text-[10px] uppercase tracking-wide bg-orange-100 text-orange-700 ring-1 ring-orange-300 rounded-full px-2 py-0.5">
+                <span className="text-[10px] uppercase tracking-wide bg-orange-100 text-orange-700 ring-1 ring-orange-300 rounded-full px-2 py-0.5 dark:bg-orange-500/20 dark:text-orange-300 dark:ring-orange-500/40">
                   Convert
                 </span>
               )}
             </div>
-            <div className="rounded-md bg-slate-50 ring-1 ring-slate-200 px-3 py-2 text-[11px] text-slate-600 leading-relaxed">
+            <div className="rounded-md bg-slate-50 ring-1 ring-slate-200 px-3 py-2 text-[11px] text-slate-600 leading-relaxed dark:bg-slate-800/60 dark:ring-slate-700 dark:text-slate-300">
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Estimated output</span>
-                <span className="font-medium tabular-nums text-slate-800">
+                <span className="text-slate-500 dark:text-slate-400">Estimated output</span>
+                <span className="font-medium tabular-nums text-slate-800 dark:text-slate-100">
                   {estimate.state === 'ready'
                     ? formatBytes(estimate.bytes)
                     : estimate.state === 'computing'
@@ -1167,7 +1167,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 <div
                   role="menu"
                   className={[
-                    'absolute right-0 z-20 w-full overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-lg',
+                    // Dark: one step up from the slate-900 panel it floats
+                    // over, the same lift the SDK's own dropdowns take.
+                    'absolute right-0 z-20 w-full overflow-hidden rounded-xl border border-slate-200 bg-white py-2 shadow-lg dark:border-slate-700 dark:bg-slate-800 dark:shadow-black/50',
                     exportMenuUp ? 'bottom-full mb-2' : 'mt-2'
                   ].join(' ')}
                 >
@@ -1188,8 +1190,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                             className={[
                               'py-1.5 rounded-lg border text-xs font-medium transition-colors',
                               isActive
-                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30'
-                                : 'border-slate-200 text-slate-600 hover:border-orange-400'
+                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300'
+                                : 'border-slate-200 text-slate-600 hover:border-orange-400 dark:border-slate-600 dark:text-slate-300 dark:hover:border-orange-500'
                             ].join(' ')}
                           >
                             {FORMAT_LABEL[f]}
@@ -1205,7 +1207,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     {target.format === 'image/png' && (
                       <div className="mt-3 flex items-center justify-between gap-3">
                         <div>
-                          <div className="text-[11px] font-medium text-slate-600">Allow transparency</div>
+                          <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Allow transparency</div>
                           <p className="text-[10px] text-slate-400 leading-snug">
                             Off fills the background white behind the image.
                           </p>
@@ -1217,7 +1219,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                           onClick={() => setTarget({ allowTransparency: !target.allowTransparency })}
                           className={[
                             'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
-                            target.allowTransparency ? 'bg-orange-600' : 'bg-slate-300'
+                            target.allowTransparency ? 'bg-orange-600' : 'bg-slate-300 dark:bg-slate-600'
                           ].join(' ')}
                         >
                           <span
@@ -1231,7 +1233,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     )}
                     {showQuality && (
                       <div className="mt-3">
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 dark:text-slate-400">
                           <span className="font-semibold uppercase tracking-wide text-[10px] text-slate-400">Quality</span>
                           <span className="tabular-nums">{Math.round(target.quality * 100)}%</span>
                         </div>
@@ -1251,7 +1253,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     )}
                   </div>
 
-                  <div className="my-2 border-t border-slate-100" />
+                  <div className="my-2 border-t border-slate-100 dark:border-slate-700" />
 
                   {images.length > 1 && (
                     <button
@@ -1262,7 +1264,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                         exportAll()
                       }}
                       disabled={batchExporting}
-                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-orange-50/70 hover:text-orange-800 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-700 transition-colors"
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-orange-50/70 hover:text-orange-800 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-300 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-700 dark:disabled:hover:bg-transparent dark:disabled:hover:text-slate-200 transition-colors"
                     >
                       <svg viewBox="0 0 20 20" className="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5M4 16h12" />
@@ -1277,7 +1279,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                       setExportMenuOpen(false)
                       useImageStore.setState({ hostedStoreOpen: true })
                     }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-orange-50/70 hover:text-orange-800 transition-colors"
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-orange-50/70 hover:text-orange-800 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-300 transition-colors"
                   >
                     <svg viewBox="0 0 20 20" className="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M16 17H4a1.5 1.5 0 0 1-1.5-1.5v-11A1.5 1.5 0 0 1 4 3h8l4 4v8.5A1.5 1.5 0 0 1 16 17z M14 17v-6H6v6 M6 3v4h6" />
@@ -1292,10 +1294,10 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               EXIF and location metadata are stripped on export.
             </p>
             {lastResult && (
-              <div className="text-[11px] text-slate-500 bg-slate-50 rounded-md px-3 py-2 leading-relaxed">
-                Saved <span className="font-medium text-slate-700">{lastResult.width}×{lastResult.height}</span>
+              <div className="text-[11px] text-slate-500 bg-slate-50 rounded-md px-3 py-2 leading-relaxed dark:text-slate-400 dark:bg-slate-800/60">
+                Saved <span className="font-medium text-slate-700 dark:text-slate-200">{lastResult.width}×{lastResult.height}</span>
                 {' · '}
-                <span className="font-medium text-slate-700">{formatBytes(lastResult.bytes)}</span>
+                <span className="font-medium text-slate-700 dark:text-slate-200">{formatBytes(lastResult.bytes)}</span>
                 {' '}({Math.round((1 - lastResult.bytes / selected.bytes) * 100)}% smaller)
               </div>
             )}
@@ -1531,7 +1533,9 @@ function PreviewArea({
     : null
 
   return (
-    <div ref={wrapperRef} className="relative flex flex-1 min-h-[55vh] lg:min-h-0 overflow-hidden checker-bg">
+    // `checker-pane`: the pasteboard goes dark with the theme (index.css). The
+    // preview <img> below keeps its own white ground and its pixels in both.
+    <div ref={wrapperRef} className="relative flex flex-1 min-h-[55vh] lg:min-h-0 overflow-hidden checker-bg checker-pane">
       {socialCrop ? (
         <SocialCropOverlay image={image} crop={socialCrop} onMove={onMoveSocialCrop} />
       ) : (
@@ -1549,7 +1553,7 @@ function PreviewArea({
                   aria-label={image.name}
                   data-preview="crop-fallback"
                   style={{ width: displayW, height: displayH, ...cropFallback }}
-                  className="block shadow-lg ring-1 ring-slate-200 bg-white"
+                  className="block shadow-lg ring-1 ring-slate-200 bg-white dark:ring-slate-700"
                 />
               ) : (
                 <img
@@ -1557,7 +1561,7 @@ function PreviewArea({
                   alt={image.name}
                   draggable={false}
                   style={{ width: displayW, height: displayH }}
-                  className="block object-fill shadow-lg ring-1 ring-slate-200 bg-white"
+                  className="block object-fill shadow-lg ring-1 ring-slate-200 bg-white dark:ring-slate-700"
                 />
               )}
             </div>

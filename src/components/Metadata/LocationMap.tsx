@@ -142,7 +142,11 @@ export default function LocationMap({ latitude, longitude }: Props) {
 
   return (
     <div className="mt-2">
-      <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-100">
+      {/* ⚠️ The map itself — its sea (this frame's ground), the land and the
+          marker — is a PICTURE and draws the same in both themes, the way a
+          map tile would. Only the chrome around it (frame edge, captions,
+          the zoom link) follows the theme. */}
+      <div className="relative rounded-lg overflow-hidden border border-slate-200 bg-slate-100 dark:border-slate-700">
         <div style={{ aspectRatio: String(ASPECT) }}>
           {frame && (
             <svg
@@ -203,8 +207,8 @@ export default function LocationMap({ latitude, longitude }: Props) {
       </div>
 
       {located && (
-        <p className="text-[11px] text-slate-500 mt-1">
-          <span className="text-slate-700 font-medium">
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+          <span className="text-slate-700 font-medium dark:text-slate-200">
             {located.isWorld
               ? 'Not inside any country — at sea, or not a real place.'
               : located.approximate && located.offshoreKm >= OFFSHORE_KM
@@ -243,12 +247,12 @@ export default function LocationMap({ latitude, longitude }: Props) {
             type="button"
             onClick={onZoomIn}
             disabled={zooming}
-            className="text-[11px] font-medium text-blue-600 hover:text-blue-700 underline underline-offset-2 disabled:text-slate-400 disabled:no-underline"
+            className="text-[11px] font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline underline-offset-2 disabled:text-slate-400 disabled:no-underline"
           >
             {zooming ? 'Zooming in…' : 'Zoom in to county and town'}
           </button>
           {/* Says the cost before it is paid, not after. */}
-          <span className="block text-[11px] text-slate-500">
+          <span className="block text-[11px] text-slate-500 dark:text-slate-400">
             Asks this app’s own server for {located.country}’s county outlines — which
             tells it the country, and nothing else. Your coordinates are not sent.
           </span>
@@ -256,7 +260,7 @@ export default function LocationMap({ latitude, longitude }: Props) {
       )}
 
       {zoomFailed && (
-        <p className="text-[11px] text-slate-500 mt-1.5">
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
           Couldn’t fetch the county outlines — you may be offline. The map above is
           drawn from the app’s own data and is unaffected.
         </p>

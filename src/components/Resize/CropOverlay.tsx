@@ -502,7 +502,9 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
           underneath, which is re-encoding as the crop changes. */}
       {onResult && adjustView && adjustRect && (
         <>
-          <div className="pointer-events-none absolute inset-0 bg-white checker-bg" />
+          {/* `checker-pane`: in dark this is the same dark pasteboard as the
+              pane around it, so a handle drag does not flash the pane white. */}
+          <div className="pointer-events-none absolute inset-0 bg-white checker-bg checker-pane" />
           {/* max-w-none: preflight caps images at max-width:100%, which silently
               squashes this one (it is drawn wider than the pane by design) and
               slides it out of register with the crop box. */}

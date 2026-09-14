@@ -1,8 +1,23 @@
 @import "tailwindcss";
 
+/* Tailwind 4 defaults `dark:` to the OS media query. We drive it from a class
+   on <html> instead, because the suite rule is that an app opens LIGHT and only
+   goes dark when the user says so — see stores/themeStore.ts. With the media
+   default, a laptop set to dark would override that on first paint. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 html, body, #root {
   height: 100%;
   margin: 0;
+}
+
+/* The canvas behind the app, dark only. #root fills the viewport and paints
+   its own ground, so this is only ever seen where the page is pulled past its
+   edge — which in dark would otherwise be a white band. Light is deliberately
+   left on the browser's default canvas: nothing shows it, and light mode must
+   not move by a pixel. */
+html.dark {
+  background-color: #020617; /* slate-950 */
 }
 
 body {
@@ -58,6 +73,26 @@ body {
   background-position: 0 0, 0 8px, 8px -8px, -8px 0;
 }
 
+/* The same checkerboard as a dark pasteboard, for the surfaces that are the
+   editor's GROUND rather than an image: the preview pane, the backdrop behind
+   a crop being adjusted, and the thumbnail tiles. Still a checkerboard — it
+   still says "transparent" — just not a bright one in a dark editor.
+
+   ⚠️ The picture itself is never touched: the preview <img> keeps its own
+   white ground in both themes, and every pixel of the image draws exactly as
+   before. Only the pattern around and behind it changes.
+
+   Unlayered and two classes deep, so it beats both `.checker-bg` above and a
+   Tailwind `bg-white` sitting on the same element (utilities are layered). */
+.dark .checker-pane {
+  background-color: #0f172a; /* slate-900 */
+  background-image:
+    linear-gradient(45deg, #1e293b 25%, transparent 25%),
+    linear-gradient(-45deg, #1e293b 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1e293b 75%),
+    linear-gradient(-45deg, transparent 75%, #1e293b 75%);
+}
+
 /* ---------- Landing image illustration ---------- */
 
 /* Every part is a window on the single `--t` that ImageIllustration.tsx writes
@@ -67,6 +102,38 @@ body {
 
 .img-illu {
   --t: 0;
+
+  /* Every chrome surface in the drawing, so it can be swapped for the dark
+     theme in one place (Universal Video's `.vid-illu` is the precedent). The
+     light values are exactly the colours these parts always had. Left alone
+     because they are right in both: the photo on the front card (it is the
+     picture being resized), the orange selection, the white handles and the
+     cursor. */
+  --ii-surface: #ffffff;
+  --ii-edge: #cbd5e1;
+  --ii-back-2: #f1f5f9;
+  --ii-back-1: #e2e8f0;
+  --ii-shadow: #0f172a;
+  --ii-shadow-opacity: 0.16;
+  --ii-ink: #0f172a;
+  --ii-muted: #64748b;
+  --ii-badge-bg: #ecfdf5;
+  --ii-badge-edge: #10b981;
+  --ii-badge-ink: #059669;
+}
+
+.dark .img-illu {
+  --ii-surface: #1e293b;
+  --ii-edge: #475569;
+  --ii-back-2: #334155;
+  --ii-back-1: #475569;
+  --ii-shadow: #000000;
+  --ii-shadow-opacity: 0.5;
+  --ii-ink: #e2e8f0;
+  --ii-muted: #94a3b8;
+  --ii-badge-bg: #052e16;
+  --ii-badge-edge: #10b981;
+  --ii-badge-ink: #34d399;
 }
 
 /* Defaults for every part. The universal selector is scoped to the

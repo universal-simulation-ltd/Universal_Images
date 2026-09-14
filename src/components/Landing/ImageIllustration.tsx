@@ -55,7 +55,10 @@ export default function ImageIllustration() {
             <stop offset="100%" stopColor="#c2410c" />
           </linearGradient>
           <filter id="card-shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="10" stdDeviation="14" floodColor="#0f172a" floodOpacity="0.16" />
+            {/* Every chrome colour below is a `--ii-*` variable, set in
+                index.css and swapped under `.dark` — the light values are the
+                colours these always were. */}
+            <feDropShadow dx="0" dy="10" stdDeviation="14" style={{ floodColor: 'var(--ii-shadow)', floodOpacity: 'var(--ii-shadow-opacity)' }} />
           </filter>
         </defs>
 
@@ -85,17 +88,17 @@ export default function ImageIllustration() {
             {/* The rest of the batch, fanning out behind. They resize with the
                 front one: this app does the whole drop at once. */}
             <g className="img-back img-back-2" style={{ transformOrigin: '250px 220px' }}>
-              <rect x="100" y="110" width="300" height="220" rx="16" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" filter="url(#card-shadow)" />
-              <rect x="112" y="122" width="276" height="196" rx="8" fill="#f1f5f9" />
+              <rect x="100" y="110" width="300" height="220" rx="16" strokeWidth="2" filter="url(#card-shadow)" style={{ fill: 'var(--ii-surface)', stroke: 'var(--ii-edge)' }} />
+              <rect x="112" y="122" width="276" height="196" rx="8" style={{ fill: 'var(--ii-back-2)' }} />
             </g>
             <g className="img-back img-back-1" style={{ transformOrigin: '250px 220px' }}>
-              <rect x="100" y="110" width="300" height="220" rx="16" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" filter="url(#card-shadow)" />
-              <rect x="112" y="122" width="276" height="196" rx="8" fill="#e2e8f0" />
+              <rect x="100" y="110" width="300" height="220" rx="16" strokeWidth="2" filter="url(#card-shadow)" style={{ fill: 'var(--ii-surface)', stroke: 'var(--ii-edge)' }} />
+              <rect x="112" y="122" width="276" height="196" rx="8" style={{ fill: 'var(--ii-back-1)' }} />
             </g>
 
             {/* The front photo */}
             <g className="img-photo">
-              <rect x="100" y="110" width="300" height="220" rx="16" fill="#ffffff" stroke="#cbd5e1" strokeWidth="2" filter="url(#card-shadow)" />
+              <rect x="100" y="110" width="300" height="220" rx="16" strokeWidth="2" filter="url(#card-shadow)" style={{ fill: 'var(--ii-surface)', stroke: 'var(--ii-edge)' }} />
               <g clipPath="url(#photo-clip)">
                 <rect x="112" y="122" width="276" height="196" fill="url(#sky)" />
                 <circle cx="250" cy="240" r="28" fill="#fef3c7" />
@@ -126,8 +129,8 @@ export default function ImageIllustration() {
 
         {/* −87%, stamped into the space the photo just gave back. */}
         <g className="img-badge" style={{ transformOrigin: '344px 171px' }}>
-          <rect x="300" y="150" width="88" height="42" rx="21" fill="#ecfdf5" stroke="#10b981" strokeWidth="2" />
-          <text x="344" y="178" textAnchor="middle" fontSize="20" fontWeight="700" fill="#059669" fontFamily="ui-sans-serif, system-ui">
+          <rect x="300" y="150" width="88" height="42" rx="21" strokeWidth="2" style={{ fill: 'var(--ii-badge-bg)', stroke: 'var(--ii-badge-edge)' }} />
+          <text x="344" y="178" textAnchor="middle" fontSize="20" fontWeight="700" fontFamily="ui-sans-serif, system-ui" style={{ fill: 'var(--ii-badge-ink)' }}>
             −87%
           </text>
         </g>
@@ -135,10 +138,10 @@ export default function ImageIllustration() {
         {/* Before and after, in the same place, with a beat of nothing between
             them: crossfading two lines of text on top of each other is unreadable
             for the whole overlap. */}
-        <text className="img-dim-before" x="250" y="402" textAnchor="middle" fontSize="17" fill="#64748b" fontFamily="ui-sans-serif, system-ui">
+        <text className="img-dim-before" x="250" y="402" textAnchor="middle" fontSize="17" fontFamily="ui-sans-serif, system-ui" style={{ fill: 'var(--ii-muted)' }}>
           1920 × 1280 · 4.8 MB
         </text>
-        <text className="img-dim-after" x="250" y="402" textAnchor="middle" fontSize="17" fontWeight="600" fill="#0f172a" fontFamily="ui-sans-serif, system-ui">
+        <text className="img-dim-after" x="250" y="402" textAnchor="middle" fontSize="17" fontWeight="600" fontFamily="ui-sans-serif, system-ui" style={{ fill: 'var(--ii-ink)' }}>
           800 × 533 · 612 KB
         </text>
 

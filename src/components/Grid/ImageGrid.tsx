@@ -23,9 +23,9 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
 
   if (mobileExpanded) {
     return (
-      <div className="flex flex-col flex-1 bg-white overflow-hidden">
+      <div className="flex flex-col flex-1 bg-white overflow-hidden dark:bg-slate-900">
         {/* Header */}
-        <div className="px-4 py-2.5 border-b border-slate-100 bg-white sticky top-0 z-10 flex items-center justify-between">
+        <div className="px-4 py-2.5 border-b border-slate-100 bg-white sticky top-0 z-10 flex items-center justify-between dark:border-slate-800 dark:bg-slate-900">
           <span className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
             {images.length} image{images.length === 1 ? '' : 's'}
           </span>
@@ -33,7 +33,7 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
             <button
               type="button"
               onClick={onBack}
-              className="text-xs font-semibold text-orange-700 hover:text-orange-800 px-2 py-1 rounded-md hover:bg-orange-50 transition-colors"
+              className="text-xs font-semibold text-orange-700 hover:text-orange-800 px-2 py-1 rounded-md hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-500/10 transition-colors"
             >
               Done
             </button>
@@ -54,10 +54,10 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                       'group relative w-full rounded-xl border-2 overflow-hidden text-left transition-all',
                       isSelected
                         ? 'border-orange-500 shadow-md shadow-orange-500/20'
-                        : 'border-slate-200 hover:border-orange-300'
+                        : 'border-slate-200 hover:border-orange-300 dark:border-slate-700 dark:hover:border-orange-500/60'
                     ].join(' ')}
                   >
-                    <div className="checker-bg aspect-square w-full">
+                    <div className="checker-bg checker-pane aspect-square w-full">
                       <img
                         src={img.objectUrl}
                         alt={img.name}
@@ -65,8 +65,8 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                         loading="lazy"
                       />
                     </div>
-                    <div className="px-2 py-2 bg-white border-t border-slate-100">
-                      <div className="truncate text-xs font-medium text-slate-700">{img.name}</div>
+                    <div className="px-2 py-2 bg-white border-t border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+                      <div className="truncate text-xs font-medium text-slate-700 dark:text-slate-200">{img.name}</div>
                       <div className="text-[10px] text-slate-400 mt-0.5">
                         {img.width}×{img.height} · {formatBytes(img.bytes)}
                       </div>
@@ -102,8 +102,8 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
 
   // Desktop sidebar
   return (
-    <div className="border-r border-slate-200 bg-white w-44 shrink-0 overflow-y-auto">
-      <div className="px-3 py-2 text-[11px] uppercase tracking-wide text-slate-400 font-medium border-b border-slate-100 sticky top-0 bg-white z-10">
+    <div className="border-r border-slate-200 bg-white w-44 shrink-0 overflow-y-auto dark:border-slate-800 dark:bg-slate-900">
+      <div className="px-3 py-2 text-[11px] uppercase tracking-wide text-slate-400 font-medium border-b border-slate-100 sticky top-0 bg-white z-10 dark:border-slate-800 dark:bg-slate-900">
         {images.length} image{images.length === 1 ? '' : 's'}
       </div>
       <ul className="p-2 space-y-2">
@@ -118,10 +118,10 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                   'group relative w-full rounded-lg border-2 overflow-hidden text-left transition-all',
                   isSelected
                     ? 'border-orange-500 shadow-md shadow-orange-500/20'
-                    : 'border-slate-200 hover:border-orange-300'
+                    : 'border-slate-200 hover:border-orange-300 dark:border-slate-700 dark:hover:border-orange-500/60'
                 ].join(' ')}
               >
-                <div className="checker-bg aspect-square w-full">
+                <div className="checker-bg checker-pane aspect-square w-full">
                   <img
                     src={img.objectUrl}
                     alt={img.name}
@@ -129,8 +129,8 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                     loading="lazy"
                   />
                 </div>
-                <div className="px-2 py-1.5 bg-white border-t border-slate-100">
-                  <div className="truncate text-xs font-medium text-slate-700">{img.name}</div>
+                <div className="px-2 py-1.5 bg-white border-t border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+                  <div className="truncate text-xs font-medium text-slate-700 dark:text-slate-200">{img.name}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">
                     {img.width}×{img.height} · {formatBytes(img.bytes)}
                   </div>

@@ -4,6 +4,7 @@ import DropWatermark from './DropWatermark'
 import { useImageStore } from '../../stores/imageStore'
 import ImageIllustration from './ImageIllustration'
 import { CONTAINER } from '../../lib/layout'
+import { useThemeStore } from '../../stores/themeStore'
 // The third column of the closing grid. These are not features, they are the
 // answer to "what does it cost me when it isn't money", so each one names the
 // thing it is refusing — a struck-through cloud, eye and megaphone — rather than
@@ -52,6 +53,7 @@ export default function LandingPage() {
   const addFiles = useImageStore((s) => s.addFiles)
   const setConvertMode = useImageStore((s) => s.setConvertMode)
   const [loadingExample, setLoadingExample] = useState(false)
+  const theme = useThemeStore((s) => s.effective)
 
   // The picker mechanics come from the SDK (shared with Compress, Converter and
   // the rest), so re-picking the same file still fires. The circle itself is the
@@ -126,16 +128,16 @@ export default function LandingPage() {
             </div>
 
             <div className="order-1 lg:order-2">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-slate-900">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                 Universal Images,
                 <br />
-                That <span className="text-orange-600">just work</span>.
+                That <span className="text-orange-600 dark:text-orange-500">just work</span>.
               </h1>
-              <p className="mt-3 text-slate-600 max-w-md">
+              <p className="mt-3 text-slate-600 max-w-md dark:text-slate-300">
                 Drop one or many. Pick a size, get a smaller file.
               </p>
 
-              <div className="mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6">
+              <div className="mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6 dark:bg-slate-900 dark:border-slate-800">
                 {/* The suite's shared drop circle (`DropRing` + `useFileDrop`
                     from @unisim/sdk) rather than a copy, so this is the same
                     front door Universal Compress, PDF and the Converter's All
@@ -149,7 +151,11 @@ export default function LandingPage() {
                     `addFiles` twice. That listener is gone — this zone is
                     `pageWide` now, and the hook recognises its own zones by the
                     `data-unisim-dropzone` marker it spreads on, so a drop that
-                    lands here is never picked up a second time. */}
+                    lands here is never picked up a second time.
+
+                    ⚠️ No `dark:` on anything inside the ring. DropRing paints
+                    its interior #ffffff in BOTH themes, so the copy on it has
+                    to stay dark ink on white whatever the page is doing. */}
                 <div className="flex flex-col items-center">
                   <div
                     {...picker.dropzoneProps}
@@ -196,22 +202,22 @@ export default function LandingPage() {
                   type="button"
                   onClick={loadExample}
                   disabled={loadingExample}
-                  className="mt-5 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 disabled:opacity-60 disabled:cursor-wait transition-colors"
+                  className="mt-5 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 disabled:opacity-60 disabled:cursor-wait transition-colors"
                 >
                   <span aria-hidden="true">🧪</span>
                   {loadingExample ? 'Loading example…' : 'Try with example image'}
                 </button>
 
-                <div className="mt-4 flex items-center gap-3 text-xs text-slate-500">
-                  <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+                <div className="mt-4 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
                   <span>or</span>
-                  <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+                  <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
                 </div>
 
                 <button
                   type="button"
                   onClick={() => openPicker(true)}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 transition-colors"
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 transition-colors"
                 >
                   <span aria-hidden="true">🔄</span>
                   Convert &amp; compress — change format or quality
@@ -241,7 +247,7 @@ export default function LandingPage() {
                     card is ~135px of text, so every item in the middle column
                     broke onto a second line. Content-sized columns, spread to
                     the edges, fit all nine on one line each. */}
-                <ul className="mt-5 grid grid-cols-1 sm:grid-cols-none sm:auto-cols-max sm:grid-rows-3 sm:grid-flow-col sm:justify-between gap-x-3 gap-y-2 text-xs text-slate-600">
+                <ul className="mt-5 grid grid-cols-1 sm:grid-cols-none sm:auto-cols-max sm:grid-rows-3 sm:grid-flow-col sm:justify-between gap-x-3 gap-y-2 text-xs text-slate-600 dark:text-slate-300">
                   {[
                     'Edit images for free',
                     'Resize images for free',
@@ -251,7 +257,7 @@ export default function LandingPage() {
                     'Strips image metadata for free'
                   ].map((claim) => (
                     <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
-                      <span className="text-orange-700" aria-hidden="true">✓</span>
+                      <span className="text-orange-700 dark:text-orange-400" aria-hidden="true">✓</span>
                       {claim}
                     </li>
                   ))}
@@ -259,7 +265,7 @@ export default function LandingPage() {
                     <li key={claim} className="flex items-center gap-2 pl-2 sm:pl-4">
                       <svg
                         viewBox="0 0 24 24"
-                        className="w-3.5 h-3.5 shrink-0 text-orange-700"
+                        className="w-3.5 h-3.5 shrink-0 text-orange-700 dark:text-orange-400"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
@@ -275,9 +281,12 @@ export default function LandingPage() {
                 </ul>
               </div>
 
-              {/* Under the card, outside the box — the suite's placement. */}
+              {/* Under the card, outside the box — the suite's placement.
+                  `theme` is the RESOLVED one: the SDK cannot see the `.dark`
+                  class this page uses, and 'system' has to arrive as a colour. */}
               <PrivacyNote
                 className="mt-4"
+                theme={theme}
                 repo="https://github.com/universal-simulation-ltd/Universal_Images"
                 proof="https://github.com/universal-simulation-ltd/Universal_Images/blob/main/PRIVACY.md"
                 subject="Your images"

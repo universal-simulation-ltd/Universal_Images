@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icon-180.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Dark mode before the first paint. The theme store (src/stores/themeStore.ts)
+         applies the same class, but only once the module bundle has parsed — a
+         dark-mode user would see one light frame first. This only ever ADDS
+         `dark`: light is the default, so there is nothing to take away.
+         ⚠️ The key must match the store's; `npm run test:theme` checks it. -->
+    <script>
+      try {
+        var pref = localStorage.getItem('unisim-images-theme')
+        if (pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark')
+          document.documentElement.style.colorScheme = 'dark'
+        }
+      } catch (e) {
+        /* private mode, storage disabled: light, exactly as the store falls back. */
+      }
+    </script>
     <meta name="theme-color" content="#0f172a" />
     <meta name="description" content="Universal Images — drag, resize and optimise images entirely in your browser. Free, open source, no uploads, no tracking." />
     <title>Universal Images — resize and optimise, in your browser</title>
