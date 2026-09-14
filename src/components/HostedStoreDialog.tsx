@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
+import { useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, isNativeShell, type HostedUpload } from '@unisim/sdk'
 import { useImageStore } from '../stores/imageStore'
 import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib/dialog'
 import { storeCurrentImage, deleteHostedImage, openHostedImage, HostedObjectMissingError } from '../lib/hostedStore'
@@ -13,6 +13,11 @@ const SIGNIN_URL = 'https://app.unisim.co.uk/login'
 // link left pointing there sends someone who wants one upload to a £5,000/year
 // enterprise plan. Not a 404: it renders fine, which is why it needed finding.
 const GET_TOKENS_URL = 'https://www.unisim.co.uk/everyday'
+// App Review 3.1.1 / 3.1.3: inside the iOS/Android app nothing may send people
+// to buy tokens outside the store — no link, no "get more" nudge. The phone
+// app still spends tokens bought elsewhere; it just never points at the shop.
+// The web and desktop builds keep the link.
+const SHOW_TOKEN_PURCHASE = !isNativeShell()
 
 // "Back up this image" — local processing stays free + on-device; the paid
 // "Hosted by UNI·SIM" cloud option (one token per upload, refunded on delete) is
@@ -92,7 +97,7 @@ export default function HostedStoreDialog() {
       if (!res.ok) {
         setError(
           res.error === 'no_credits'
-            ? 'You have no tokens left. Get more to keep storing images online.'
+            ? `You have no tokens left.${SHOW_TOKEN_PURCHASE ? ' Get more to keep storing images online.' : ''}`
             : res.error ?? 'Could not store this image.',
         )
       } else {
@@ -260,12 +265,14 @@ export default function HostedStoreDialog() {
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/60 dark:bg-amber-950/40">
                       <p className="text-sm text-amber-800 dark:text-amber-200">
                         {freeToken === 'held'
-                          ? 'Your free Images token is in use — delete the stored image below to get it back, or add tokens.'
+                          ? `Your free Images token is in use — delete the stored image below to get it back${SHOW_TOKEN_PURCHASE ? ', or add tokens' : ''}.`
                           : 'You have no tokens left.'}
                       </p>
+                      {SHOW_TOKEN_PURCHASE && (
                       <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
                         Get tokens →
                       </a>
+                      )}
                     </div>
                   )
                 ) : (

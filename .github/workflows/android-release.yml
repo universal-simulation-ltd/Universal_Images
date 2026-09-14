@@ -1,0 +1,134 @@
+# Builds the Android release APK + AAB. The AAB is what goes to the Play
+# Console; the APK is for sideloading and testers. Modelled on Universal PDF's
+# release.yml android job — same secret names, because one upload key serves
+# every app in the suite (Google allows the same upload key across apps).
+#
+#   on a v* tag       build, upload both as workflow artifacts, and attach the
+#                     APK to that tag's GitHub Release
+#   workflow_dispatch build and upload the artifacts only — no release
+#
+# Signed WHEN THE SECRETS ARE SET, unsigned when they are not, so a fork (or
+# this repo before the owner adds them) still gets a build rather than a
+# failure. An unsigned APK will not install and Play rejects an unsigned AAB.
+#
+#   ANDROID_KEYSTORE_BASE64    the upload keystore (.jks), base64-encoded
+#   ANDROID_KEYSTORE_PASSWORD  the keystore's password
+#   ANDROID_KEY_ALIAS          the key's alias inside it
+#   ANDROID_KEY_PASSWORD       the key's password
+#
+# ⚠️ Never sign a release locally. CI is the only place the keystore is used.
+
+name: android-release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Android APK + AAB
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # ⚠️ Java 21, not "latest". Gradle rejects a newer class-file version
+      # outright — Java 25 fails the build with "Unsupported class file major
+      # version 69" before it compiles a line.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install deps
+        run: npm ci
+
+      # cap:sync builds the `desktop` Vite mode: relative base, so assets load
+      # inside the WebView. It also runs check:mobile-bundle, which fails the job if the bundle would not load there. The Supabase values are public client
+      # config and the app falls back to its built-in ones when these are empty.
+      - name: Build web bundle and sync Capacitor
+        run: npm run cap:sync
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      # Absent secrets produce no file, and build.gradle only wires the signing
+      # config when ANDROID_KEYSTORE_PATH is set — so a repo without the
+      # keystore still gets an unsigned build rather than a hard failure.
+      # ⚠️ The secret goes through `env:`, NOT interpolated into the script.
+      # `${{ secrets.X }}` inside `run:` is substituted into the shell source
+      # before it executes, so it lands in the command line. And the emptiness
+      # test has to happen in the shell rather than in a step-level `if:` —
+      # the `secrets` context is not available to `if`.
+      - name: Decode upload keystore
+        id: keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "No ANDROID_KEYSTORE_BASE64 secret set — building UNSIGNED."
+            echo "An unsigned APK will not install on a phone and Play will reject it."
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "path=$RUNNER_TEMP/upload.jks" >> "$GITHUB_OUTPUT"
+
+      - name: Build release APK + AAB
+        run: ./gradlew :app:assembleRelease :app:bundleRelease
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      # Gradle's own output names (app-release.apk) say nothing about which app
+      # or which version. Unsigned builds get "-unsigned" in the name, so the
+      # file never passes for one that can be installed or uploaded.
+      - name: Rename artifacts
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          SUFFIX=""
+          [ -n "${{ steps.keystore.outputs.path }}" ] || SUFFIX="-unsigned"
+          APK_DIR=android/app/build/outputs/apk/release
+          AAB_DIR=android/app/build/outputs/bundle/release
+          # Gradle names it app-release-unsigned.apk when no signing config is
+          # wired, and app-release.apk when one is — handle both.
+          SRC=$(ls "$APK_DIR"/app-release*.apk | head -1)
+          mv "$SRC" "$APK_DIR/Universal-Images-$VERSION-android$SUFFIX.apk"
+          mv "$AAB_DIR/app-release.aab" "$AAB_DIR/Universal-Images-$VERSION-android$SUFFIX.aab"
+
+      - name: Upload AAB for the Play Console
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-images-android-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-images-android-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      # The AAB is NOT attached to the release: it is an upload format for
+      # Google Play, not installable, and offering it next to the APK only
+      # invites people to download the one that cannot be opened.
+      - name: Attach APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
