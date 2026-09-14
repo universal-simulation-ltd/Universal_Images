@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, isNativeShell, type HostedUpload } from '@unisim/sdk'
+import { Chip, useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, isNativeShell, type HostedUpload } from '@unisim/sdk'
 import { useImageStore } from '../stores/imageStore'
 import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib/dialog'
 import { storeCurrentImage, deleteHostedImage, openHostedImage, HostedObjectMissingError } from '../lib/hostedStore'
@@ -171,7 +171,7 @@ export default function HostedStoreDialog() {
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">On this device</span>
-              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:bg-slate-700 dark:text-slate-300">Free</span>
+              <Chip size="sm">Free</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Your images are resized entirely in this browser and never uploaded. Use Download to save the result to your device — free.
@@ -182,7 +182,7 @@ export default function HostedStoreDialog() {
           <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Save to desktop</span>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">Re-import later</span>
+              <Chip size="sm">Re-import later</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Download a backup of your original image plus your crop and size settings. Import it any time — on any device — to carry on editing where you left off.
@@ -228,7 +228,7 @@ export default function HostedStoreDialog() {
           <div className="rounded-xl border border-orange-200 bg-white p-4 dark:border-orange-500/40 dark:bg-slate-900">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Hosted by UNI SIM</span>
-              <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">Universal subscription</span>
+              <Chip size="sm">Universal subscription</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Keep this resized image online against your Universal ID. One token per upload — delete it and your token comes straight back.

@@ -1,4 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Chip, ChipToggle, ValueChip } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import {
   computePresets,
@@ -469,14 +470,12 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               </button>
             )}
             {crop && (
-              <span className="inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium dark:text-orange-300 dark:bg-orange-500/10 dark:ring-orange-500/30">
-                <span aria-hidden="true">✂</span> {Math.round(crop.width)} × {Math.round(crop.height)} crop
-              </span>
+              <ValueChip size="sm" label="Crop" className="tabular-nums">
+                {Math.round(crop.width)} × {Math.round(crop.height)}
+              </ValueChip>
             )}
             {!crop && socialCrop && activeSocialLabel && (
-              <span className="inline-flex items-center gap-1 text-orange-700 bg-orange-50 ring-1 ring-orange-200 rounded-full px-2 py-0.5 text-[11px] font-medium dark:text-orange-300 dark:bg-orange-500/10 dark:ring-orange-500/30">
-                <span aria-hidden="true">📐</span> {activeSocialLabel}
-              </span>
+              <Chip size="sm" icon={<span>📐</span>}>{activeSocialLabel}</Chip>
             )}
           </span>
         </div>
@@ -609,9 +608,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">Crop</span>
               <span className="flex items-center gap-1.5">
                 {crop && (
-                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/30 tabular-nums">
+                  <Chip size="sm" className="tabular-nums">
                     {Math.round(crop.width)}×{Math.round(crop.height)}
-                  </span>
+                  </Chip>
                 )}
                 <span
                   aria-hidden="true"
@@ -720,7 +719,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">Background</span>
               <span className="flex items-center gap-1.5">
                 {bgRemoved && (
-                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/30">Removed</span>
+                  <Chip size="sm">Removed</Chip>
                 )}
                 <span
                   aria-hidden="true"
@@ -874,9 +873,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">Redact faces</span>
               <span className="flex items-center gap-1.5">
                 {faceBlurred && enabledFaceCount > 0 && (
-                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/30 tabular-nums">
-                    {enabledFaceCount} blurred
-                  </span>
+                  <ValueChip size="sm" label={enabledFaceCount}>blurred</ValueChip>
                 )}
                 <span
                   aria-hidden="true"
@@ -980,22 +977,16 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {faceBoxes.map((f, i) => (
-                          <button
+                          <ChipToggle
                             key={f.id}
-                            type="button"
+                            size="sm"
+                            selected={f.enabled}
+                            icon={<span>👁</span>}
                             onClick={() => setFaceEnabled(f.id, !f.enabled)}
-                            aria-pressed={f.enabled}
                             title={f.enabled ? 'Blurred — tap to keep visible' : 'Visible — tap to blur'}
-                            className={[
-                              'inline-flex items-center gap-1 px-2 py-1 rounded-md border text-[11px] font-medium transition-colors',
-                              f.enabled
-                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300'
-                                : 'border-slate-200 text-slate-500 hover:border-slate-300 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600'
-                            ].join(' ')}
                           >
-                            <span aria-hidden="true">{f.enabled ? '🙈' : '👁'}</span>
                             Face {i + 1}
-                          </button>
+                          </ChipToggle>
                         ))}
                       </div>
                     </div>
@@ -1030,9 +1021,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               </span>
               <span className="flex items-center gap-1.5">
                 {socialCrop && (
-                  <span className="text-[10px] uppercase tracking-wide bg-orange-50 text-orange-700 ring-1 ring-orange-200 rounded-full px-2 py-0.5 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/30">
-                    Active
-                  </span>
+                  <Chip size="sm">Active</Chip>
                 )}
                 <span
                   aria-hidden="true"
@@ -1105,9 +1094,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Export</h2>
               {convertMode && (
-                <span className="text-[10px] uppercase tracking-wide bg-orange-100 text-orange-700 ring-1 ring-orange-300 rounded-full px-2 py-0.5 dark:bg-orange-500/20 dark:text-orange-300 dark:ring-orange-500/40">
-                  Convert
-                </span>
+                <Chip size="sm">Convert</Chip>
               )}
             </div>
             <div className="rounded-md bg-slate-50 ring-1 ring-slate-200 px-3 py-2 text-[11px] text-slate-600 leading-relaxed dark:bg-slate-800/60 dark:ring-slate-700 dark:text-slate-300">
