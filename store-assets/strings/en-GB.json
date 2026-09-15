@@ -1,0 +1,43 @@
+{
+  "01-hero": {
+    "headline": ["Photos,", "*ready to share.*"],
+    "sub": "The right size, the right shape,\na smaller file."
+  },
+  "02-hero": {
+    "headline": ["Smaller files,", "same photo"],
+    "badges": ["Resize", "Crop", "Blur faces", "Remove background"],
+    "sub": "Built by James Markey\nand the UNI·SIM team"
+  },
+  "03-resize": {
+    "headline": ["The right size,", "in one tap"],
+    "caption": "See the new size before you save",
+    "chips": ["Small, medium, large", "Exact size", "Proportions kept"]
+  },
+  "04-crop": {
+    "headline": ["Crop it"],
+    "caption": "By hand, or trim a blank border automatically",
+    "chips": ["Manual crop", "Autocrop", "Social media sizes"]
+  },
+  "05-convert": {
+    "headline": ["Pick a format"],
+    "caption": "With a quality slider and a live preview",
+    "chips": ["WebP", "JPEG", "PNG", "Opens HEIC"],
+    "footnote": "Location and camera details are removed when you export"
+  },
+  "06-batch": {
+    "headline": ["Many at once"],
+    "caption": "One size and format for all of them",
+    "chips": [".zip download", "Same size", "Same format"]
+  },
+  "07-private": {
+    "headline": ["Your photos", "stay yours"],
+    "caption": {
+      "phone": "The work happens on your phone",
+      "ipad": "The work happens on your iPad"
+    },
+    "chips": ["No ads", "No tracking", "No account needed", "Open source"]
+  },
+  "feature-graphic": {
+    "tagline": ["Resize, crop and convert photos.", "On your phone."]
+  }
+}

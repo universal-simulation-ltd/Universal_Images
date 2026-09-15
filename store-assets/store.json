@@ -1,0 +1,15 @@
+{
+  "app": "Universal Images",
+  "icon": "../ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png",
+  "captures": "draw",
+  "devices": ["iphone", "ipad", "android"],
+  "screens": [
+    { "id": "01-hero", "layout": "hero-open", "raw": ["02-resize", "05-batch"] },
+    { "id": "02-hero", "layout": "hero-close", "raw": "05-batch" },
+    { "id": "03-resize", "layout": "feature", "raw": "02-resize", "hot": 0 },
+    { "id": "04-crop", "layout": "feature", "raw": "03-crop", "hot": 0 },
+    { "id": "05-convert", "layout": "feature", "raw": "04-convert", "hot": 0 },
+    { "id": "06-batch", "layout": "feature", "raw": "05-batch", "hot": 0 },
+    { "id": "07-private", "layout": "feature", "raw": "01-start", "hot": 0 }
+  ]
+}
