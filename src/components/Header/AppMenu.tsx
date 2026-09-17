@@ -5,7 +5,7 @@ import { AdvancedMenu, MENU, useFileDrop } from '@unisim/sdk'
 // package we removed is worse than no list at all.
 import credits from '../../generated/credits.json'
 import { useImageStore } from '../../stores/imageStore'
-import { useThemeStore, type ThemePref } from '../../stores/themeStore'
+import { useThemeStore } from '../../stores/themeStore'
 
 // The per-app actions that slot into <UniversalAppsNavBar />'s `actions` prop —
 // ROWS ONLY, no trigger and no panel of its own. The SDK renders them inside the
@@ -24,15 +24,13 @@ import { useThemeStore, type ThemePref } from '../../stores/themeStore'
 // panel is unreadable, and it looks fine until somebody switches.
 //
 // ⚠️ Rendered in EVERY state, the empty landing page included (it used to be
-// passed only once an image was open). The theme lives here, and a control you
-// can only reach after opening a photo is not a setting.
-
-const THEMES: { pref: ThemePref; label: string; glyph: string }[] = [
-  { pref: 'light', label: 'Light', glyph: '☀️' },
-  { pref: 'dark', label: 'Dark', glyph: '🌙' },
-  // 'system' is offered but is deliberately NOT the default — see themeStore.
-  { pref: 'system', label: 'Match my device', glyph: '🖥️' },
-]
+// passed only once an image was open) — "Open images…" is how the landing page
+// is reached from the menu too.
+//
+// There is no Appearance section here any more. Since SDK 0.143 the colour
+// scheme is a Global preference with a per-app override in the SDK's own App
+// preferences dialog (App.tsx passes `themeStore`), so a second copy of the
+// control here would be a second place to disagree with it.
 
 type Tint = { bg: string; fg: string }
 type Palette = {
@@ -40,8 +38,7 @@ type Palette = {
   sub: string
   count: string
   warn: string
-  label: string
-  tints: { add: Tint; meta: Tint; danger: Tint; pick: Tint }
+  tints: { add: Tint; meta: Tint; danger: Tint }
 }
 
 // ⚠️ LIGHT is the exact set of colours these rows have always had — not
@@ -55,12 +52,10 @@ const PALETTE: Record<'light' | 'dark', Palette> = {
     sub: '#64748b',
     count: '#94a3b8',
     warn: '#d97706',
-    label: MENU.light.muted,
     tints: {
       add: { bg: '#ecfdf5', fg: '#047857' },
       meta: { bg: '#fffbeb', fg: '#92400e' },
       danger: { bg: '#fef2f2', fg: '#b91c1c' },
-      pick: { bg: MENU.light.accentBg, fg: MENU.light.accentText },
     },
   },
   dark: {
@@ -68,12 +63,10 @@ const PALETTE: Record<'light' | 'dark', Palette> = {
     sub: MENU.dark.faint,
     count: MENU.dark.faint,
     warn: '#fbbf24',
-    label: MENU.dark.muted,
     tints: {
       add: { bg: 'rgba(16,185,129,0.16)', fg: '#6ee7b7' },
       meta: { bg: 'rgba(245,158,11,0.16)', fg: '#fcd34d' },
       danger: { bg: MENU.dark.dangerHoverBg, fg: MENU.dark.dangerHoverText },
-      pick: { bg: MENU.dark.accentBg, fg: MENU.dark.accentText },
     },
   },
 }
@@ -86,8 +79,6 @@ export default function AppMenu() {
   const addFiles = useImageStore((s) => s.addFiles)
   const clearAll = useImageStore((s) => s.clearAll)
   const theme = useThemeStore((s) => s.effective)
-  const pref = useThemeStore((s) => s.pref)
-  const setPref = useThemeStore((s) => s.setPref)
   const p = PALETTE[theme]
   const hasImages = images.length > 0
   // Unlike the badge above the preview, this entry stays visible whether or not
@@ -147,23 +138,6 @@ export default function AppMenu() {
         />
       )}
 
-      {/* The theme. Picking one leaves the menu open, so the change is seen
-          happening — the panel itself is the first thing that turns. */}
-      <MenuLabel color={p.label}>Appearance</MenuLabel>
-      {THEMES.map((t) => (
-        <MenuRow
-          key={t.pref}
-          icon={t.glyph}
-          palette={p}
-          tint={p.tints.pick}
-          label={t.label}
-          selected={pref === t.pref}
-          radio
-          onClick={() => setPref(t.pref)}
-          trailing={pref === t.pref ? <span aria-hidden style={{ color: p.tints.pick.fg }}>✓</span> : null}
-        />
-      ))}
-
       {/* Advanced — the SDK's own category, so every app in the suite has one
           in the same place with the same rhythm, and so whatever goes in it
           next is one change rather than nineteen. "About this app" is always
@@ -186,23 +160,6 @@ export default function AppMenu() {
   )
 }
 
-function MenuLabel({ children, color }: { children: string; color: string }) {
-  return (
-    <div
-      style={{
-        padding: '8px 14px 4px',
-        fontSize: 11,
-        fontWeight: 600,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-        color,
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
 function MenuRow({
   icon,
   label,
@@ -210,8 +167,6 @@ function MenuRow({
   trailing,
   palette,
   tint,
-  selected = false,
-  radio = false,
   onClick,
 }: {
   icon: string
@@ -220,18 +175,14 @@ function MenuRow({
   trailing?: React.ReactNode
   palette: Palette
   tint: Tint
-  selected?: boolean
-  /** One of a set where exactly one is chosen — the Appearance rows. */
-  radio?: boolean
   onClick: () => void
 }) {
-  const restBg = selected ? tint.bg : 'transparent'
-  const restFg = selected ? tint.fg : palette.rest
+  const restBg = 'transparent'
+  const restFg = palette.rest
   return (
     <button
       type="button"
-      role={radio ? 'menuitemradio' : 'menuitem'}
-      aria-checked={radio ? selected : undefined}
+      role="menuitem"
       onClick={onClick}
       style={{
         display:    'flex',

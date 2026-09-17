@@ -12,7 +12,7 @@
 // It is not a style rule. The key IS every user's saved choice: change it and
 // everybody who chose dark is silently back on light.
 //
-// Same three assertions as Universal Jukebox's `src/lib/theme.test.ts`, in this
+// The first three are the same assertions as Universal Jukebox's `src/lib/theme.test.ts`, in this
 // repo's plain-node test style.
 
 import { readFileSync } from 'node:fs'
@@ -52,6 +52,13 @@ ok(
   head.includes(`localStorage.getItem('${key}')`),
   'reads the same localStorage key as the theme store',
   `index.html's <head> has no localStorage.getItem('${key}')`,
+)
+// Since SDK 0.143 the app's key is an override: absent, the global choice
+// applies, and the pre-paint script has to know that as well as the store does.
+ok(
+  head.includes("localStorage.getItem('universal:color-scheme')"),
+  "falls back to Global preferences' universal:color-scheme when the app has no override",
+  "index.html's <head> has no localStorage.getItem('universal:color-scheme')",
 )
 // 'system' has to be honoured here too, or somebody on the OS setting gets the
 // light ground first and the dark one once the bundle catches up.

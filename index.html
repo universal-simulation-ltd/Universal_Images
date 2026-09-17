@@ -9,10 +9,15 @@
          applies the same class, but only once the module bundle has parsed — a
          dark-mode user would see one light frame first. This only ever ADDS
          `dark`: light is the default, so there is nothing to take away.
+         The app's key is its OVERRIDE (App preferences); absent, it follows
+         Global preferences' `universal:color-scheme` (SDK 0.143) — read here
+         too, or someone whose only choice is the global one gets a light frame
+         and then a flip.
          ⚠️ The key must match the store's; `npm run test:theme` checks it. -->
     <script>
       try {
         var pref = localStorage.getItem('unisim-images-theme')
+          || localStorage.getItem('universal:color-scheme') || 'light'
         if (pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) {
           document.documentElement.classList.add('dark')
           document.documentElement.style.colorScheme = 'dark'

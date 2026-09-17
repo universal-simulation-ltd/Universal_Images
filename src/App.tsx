@@ -78,10 +78,13 @@ export default function App() {
           landing page straight back.
 
           ⚠️ `actions` is passed on the landing page too, not only once an
-          image is open. The Appearance choice lives in that menu, and a theme
-          you can only change after opening a photo is not a setting. The cost
-          is that the pill reads "Actions" here instead of greeting — which the
-          suite has settled is fine; a BLANK pill is what must never ship. */}
+          image is open. The cost is that the pill reads "Actions" here instead
+          of greeting — which the suite has settled is fine; a BLANK pill is
+          what must never ship.
+
+          `themeStore` puts this app's colour scheme override in the SDK's App
+          preferences dialog (Follow global / Light / Dark / System, since SDK
+          0.143). `theme` stays the RESOLVED value the bar paints with. */}
       <UniversalAppsNavBar
         product="images"
         productLogo={<ProductLogo />}
@@ -90,6 +93,7 @@ export default function App() {
         centre={hasImages ? <EditShortcuts /> : undefined}
         actions={<AppMenu />}
         theme={theme}
+        themeStore={useThemeStore}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
         contentClassName={hasImages ? EDITOR_CONTAINER : CONTAINER}
       />
