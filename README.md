@@ -18,6 +18,7 @@ A clean Progressive Web App for resizing, cropping, converting, and optimising i
 - **Remove background** — one-click AI cut-out to a transparent PNG, running entirely on-device (your image is never uploaded; a one-time model download is cached on first use). One tap to undo, and a re-remove after undo is instant
 - **Fill background** — replace a transparent background with a solid colour (black / white / orange / any custom colour) on export
 - **Redact faces** — detect faces and blur or pixelate them, running entirely on-device (your image is never uploaded; a one-time ~2 MB face model is cached on first use). Adjustable strength, a blur/pixelate toggle, and a per-face toggle to keep individual faces visible — one tap to undo. Blur and background removal stack in either order: the cut-out is always computed from the unblurred photo, and the blur is trimmed back to the subject so it never leaves a blurred block where the background used to be
+- **Collage** — put photos side by side, one above the other, or in a grid (big-left, big-top, 2×2, 3×2, 3×3). Tap a space then a photo to fill it, drag to choose what shows, zoom, spacing, rounded corners and background colour; "Fit photos" keeps every picture whole. Download it, or add it back to your images to resize or convert
 - **Batch export** — download images individually or all at once as a ZIP
 - **Installable** PWA — add to home screen on phone or install on desktop, works offline after first load
 

@@ -76,6 +76,7 @@ export default function AppMenu() {
   const selectedId = useImageStore((s) => s.selectedId)
   const metadataMap = useImageStore((s) => s.metadata)
   const setMetadataOpen = useImageStore((s) => s.setMetadataOpen)
+  const setCollageOpen = useImageStore((s) => s.setCollageOpen)
   const addFiles = useImageStore((s) => s.addFiles)
   const clearAll = useImageStore((s) => s.clearAll)
   const theme = useThemeStore((s) => s.effective)
@@ -106,6 +107,17 @@ export default function AppMenu() {
         onClick={picker.open}
         label={hasImages ? 'Add more images…' : 'Open images…'}
       />
+
+      {hasImages && (
+        <MenuRow
+          icon="🧩"
+          palette={p}
+          tint={p.tints.add}
+          onClick={() => setCollageOpen(true)}
+          label="Make a collage…"
+          sub="Photos side by side, one above the other, or in a grid"
+        />
+      )}
 
       {hasImages && selectedId && (
         <MenuRow

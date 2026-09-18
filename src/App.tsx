@@ -8,6 +8,7 @@ import ResizePanel from './components/Resize/ResizePanel'
 import HostedStoreDialog from './components/HostedStoreDialog'
 import LoadErrorNotice from './components/LoadErrorNotice'
 import MetadataDialog from './components/Metadata/MetadataDialog'
+import CollageDialog from './components/Collage/CollageDialog'
 import { useImageStore } from './stores/imageStore'
 import { useThemeStore } from './stores/themeStore'
 import EditShortcuts from './components/Header/EditShortcuts'
@@ -21,6 +22,8 @@ export default function App() {
   const addFiles = useImageStore((s) => s.addFiles)
   const metadataOpen = useImageStore((s) => s.metadataOpen)
   const setMetadataOpen = useImageStore((s) => s.setMetadataOpen)
+  const collageOpen = useImageStore((s) => s.collageOpen)
+  const setCollageOpen = useImageStore((s) => s.setCollageOpen)
   const clearAll = useImageStore((s) => s.clearAll)
   // The RESOLVED theme ('system' already turned into light or dark) — what the
   // SDK's bar and its dropdowns take. The preference itself is set from the
@@ -179,6 +182,7 @@ export default function App() {
 
       <HostedStoreDialog />
       {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
+      {collageOpen && hasImages && <CollageDialog onClose={() => setCollageOpen(false)} />}
     </div>
   )
 }

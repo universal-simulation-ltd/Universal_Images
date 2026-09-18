@@ -13,8 +13,22 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
   const selectedId = useImageStore((s) => s.selectedId)
   const selectImage = useImageStore((s) => s.selectImage)
   const removeImage = useImageStore((s) => s.removeImage)
+  const setCollageOpen = useImageStore((s) => s.setCollageOpen)
 
   if (images.length === 0) return null
+
+  // Two photos is the least a collage can be, so the shortcut waits for them.
+  // The Actions menu's row is there from one (it can add the second).
+  const collageButton = images.length >= 2 && (
+    <button
+      type="button"
+      onClick={() => { setCollageOpen(true); onBack?.() }}
+      title="Put these photos together in one image"
+      className="normal-case tracking-normal text-xs font-semibold text-orange-700 hover:text-orange-800 px-2 py-1 -my-1 rounded-md hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-500/10 transition-colors"
+    >
+      🧩 Collage
+    </button>
+  )
 
   function handleSelect(id: string) {
     selectImage(id)
@@ -29,6 +43,7 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
           <span className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
             {images.length} image{images.length === 1 ? '' : 's'}
           </span>
+          <span className="ml-auto mr-1">{collageButton}</span>
           {onBack && (
             <button
               type="button"
@@ -103,8 +118,9 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
   // Desktop sidebar
   return (
     <div className="border-r border-slate-200 bg-white w-44 shrink-0 overflow-y-auto dark:border-slate-800 dark:bg-slate-900">
-      <div className="px-3 py-2 text-[11px] uppercase tracking-wide text-slate-400 font-medium border-b border-slate-100 sticky top-0 bg-white z-10 dark:border-slate-800 dark:bg-slate-900">
-        {images.length} image{images.length === 1 ? '' : 's'}
+      <div className="px-3 py-2 text-[11px] uppercase tracking-wide text-slate-400 font-medium border-b border-slate-100 sticky top-0 bg-white z-10 flex items-center justify-between gap-1 dark:border-slate-800 dark:bg-slate-900">
+        <span>{images.length} image{images.length === 1 ? '' : 's'}</span>
+        {collageButton}
       </div>
       <ul className="p-2 space-y-2">
         {images.map((img) => {

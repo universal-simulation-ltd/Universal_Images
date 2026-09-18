@@ -316,6 +316,9 @@ interface ImageStore {
   /** "Hosted by UNI·SIM" cloud-store dialog open state. */
   hostedStoreOpen: boolean
   setHostedStoreOpen: (open: boolean) => void
+  /** The collage dialog — several of the open images on one canvas. */
+  collageOpen: boolean
+  setCollageOpen: (open: boolean) => void
   /**
    * Set when the user enters via the homepage "Convert" action — the editor
    * opens with the Format & quality section expanded and highlighted. Cleared
@@ -396,6 +399,8 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   dismissLoadErrors: () => set({ loadErrors: [] }),
   hostedStoreOpen: false,
   setHostedStoreOpen: (hostedStoreOpen) => set({ hostedStoreOpen }),
+  collageOpen: false,
+  setCollageOpen: (collageOpen) => set({ collageOpen }),
   convertMode: false,
   setConvertMode: (convertMode) => set({ convertMode }),
   crop: null,
@@ -614,7 +619,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
 
     const remaining = cur.images.filter((i) => i.id !== id)
     if (remaining.length === 0) {
-      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, bgFill: null, bgOriginal: null, bgCutout: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false })
+      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, bgFill: null, bgOriginal: null, bgCutout: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false, collageOpen: false })
       return
     }
     if (cur.selectedId === id) {
@@ -648,7 +653,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     if (cur.bgCutout) URL.revokeObjectURL(cur.bgCutout.objectUrl)
     if (cur.faceOriginal) URL.revokeObjectURL(cur.faceOriginal.objectUrl)
     for (const e of Object.values(cur.edits)) revokeEditUrls(e)
-    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false })
+    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false, collageOpen: false })
   },
 
   setTarget(partial) {

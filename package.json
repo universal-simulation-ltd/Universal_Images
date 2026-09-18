@@ -26,7 +26,8 @@
     "cap:open:android": "npx cap open android",
     "test:geo": "node --experimental-strip-types scripts/geo.test.mjs",
     "test:heic-sniff": "node --experimental-strip-types scripts/heicSniff.test.mjs",
-    "build:example": "node scripts/build-example-image.mjs"
+    "build:example": "node scripts/build-example-image.mjs",
+    "test:collage": "node --experimental-strip-types scripts/collage.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.8",
