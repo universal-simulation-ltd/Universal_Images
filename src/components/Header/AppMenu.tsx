@@ -1,4 +1,4 @@
-import { AdvancedMenu, MENU, useFileDrop } from '@unisim/sdk'
+import { AdvancedMenu, MENU, useCloseAppMenu, useFileDrop } from '@unisim/sdk'
 // Generated — `npm run credits` after any dependency change. Never edit it by
 // hand: it is read off the installed tree, so a hand-kept list drifts from the
 // lockfile the first time anyone upgrades anything, and a credits list naming a
@@ -80,6 +80,12 @@ export default function AppMenu() {
   const addFiles = useImageStore((s) => s.addFiles)
   const clearAll = useImageStore((s) => s.clearAll)
   const theme = useThemeStore((s) => s.effective)
+  // The rows below are rendered INSIDE the SDK's Actions dropdown, which is
+  // portaled to <body> at the top of the z stack — well above our own dialogs
+  // at z-1100. So a row that opens a screen has to dismiss the menu itself, or
+  // the menu is left sitting over the thing it just opened (James, 2026-09-18,
+  // about Metadata). A no-op outside a menu, so it is safe to call blind.
+  const closeMenu = useCloseAppMenu()
   const p = PALETTE[theme]
   const hasImages = images.length > 0
   // Unlike the badge above the preview, this entry stays visible whether or not
@@ -113,7 +119,7 @@ export default function AppMenu() {
           icon="🧩"
           palette={p}
           tint={p.tints.add}
-          onClick={() => setCollageOpen(true)}
+          onClick={() => { closeMenu(); setCollageOpen(true) }}
           label="Make a collage…"
           sub="Photos side by side, one above the other, or in a grid"
         />
@@ -124,7 +130,7 @@ export default function AppMenu() {
           icon="🏷"
           palette={p}
           tint={p.tints.meta}
-          onClick={() => setMetadataOpen(true)}
+          onClick={() => { closeMenu(); setMetadataOpen(true) }}
           label="Metadata"
           sub={selectedMeta
             ? 'See where and when this photo was taken — then scrub it'

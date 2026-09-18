@@ -231,6 +231,24 @@ is an accessibility feature; `index.html` stays
 `width=device-width, initial-scale=1.0, viewport-fit=cover`, and the test asserts
 that it does.
 
+### An Actions row that opens a screen closes the Actions menu
+
+`AppMenu.tsx` supplies the rows inside the SDK's Actions dropdown, and that
+dropdown is portaled to `<body>` at `z-index: 2147483000`. Our dialogs are
+`z-[1100]` — deliberately, so they clear the navbar (above) — so the menu is
+painted **over** anything a row opens. On a phone that covered the metadata
+dialog's own title and close button (James, 2026-09-18).
+
+The rows that open a screen therefore call `useCloseAppMenu()` from the SDK
+first: `Metadata` and `Make a collage…`. It is a no-op outside a menu, so it
+needs no guard.
+
+⚠️ **`Open images…` / `Add more images…` deliberately does not.** The
+`<input type="file">` it drives is rendered by `AppMenu` itself, so closing the
+menu unmounts the input while the OS picker is still open and the chosen files
+never arrive. `npm run test:menu-close` pins both halves, the picker included,
+so a later tidy-up cannot "finish the job" and break it.
+
 ## Phone builds and the App Store / Google Play requirements
 
 Added 2026-09-14, when the iPhone and Android apps were prepared for the stores.

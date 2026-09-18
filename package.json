@@ -15,6 +15,7 @@
     "credits": "node ../scripts/gen-credits.mjs . --repo https://github.com/universal-simulation-ltd/Universal_Images",
     "test:hosted-paths": "node --experimental-strip-types scripts/hostedPath.test.mjs",
     "test:mobile-ui": "node scripts/mobileUi.test.mjs",
+    "test:menu-close": "node scripts/menuClose.test.mjs",
     "test:theme": "node scripts/theme.test.mjs",
     "electron": "electron .",
     "dist": "npm run build:desktop && electron-builder",
