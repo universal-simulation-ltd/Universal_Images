@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { DropAnywhere, UniversalAppsNavBar, UpdateNotice, useFileDrop } from '@unisim/sdk'
-import AppMenu from './components/Header/AppMenu'
+import AppMenu, { ABOUT } from './components/Header/AppMenu'
 import ProductLogo from './components/Header/ProductLogo'
 import LandingPage from './components/Landing/LandingPage'
 import ImageGrid from './components/Grid/ImageGrid'
@@ -95,6 +95,7 @@ export default function App() {
         onHome={hasImages ? clearAll : undefined}
         centre={hasImages ? <EditShortcuts /> : undefined}
         actions={<AppMenu />}
+        about={ABOUT}
         theme={theme}
         themeStore={useThemeStore}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}

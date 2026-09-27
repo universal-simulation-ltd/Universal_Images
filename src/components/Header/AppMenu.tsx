@@ -1,4 +1,4 @@
-import { AdvancedMenu, MENU, useCloseAppMenu, useFileDrop } from '@unisim/sdk'
+import { MENU, useCloseAppMenu, useFileDrop, type AboutAppConfig } from '@unisim/sdk'
 // Generated — `npm run credits` after any dependency change. Never edit it by
 // hand: it is read off the installed tree, so a hand-kept list drifts from the
 // lockfile the first time anyone upgrades anything, and a credits list naming a
@@ -69,6 +69,20 @@ const PALETTE: Record<'light' | 'dark', Palette> = {
       danger: { bg: MENU.dark.dangerHoverBg, fg: MENU.dark.dangerHoverText },
     },
   },
+}
+
+// "About this app" — handed to <UniversalAppsNavBar about={…}> in App.tsx.
+// Since SDK 0.161 the SDK draws the row at the foot of "Tune this app" and opens
+// its own AboutAppDialog, so it no longer sits in this actions menu.
+export const ABOUT: AboutAppConfig = {
+  repo:    'https://github.com/universal-simulation-ltd/Universal_Images',
+  proof:   'https://github.com/universal-simulation-ltd/Universal_Images/blob/main/PRIVACY.md',
+  subject: 'Your images',
+  plural:  true,
+  except:  'backup',
+  version: __APP_VERSION__,
+  credits,
+  noticesHref: 'https://github.com/universal-simulation-ltd/Universal_Images/blob/main/THIRD-PARTY-NOTICES.md',
 }
 
 export default function AppMenu() {
@@ -155,25 +169,6 @@ export default function AppMenu() {
           }
         />
       )}
-
-      {/* Advanced — the SDK's own category, so every app in the suite has one
-          in the same place with the same rhythm, and so whatever goes in it
-          next is one change rather than nineteen. "About this app" is always
-          its last row; see AdvancedMenu.tsx. `theme` is the RESOLVED one, the
-          same value the nav bar gets. */}
-      <AdvancedMenu
-        theme={theme}
-        about={{
-          repo:    'https://github.com/universal-simulation-ltd/Universal_Images',
-          proof:   'https://github.com/universal-simulation-ltd/Universal_Images/blob/main/PRIVACY.md',
-          subject: 'Your images',
-          plural:  true,
-          except:  'backup',
-          version: __APP_VERSION__,
-          credits,
-          noticesHref: 'https://github.com/universal-simulation-ltd/Universal_Images/blob/main/THIRD-PARTY-NOTICES.md',
-        }}
-      />
     </>
   )
 }
