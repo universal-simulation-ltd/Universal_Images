@@ -11,6 +11,7 @@ import MetadataDialog from './components/Metadata/MetadataDialog'
 import CollageDialog from './components/Collage/CollageDialog'
 import { useImageStore } from './stores/imageStore'
 import { useThemeStore } from './stores/themeStore'
+import { useSystemBarsStyle } from './lib/systemBars'
 import EditShortcuts from './components/Header/EditShortcuts'
 import { CONTAINER, EDITOR_CONTAINER } from './lib/layout'
 import { KNOWLEDGE_BASE } from './knowledge'
@@ -30,6 +31,8 @@ export default function App() {
   // SDK's bar and its dropdowns take. The preference itself is set from the
   // Actions menu; see stores/themeStore.ts.
   const theme = useThemeStore((s) => s.effective)
+  // The native status-bar glyphs follow it wherever the page is under them.
+  useSystemBarsStyle(theme)
 
   // Mobile image-picker overlay — hidden by default; shown when user taps the grid button.
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
