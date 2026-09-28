@@ -89,6 +89,20 @@ is the whole point. The coordinates themselves are printed in full above the
 map, and there is a **Copy** button, so sending them somewhere stays a thing you
 choose to do.
 
+### "Save to desktop" backups keep your original — metadata and all
+
+Every export (Download, convert, crop, resize, and the online store below) is a
+newly encoded image, so it does not carry the original's EXIF, including GPS.
+The **Save to desktop** backup is the deliberate exception: it exists so you can
+re-import it and carry on editing, which needs the untouched original, so it
+contains your original file byte for byte plus your crop and size settings
+([`src/lib/imageBackup.ts`](src/lib/imageBackup.ts)). If that photo has a
+location in it, so does the backup. (A HEIC photo is the exception to the
+exception: it is converted to JPEG as it is added, which already drops its
+EXIF, so its backup holds that JPEG.) It never leaves your device unless you send
+it somewhere — and if you might, press **Scrub metadata** in the metadata panel
+first; the backup then holds the scrubbed copy.
+
 ---
 
 ## The one way an image *can* leave — a button you press

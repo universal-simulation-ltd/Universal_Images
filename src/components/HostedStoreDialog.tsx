@@ -186,6 +186,7 @@ export default function HostedStoreDialog() {
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Download a backup of your original image plus your crop and size settings. Import it any time — on any device — to carry on editing where you left off.
+              {' '}It holds your original image as you added it, so it can still carry the photo’s location and camera details — unlike Download. Scrub metadata first if you’ll share it.
             </p>
 
             <div className="mt-3 flex flex-wrap gap-2">
