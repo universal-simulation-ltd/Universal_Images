@@ -2,7 +2,7 @@
   "app": "universal-images",
   "appVersion": "0.1.0",
   "generated": "2026-09-28",
-  "noticesCount": 130,
+  "noticesCount": 40,
   "ships": [
     {
       "name": "@capacitor/*",
@@ -125,6 +125,17 @@
     }
   ],
   "builds": [
+    {
+      "name": "@capacitor/*",
+      "title": "Capacitor",
+      "licence": "MIT",
+      "repo": "https://github.com/ionic-team/capacitor",
+      "description": "wraps the web app as a real iPhone and Android app",
+      "authors": [
+        "Ionic Team"
+      ],
+      "source": "overlay"
+    },
     {
       "name": "@types/*",
       "title": "DefinitelyTyped",
