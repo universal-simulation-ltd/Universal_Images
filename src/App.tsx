@@ -31,7 +31,7 @@ export default function App() {
   // SDK's bar and its dropdowns take. The preference itself is set from the
   // Actions menu; see stores/themeStore.ts.
   const theme = useThemeStore((s) => s.effective)
-  // The native status-bar glyphs follow it wherever the page is under them.
+  // The native status bar (its strip on Android, and the glyphs) follows it.
   useSystemBarsStyle(theme)
 
   // Mobile image-picker overlay — hidden by default; shown when user taps the grid button.
