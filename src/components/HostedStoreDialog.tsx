@@ -19,9 +19,15 @@ const GET_TOKENS_URL = 'https://www.unisim.co.uk/everyday'
 // The web and desktop builds keep the link.
 const SHOW_TOKEN_PURCHASE = !isNativeShell()
 
-// "Back up this image" — local processing stays free + on-device; the paid
+// "Back up this image" — local processing stays free + on-device; the
 // "Hosted by UNI·SIM" cloud option (one token per upload, refunded on delete) is
 // gated behind a Universal ID. Backend: 0041 + the SDK hosted helpers.
+//
+// Copy rule (2026-09-30): the allowance is never put in front of anyone before
+// they reach it. Signed out, the card only invites them to create a Universal
+// ID for FREE; signed in, there is no token talk at all (a purchased-token
+// count is the one exception). The limit is explained only once it is hit —
+// and never with a number, since the allowances are about to change.
 export default function HostedStoreDialog() {
   const open = useImageStore((s) => s.hostedStoreOpen)
   const setOpen = useImageStore((s) => s.setHostedStoreOpen)
@@ -50,6 +56,12 @@ export default function HostedStoreDialog() {
   const signedIn = !!session?.user && session.user.is_anonymous !== true
   const tokens = credits ?? 0
   const canStore = freeToken === 'available' || tokens > 0
+  // What we say once the free allowance is used up and nothing was bought.
+  // 'held' can be freed by deleting a backup; 'spent' cannot.
+  const limitMessage = (status: typeof freeToken) =>
+    status === 'spent'
+      ? `You've used your free online storage for images.${SHOW_TOKEN_PURCHASE ? ' Get more to keep backing up images online.' : ''}`
+      : `You've used your free online storage for images. Delete a stored image to make room${SHOW_TOKEN_PURCHASE ? ', or get more' : ''}.`
 
   function close() {
     setOpen(false)
@@ -96,8 +108,8 @@ export default function HostedStoreDialog() {
       const res = await storeCurrentImage(supabase, activeOrgId)
       if (!res.ok) {
         setError(
-          res.error === 'no_credits'
-            ? `You have no tokens left.${SHOW_TOKEN_PURCHASE ? ' Get more to keep storing images online.' : ''}`
+          res.error === 'no_credits' || res.error === 'token_in_use'
+            ? limitMessage(freeToken === 'spent' ? 'spent' : 'held')
             : res.error ?? 'Could not store this image.',
         )
       } else {
@@ -229,15 +241,15 @@ export default function HostedStoreDialog() {
           <div className="rounded-xl border border-orange-200 bg-white p-4 dark:border-orange-500/40 dark:bg-slate-900">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Hosted by UNI SIM</span>
-              <Chip size="sm">Universal subscription</Chip>
+              <Chip size="sm">Free with Universal ID</Chip>
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Keep this resized image online against your Universal ID. One token per upload — delete it and your token comes straight back.
+              Keep this resized image online against your Universal ID, so you can get it back on any device.
             </p>
 
             {!signedIn ? (
               <div className="mt-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
-                <p className="text-sm text-slate-700 dark:text-slate-200">Sign in with your <strong>Universal ID</strong> to store images online.</p>
+                <p className="text-sm text-slate-700 dark:text-slate-200">Create a <strong>Universal ID</strong> to back up images online for FREE.</p>
                 <a href={SIGNIN_URL} className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
                   Create / sign in with Universal ID →
                 </a>
@@ -246,11 +258,11 @@ export default function HostedStoreDialog() {
               <div className="mt-3">
                 <div className="flex items-center justify-between rounded-lg bg-orange-50/60 px-3 py-2 text-sm dark:bg-orange-500/10">
                   <span className="text-slate-600 dark:text-slate-300">{user?.email}</span>
-                  <span className="font-semibold text-orange-700 dark:text-orange-300">
-                    {freeToken === 'available'
-                      ? `Free token${tokens > 0 ? ` + ${tokens} purchased` : ' available'}`
-                      : `${tokens} token${tokens === 1 ? '' : 's'}`}
-                  </span>
+                  {tokens > 0 && (
+                    <span className="font-semibold text-orange-700 dark:text-orange-300">
+                      {`${tokens} purchased token${tokens === 1 ? '' : 's'}`}
+                    </span>
+                  )}
                 </div>
 
                 {hasImage ? (
@@ -260,18 +272,16 @@ export default function HostedStoreDialog() {
                       disabled={busy}
                       className="mt-3 w-full rounded-lg bg-orange-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-800 disabled:opacity-50"
                     >
-                      {busy ? 'Backing up…' : justStored ? '✓ Backed up (1 token used)' : 'Back up this image online (1 token)'}
+                      {busy ? 'Backing up…' : justStored ? '✓ Backed up' : 'Back up this image online'}
                     </button>
                   ) : freeToken === null ? null : (
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800/60 dark:bg-amber-950/40">
                       <p className="text-sm text-amber-800 dark:text-amber-200">
-                        {freeToken === 'held'
-                          ? `Your free Images token is in use — delete the stored image below to get it back${SHOW_TOKEN_PURCHASE ? ', or add tokens' : ''}.`
-                          : 'You have no tokens left.'}
+                        {limitMessage(freeToken)}
                       </p>
                       {SHOW_TOKEN_PURCHASE && (
                       <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
-                        Get tokens →
+                        Get more →
                       </a>
                       )}
                     </div>
@@ -299,14 +309,14 @@ export default function HostedStoreDialog() {
                               <span className="block text-[10px] text-slate-400">{new Date(u.created_at).toLocaleDateString()}</span>
                             </span>
                             <button onClick={() => onOpen(u)} disabled={busy} className="shrink-0 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-800 disabled:opacity-50">Open</button>
-                            <button onClick={() => onDelete(u)} disabled={busy} className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 disabled:opacity-50" title="Delete and refund the token">Delete</button>
+                            <button onClick={() => onDelete(u)} disabled={busy} className="shrink-0 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 disabled:opacity-50" title="Delete this backup">Delete</button>
                           </div>
 
                           {/* A backup with nothing behind it. Say which file,
                               say plainly that the upload never finished, and
-                              make clearing it up one click — the token comes
-                              back with it, so there is nothing to lose by
-                              tidying. This replaces storage's bare "Object not
+                              make clearing it up one click (the token comes
+                              back with it, though the copy no longer says so —
+                              no token talk below the limit). This replaces storage's bare "Object not
                               found", which read like the app had mislaid the
                               user's image. */}
                           {missingId === u.id && (
@@ -318,7 +328,6 @@ export default function HostedStoreDialog() {
                               <p className="text-[11px] leading-snug text-amber-900 dark:text-amber-200">
                                 <strong className="font-semibold">{u.file_name || 'image'}</strong> is listed here,
                                 but there is no file behind it — this upload never finished, so nothing was ever stored.
-                                Your token is still being held for it.
                               </p>
                               <button
                                 type="button"
@@ -326,7 +335,7 @@ export default function HostedStoreDialog() {
                                 disabled={busy}
                                 className="mt-2 inline-flex rounded-md bg-amber-700 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
                               >
-                                Remove this entry and get the token back
+                                Remove this entry
                               </button>
                             </div>
                           )}

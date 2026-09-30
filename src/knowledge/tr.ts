@@ -209,7 +209,7 @@ Konum haritasını il düzeyine yakınlaştırırsanız uygulamanın web sürüm
 
 ## Yalnızca siz seçtiğinizde: çevrimiçi saklama
 
-Universal ID'nizle oturum açar ve bir görüntüyü UNI·SIM'de saklamayı seçerseniz uygulama, başka bir cihazda geri alabilmeniz için bitmiş görüntüyü, yani İndir düğmesinin size vereceği görüntünün aynısını yükler. Saklanan her görüntü bir jeton kullanır; silmek jetonu geri verir ve görüntüyü depolamadan kaldırır.
+Universal ID'nizle oturum açar ve bir görüntüyü UNI·SIM'de saklamayı seçerseniz uygulama, başka bir cihazda geri alabilmeniz için bitmiş görüntüyü, yani İndir düğmesinin size vereceği görüntünün aynısını yükler. Görüntüleri çevrimiçi saklamak Universal ID ile ücretsizdir. Ücretsiz hesapların cömert bir sınırı vardır; bu sınıra bir gün ulaşırsanız artık ihtiyacınız olmayan bir görüntüyü silin. Bir görüntüyü silmek onu depolamadan kaldırır.
 
 Bu, uçtan uca şifreleme değil sıradan bir bulut depolamadır. Aktarım sırasında ve depolandığı yerde şifrelenir ve erişim hesabınızla sınırlıdır, ancak anahtarlar bizdedir. Belirli bir resim için bu önemliyse onu saklamayın; uygulama hesap olmadan da tam olarak çalışır.
 

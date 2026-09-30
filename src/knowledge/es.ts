@@ -209,7 +209,7 @@ Si acerca el mapa de ubicación al nivel de provincia o región, la versión web
 
 ## Solo cuando usted lo decide: guardar en internet
 
-Si inicia sesión con su Universal ID y decide guardar una imagen en UNI·SIM, la aplicación sube la imagen terminada, la misma que le daría el botón Descargar, para que pueda recuperarla en otro dispositivo. Cada imagen guardada usa un token, y al eliminarla se le devuelve el token y se borra del almacenamiento.
+Si inicia sesión con su Universal ID y decide guardar una imagen en UNI·SIM, la aplicación sube la imagen terminada, la misma que le daría el botón Descargar, para que pueda recuperarla en otro dispositivo. Guardar imágenes en línea es gratis con un Universal ID. Las cuentas gratuitas tienen un límite generoso; si alguna vez lo alcanza, elimine una imagen que ya no necesite. Al eliminar una imagen, se borra del almacenamiento.
 
 Se trata de un almacenamiento en la nube normal, no de un cifrado de extremo a extremo. Está cifrado en tránsito y en reposo y el acceso está limitado a su cuenta, pero nosotros tenemos las claves. Si eso le importa en el caso de una imagen concreta, no la guarde; la aplicación funciona por completo sin cuenta.
 

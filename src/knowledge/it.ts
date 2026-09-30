@@ -209,7 +209,7 @@ Se ingrandisci la mappa della posizione fino al livello di contea, la versione w
 
 ## Solo se lo scegli tu: archiviazione online
 
-Se accedi con il tuo Universal ID e scegli di archiviare un'immagine con UNI·SIM, l'app carica l'immagine finita, la stessa che ti darebbe il pulsante Scarica, così puoi recuperarla su un altro dispositivo. Ogni immagine archiviata usa un token, ed eliminandola il token ti viene restituito e l'immagine viene rimossa dall'archivio.
+Se accedi con il tuo Universal ID e scegli di archiviare un'immagine con UNI·SIM, l'app carica l'immagine finita, la stessa che ti darebbe il pulsante Scarica, così puoi recuperarla su un altro dispositivo. Archiviare immagini online è gratuito con un Universal ID. Gli account gratuiti hanno un limite generoso; se mai lo raggiungi, elimina un'immagine che non ti serve più. Eliminando un'immagine, questa viene rimossa dall'archivio.
 
 Si tratta di un normale archivio cloud, non di crittografia end-to-end. È cifrato in transito e a riposo e l'accesso è limitato al tuo account, ma le chiavi le abbiamo noi. Se per una certa immagine questo è importante, non archiviarla; l'app funziona pienamente anche senza account.
 

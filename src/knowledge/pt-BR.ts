@@ -209,7 +209,7 @@ Se você aproximar o mapa de localização até o nível de condado, a versão w
 
 ## Só quando você escolhe: armazenamento na internet
 
-Se você entrar com o seu Universal ID e escolher guardar uma imagem na UNI·SIM, o app envia a imagem final, a mesma que o botão Baixar lhe daria, para que você possa recuperá-la em outro dispositivo. Cada imagem guardada usa um token, e excluí-la devolve o token e a remove do armazenamento.
+Se você entrar com o seu Universal ID e escolher guardar uma imagem na UNI·SIM, o app envia a imagem final, a mesma que o botão Baixar lhe daria, para que você possa recuperá-la em outro dispositivo. Guardar imagens online é gratuito com um Universal ID. Contas gratuitas têm um limite generoso; se algum dia você chegar a ele, exclua uma imagem de que não precisa mais. Excluir uma imagem a remove do armazenamento.
 
 Isso é um armazenamento em nuvem comum, não criptografia de ponta a ponta. É criptografado em trânsito e em repouso, e o acesso é limitado à sua conta, mas nós temos as chaves. Se isso for importante para uma imagem específica, não a guarde; o app funciona completamente sem conta.
 

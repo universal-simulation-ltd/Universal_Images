@@ -209,7 +209,7 @@ Si vous zoomez sur la carte de localisation jusqu'au niveau du département ou d
 
 ## Uniquement si vous le choisissez : le stockage en ligne
 
-Si vous vous connectez avec votre Universal ID et choisissez de stocker une image chez UNI·SIM, l'application envoie l'image finale, la même que celle que vous donnerait le bouton Télécharger, pour que vous puissiez la récupérer sur un autre appareil. Chaque image stockée utilise un jeton ; la supprimer vous rend le jeton et la retire du stockage.
+Si vous vous connectez avec votre Universal ID et choisissez de stocker une image chez UNI·SIM, l'application envoie l'image finale, la même que celle que vous donnerait le bouton Télécharger, pour que vous puissiez la récupérer sur un autre appareil. Le stockage d'images en ligne est gratuit avec un Universal ID. Les comptes gratuits disposent d'une limite généreuse ; si vous l'atteignez un jour, supprimez une image dont vous n'avez plus besoin. Supprimer une image la retire du stockage.
 
 Il s'agit d'un stockage cloud ordinaire, pas d'un chiffrement de bout en bout. Il est chiffré pendant le transfert et au repos, et l'accès est limité à votre compte, mais c'est nous qui détenons les clés. Si cela compte pour une image en particulier, ne la stockez pas ; l'application fonctionne entièrement sans compte.
 

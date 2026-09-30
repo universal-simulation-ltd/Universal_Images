@@ -209,7 +209,7 @@ If you zoom the location map in to county level, the web version of the app down
 
 ## Only when you choose: storing online
 
-If you sign in with your Universal ID and choose to store an image with UNI·SIM, the app uploads the finished image, the same one the Download button would give you, so you can get it back on another device. Each stored image uses one token, and deleting it gives the token back and removes it from storage.
+If you sign in with your Universal ID and choose to store an image with UNI·SIM, the app uploads the finished image, the same one the Download button would give you, so you can get it back on another device. Storing images online is free with a Universal ID. Free accounts have a generous limit; if you ever reach it, delete an image you no longer need. Deleting an image removes it from storage.
 
 This is ordinary cloud storage, not end-to-end encryption. It is encrypted in transit and at rest and access is limited to your account, but we hold the keys. If that matters for a particular picture, do not store it; the app works fully without an account.
 

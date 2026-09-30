@@ -209,7 +209,7 @@ Wenn Sie die Standortkarte bis auf Regionsebene heranzoomen, lädt die Webversio
 
 ## Nur wenn Sie es wählen: online speichern
 
-Wenn Sie sich mit Ihrer Universal ID anmelden und ein Bild bei UNI·SIM speichern, lädt die App das fertige Bild hoch, dasselbe, das Sie über die Schaltfläche Herunterladen bekommen würden, damit Sie es auf einem anderen Gerät wieder abrufen können. Jedes gespeicherte Bild belegt einen Token. Wenn Sie es löschen, erhalten Sie den Token zurück, und das Bild wird aus dem Speicher entfernt.
+Wenn Sie sich mit Ihrer Universal ID anmelden und ein Bild bei UNI·SIM speichern, lädt die App das fertige Bild hoch, dasselbe, das Sie über die Schaltfläche Herunterladen bekommen würden, damit Sie es auf einem anderen Gerät wieder abrufen können. Bilder online zu speichern ist mit einer Universal ID kostenlos. Kostenlose Konten haben ein großzügiges Limit; sollten Sie es einmal erreichen, löschen Sie ein Bild, das Sie nicht mehr brauchen. Wenn Sie ein Bild löschen, wird es aus dem Speicher entfernt.
 
 Das ist gewöhnlicher Cloud-Speicher und keine Ende-zu-Ende-Verschlüsselung. Die Daten sind bei der Übertragung und im Ruhezustand verschlüsselt, und der Zugriff ist auf Ihr Konto beschränkt, aber die Schlüssel liegen bei uns. Wenn Ihnen das bei einem bestimmten Bild wichtig ist, speichern Sie es nicht; die App funktioniert vollständig ohne Konto.
 
