@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Chip, useUniversal, useUser, useCredits, useHostedUploads, useAppFreeToken, isNativeShell, type HostedUpload } from '@unisim/sdk'
+import { Chip, useUniversal, useUser, useOrg, useCredits, useHostedUploads, useAppFreeToken, isNativeShell, type HostedUpload } from '@unisim/sdk'
 import { useImageStore } from '../stores/imageStore'
 import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib/dialog'
 import { storeCurrentImage, deleteHostedImage, openHostedImage, HostedObjectMissingError } from '../lib/hostedStore'
@@ -14,6 +14,9 @@ const SIGNIN_URL = 'https://app.unisim.co.uk/login'
 // link left pointing there sends someone who wants one upload to a £5,000/year
 // enterprise plan. Not a 404: it renders fine, which is why it needed finding.
 const GET_TOKENS_URL = 'https://www.unisim.co.uk/everyday'
+// Where a signed-in Universal ID with no company sets one up. Opened in a new
+// tab so the images being worked on here are not navigated away from.
+const SET_UP_COMPANY_URL = 'https://app.unisim.co.uk/branding'
 // App Review 3.1.1 / 3.1.3: inside the iOS/Android app nothing may send people
 // to buy tokens outside the store — no link, no "get more" nudge. The phone
 // app still spends tokens bought elsewhere; it just never points at the shop.
@@ -37,6 +40,11 @@ export default function HostedStoreDialog() {
   const hasImage = useImageStore((s) => !!s.images.find((i) => i.id === s.selectedId) && !!s.target)
 
   const { supabase, session, activeOrgId } = useUniversal()
+  // Online copies are kept with a company, so a signed-in ID that belongs to
+  // none has nowhere to store one. Only a SUCCESSFUL empty read counts as "no
+  // company" — a failed read is unknown, and never a reason to offer one.
+  const { orgs, loading: orgsLoading, error: orgsError } = useOrg()
+  const noCompany = !orgsLoading && !orgsError && orgs.length === 0
   const { user } = useUser()
   const { credits, refresh: refreshCredits } = useCredits()
   // Every org gets one free returnable Images token (migration 0045) — the RPC
@@ -63,7 +71,7 @@ export default function HostedStoreDialog() {
   const canStore = freeToken === 'available' || tokens > 0
   // Talk about the limit only once it is close: 80%+ used and still room. At
   // the limit the existing at-limit message takes over instead.
-  const near = signedIn && freeToken === 'available' ? nearFreeLimit(allowance) : null
+  const near = signedIn && !noCompany && freeToken === 'available' ? nearFreeLimit(allowance) : null
   // What we say once the free allowance is used up and nothing was bought.
   // 'held' can be freed by deleting a backup; 'spent' cannot.
   const limitMessage = (status: typeof freeToken) =>
@@ -275,7 +283,16 @@ export default function HostedStoreDialog() {
                   )}
                 </div>
 
-                {hasImage ? (
+                {noCompany ? (
+                  <div className="mt-3" data-testid="hosted-no-company">
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                      Online images are kept with your company, and your Universal ID doesn’t have one yet. Setting one up is free.
+                    </p>
+                    <a href={SET_UP_COMPANY_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
+                      Set up a company →
+                    </a>
+                  </div>
+                ) : hasImage ? (
                   canStore ? (
                     <button
                       onClick={onStore}
