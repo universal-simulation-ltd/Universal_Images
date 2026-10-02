@@ -103,6 +103,18 @@ eq(
   'the two never duplicate when they agree',
 )
 
+
+console.log('\nR2 rows (migration 0226 -- storage_backend says where the bytes live):')
+eq(
+  hostedImagePathCandidates({ id: UPLOAD, org_id: ORG, storage_path: `${ORG}/images/moved-elsewhere.png`, file_name: 'x.png', storage_backend: 'r2' }),
+  [`${ORG}/images/moved-elsewhere.png`],
+  'an R2 row is its recorded path only -- no legacy guess the R2 signer would refuse',
+)
+eq(
+  hostedImagePathCandidates({ id: UPLOAD, org_id: ORG, storage_path: `${ORG}/images/moved-elsewhere.png`, file_name: 'x.png', storage_backend: 'supabase' }).length,
+  2,
+  "a 'supabase' row keeps the legacy fallback exactly as before",
+)
 console.log('\nnewObjectId (no secure-context dependency — the desktop app is file://):')
 const idA = newObjectId()
 const idB = newObjectId()

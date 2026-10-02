@@ -1,7 +1,7 @@
 import {
-  consumeHostedUpload,
-  refundHostedUpload,
-  HOSTED_BUCKET,
+  storeHostedFile,
+  deleteHostedUpload,
+  downloadHostedObject,
   type HostedUpload,
 } from '@unisim/sdk'
 import { useImageStore } from '../stores/imageStore'
@@ -12,8 +12,14 @@ import { hostedImagePath, hostedImagePathCandidates, newObjectId } from './hoste
 // free + on-device; hosting keeps a resized image online against the user's
 // Universal ID for one token (subscriptions.credits), refunded on delete.
 // Backend: migration 0041 + the @unisim/sdk hosted helpers (mirrors Universal PDF).
+//
+// Where the bytes live is the ROW's call, not this app's (migration 0226):
+// new saves offer Cloudflare R2 and the server picks, and every row says which
+// in `storage_backend`. Older rows — and anything an older native build saves
+// — are on Supabase Storage and stay there, so every read and delete goes
+// through the SDK helpers with the row's own backend.
 
-type Supabase = Parameters<typeof consumeHostedUpload>[0]
+type Supabase = Parameters<typeof storeHostedFile>[0]
 
 export interface StoreResult {
   ok: boolean
@@ -69,26 +75,20 @@ export async function storeCurrentImage(supabase: Supabase, orgId: string): Prom
   // at insert time and there is no second write to fail.
   const path = hostedImagePath(orgId, newObjectId(), fileName)
 
-  const consumed = await consumeHostedUpload(supabase, {
+  // Reserve the token, then upload to whichever backend the server chose;
+  // storeHostedFile refunds the token itself if the upload fails.
+  const stored = await storeHostedFile(supabase, {
     product: 'images',
     storagePath: path,
     fileName,
-    sizeBytes: blob.size,
+    body: blob,
+    contentType,
   })
-  if (!consumed.ok || !consumed.upload_id) {
-    return { ok: false, error: consumed.error ?? 'Could not save right now.' }
+  if (!stored.ok || !stored.upload_id) {
+    return { ok: false, error: stored.error ?? 'Could not save right now.' }
   }
 
-  const { error: upErr } = await supabase.storage
-    .from(HOSTED_BUCKET)
-    .upload(path, blob, { contentType, upsert: true })
-
-  if (upErr) {
-    await refundHostedUpload(supabase, consumed.upload_id)
-    return { ok: false, error: upErr.message }
-  }
-
-  return { ok: true, creditsRemaining: consumed.credits }
+  return { ok: true, creditsRemaining: stored.credits }
 }
 
 /** Delete a hosted image (storage object first, then refund the token).
@@ -98,8 +98,9 @@ export async function storeCurrentImage(supabase: Supabase, orgId: string): Prom
  *  token and leave the real object orphaned in the bucket forever, with the row
  *  that pointed at it gone. */
 export async function deleteHostedImage(supabase: Supabase, upload: HostedUpload): Promise<StoreResult> {
-  await supabase.storage.from(HOSTED_BUCKET).remove(hostedImagePathCandidates(upload))
-  const res = await refundHostedUpload(supabase, upload.id)
+  // An R2 row is removed and refunded in one call to the hosted-files
+  // function; the candidates only matter on Supabase.
+  const res = await deleteHostedUpload(supabase, upload, hostedImagePathCandidates(upload))
   if (!res.ok) return { ok: false, error: res.error ?? 'Could not delete right now.' }
   return { ok: true, creditsRemaining: res.credits }
 }
@@ -134,7 +135,7 @@ export async function openHostedImage(supabase: Supabase, upload: HostedUpload):
   let lastError: string | null = null
 
   for (const path of hostedImagePathCandidates(upload)) {
-    const { data, error } = await supabase.storage.from(HOSTED_BUCKET).download(path)
+    const { data, error } = await downloadHostedObject(supabase, { backend: upload.storage_backend, path })
     if (data && !error) {
       const url = URL.createObjectURL(data)
       window.open(url, '_blank', 'noopener')
