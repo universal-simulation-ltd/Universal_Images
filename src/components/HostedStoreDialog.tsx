@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Chip, useUniversal, useUser, useOrg, useCredits, useHostedUploads, useAppFreeToken, isNativeShell, type HostedUpload } from '@unisim/sdk'
+import { Chip, useUniversal, useUser, useOrg, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
 import { useImageStore } from '../stores/imageStore'
 import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib/dialog'
 import { storeCurrentImage, deleteHostedImage, openHostedImage, HostedObjectMissingError } from '../lib/hostedStore'
@@ -8,20 +8,14 @@ import { downloadBackup, importBackup } from '../lib/imageBackup'
 import { useFreeAllowance, nearFreeLimit } from '../lib/useFreeAllowance'
 
 const SIGNIN_URL = 'https://app.unisim.co.uk/login'
-// Was /subscription.html until 2026-09-07, when the marketing site split its
-// one pricing page in two. The token card moved to /everyday; /subscription is
-// now the Assess Suite's seats and licences and sells no tokens at all — so a
-// link left pointing there sends someone who wants one upload to a £5,000/year
-// enterprise plan. Not a 404: it renders fine, which is why it needed finding.
-const GET_TOKENS_URL = 'https://www.unisim.co.uk/everyday'
+// Nothing is for sale for the everyday apps (2026-10-03): at the free limit the
+// note says how to make room, and one quiet link asks people who need more to
+// tell us — that is the signal for when a paid tier is worth building. It is a
+// support link, not a purchase link, so the phone apps show it too.
+const NEED_MORE_URL = 'https://www.unisim.co.uk/support'
 // Where a signed-in Universal ID with no company sets one up. Opened in a new
 // tab so the images being worked on here are not navigated away from.
 const SET_UP_COMPANY_URL = 'https://app.unisim.co.uk/branding'
-// App Review 3.1.1 / 3.1.3: inside the iOS/Android app nothing may send people
-// to buy tokens outside the store — no link, no "get more" nudge. The phone
-// app still spends tokens bought elsewhere; it just never points at the shop.
-// The web and desktop builds keep the link.
-const SHOW_TOKEN_PURCHASE = !isNativeShell()
 
 // "Back up this image" — local processing stays free + on-device; the
 // "Hosted by UNI·SIM" cloud option (one token per upload, refunded on delete) is
@@ -76,8 +70,8 @@ export default function HostedStoreDialog() {
   // 'held' can be freed by deleting a backup; 'spent' cannot.
   const limitMessage = (status: typeof freeToken) =>
     status === 'spent'
-      ? `You've used your free online storage for images.${SHOW_TOKEN_PURCHASE ? ' Get more to keep backing up images online.' : ''}`
-      : `You've used your free online storage for images. Delete a stored image to make room${SHOW_TOKEN_PURCHASE ? ', or get more' : ''}.`
+      ? "You've used your free online storage for images."
+      : "You've used your free online storage for images. Delete a stored image to make room."
 
   function close() {
     setOpen(false)
@@ -306,11 +300,9 @@ export default function HostedStoreDialog() {
                       <p className="text-sm text-amber-800 dark:text-amber-200">
                         {limitMessage(freeToken)}
                       </p>
-                      {SHOW_TOKEN_PURCHASE && (
-                      <a href={GET_TOKENS_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-orange-800">
-                        Get more →
+                      <a href={NEED_MORE_URL} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-xs text-amber-800 underline underline-offset-2 hover:text-amber-950 dark:text-amber-200 dark:hover:text-amber-50">
+                        Need more? Tell us
                       </a>
-                      )}
                     </div>
                   )
                 ) : (
