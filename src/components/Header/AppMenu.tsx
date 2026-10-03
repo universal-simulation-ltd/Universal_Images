@@ -1,9 +1,11 @@
-import { MENU, useCloseAppMenu, useFileDrop, type AboutAppConfig } from '@unisim/sdk'
+import { useState } from 'react'
+import { AdvancedMenu, MENU, useCloseAppMenu, useFileDrop, type AboutAppConfig } from '@unisim/sdk'
 // Generated — `npm run credits` after any dependency change. Never edit it by
 // hand: it is read off the installed tree, so a hand-kept list drifts from the
 // lockfile the first time anyone upgrades anything, and a credits list naming a
 // package we removed is worse than no list at all.
 import credits from '../../generated/credits.json'
+import { KNOWLEDGE_BASE } from '../../knowledge'
 import { useImageStore } from '../../stores/imageStore'
 import { useThemeStore } from '../../stores/themeStore'
 
@@ -27,6 +29,12 @@ import { useThemeStore } from '../../stores/themeStore'
 // passed only once an image was open) — "Open images…" is how the landing page
 // is reached from the menu too.
 //
+// Grouped (James, 2026-10-04): File ▸ Add more images / Make a collage, then
+// Clear all images, then Advanced ▸ Metadata / Knowledge base. Advanced is the
+// SDK's own <AdvancedMenu>, drawn HERE rather than by the navbar's
+// `knowledgeBase` prop, because that is the only way to put Metadata in it —
+// so App.tsx no longer passes `knowledgeBase` (two Advanced sections otherwise).
+//
 // There is no Appearance section here any more. Since SDK 0.143 the colour
 // scheme is a Global preference with a per-app override in the SDK's own App
 // preferences dialog (App.tsx passes `themeStore`), so a second copy of the
@@ -36,6 +44,9 @@ type Tint = { bg: string; fg: string }
 type Palette = {
   rest: string
   sub: string
+  faint: string
+  divider: string
+  sectionBg: string
   count: string
   warn: string
   tints: { add: Tint; meta: Tint; danger: Tint }
@@ -50,6 +61,9 @@ const PALETTE: Record<'light' | 'dark', Palette> = {
   light: {
     rest: '#374151',
     sub: '#64748b',
+    faint: MENU.light.faint,
+    divider: MENU.light.divider,
+    sectionBg: MENU.light.rowHover,
     count: '#94a3b8',
     warn: '#d97706',
     tints: {
@@ -61,6 +75,9 @@ const PALETTE: Record<'light' | 'dark', Palette> = {
   dark: {
     rest: MENU.dark.body,
     sub: MENU.dark.faint,
+    faint: MENU.dark.faint,
+    divider: MENU.dark.divider,
+    sectionBg: MENU.dark.rowHover,
     count: MENU.dark.faint,
     warn: '#fbbf24',
     tints: {
@@ -101,6 +118,8 @@ export default function AppMenu() {
   // about Metadata). A no-op outside a menu, so it is safe to call blind.
   const closeMenu = useCloseAppMenu()
   const p = PALETTE[theme]
+  // Collapsed by default, like the SDK's Advanced beside it.
+  const [fileOpen, setFileOpen] = useState(false)
   const hasImages = images.length > 0
   // Unlike the badge above the preview, this entry stays visible whether or not
   // metadata was found — "is there anything in this photo?" is a question worth
@@ -120,39 +139,30 @@ export default function AppMenu() {
     <>
       <input {...picker.inputProps} hidden />
 
-      <MenuRow
-        icon="🖼"
-        palette={p}
-        tint={p.tints.add}
-        onClick={picker.open}
-        label={hasImages ? 'Add more images…' : 'Open images…'}
-      />
+      <SectionHeader label="File" open={fileOpen} onToggle={() => setFileOpen((v) => !v)} palette={p} />
+      {fileOpen && (
+        <div style={{ borderTop: `1px solid ${p.divider}`, background: p.sectionBg }}>
+          <MenuRow
+            icon="🖼"
+            indent
+            palette={p}
+            tint={p.tints.add}
+            onClick={picker.open}
+            label={hasImages ? 'Add more images…' : 'Open images…'}
+          />
 
-      {hasImages && (
-        <MenuRow
-          icon="🧩"
-          palette={p}
-          tint={p.tints.add}
-          onClick={() => { closeMenu(); setCollageOpen(true) }}
-          label="Make a collage…"
-          sub="Photos side by side, one above the other, or in a grid"
-        />
-      )}
-
-      {hasImages && selectedId && (
-        <MenuRow
-          icon="🏷"
-          palette={p}
-          tint={p.tints.meta}
-          onClick={() => { closeMenu(); setMetadataOpen(true) }}
-          label="Metadata"
-          sub={selectedMeta
-            ? 'See where and when this photo was taken — then scrub it'
-            : 'Check what this photo reveals about you'}
-          trailing={selectedMeta && selectedMeta.identifyingCount > 0
-            ? <span style={{ flexShrink: 0, color: p.warn }} title="Can identify you" aria-hidden>⚠</span>
-            : null}
-        />
+          {hasImages && (
+            <MenuRow
+              icon="🧩"
+              indent
+              palette={p}
+              tint={p.tints.add}
+              onClick={() => { closeMenu(); setCollageOpen(true) }}
+              label="Make a collage…"
+              sub="Photos side by side, one above the other, or in a grid"
+            />
+          )}
+        </div>
       )}
 
       {hasImages && (
@@ -169,6 +179,25 @@ export default function AppMenu() {
           }
         />
       )}
+
+      <AdvancedMenu knowledgeBase={KNOWLEDGE_BASE} theme={theme}>
+        {hasImages && selectedId && (
+          <MenuRow
+            icon="🏷"
+            indent
+            palette={p}
+            tint={p.tints.meta}
+            onClick={() => { closeMenu(); setMetadataOpen(true) }}
+            label="Metadata"
+            sub={selectedMeta
+              ? 'See where and when this photo was taken — then scrub it'
+              : 'Check what this photo reveals about you'}
+            trailing={selectedMeta && selectedMeta.identifyingCount > 0
+              ? <span style={{ flexShrink: 0, color: p.warn }} title="Can identify you" aria-hidden>⚠</span>
+              : null}
+          />
+        )}
+      </AdvancedMenu>
     </>
   )
 }
@@ -178,11 +207,14 @@ function MenuRow({
   label,
   sub,
   trailing,
+  indent,
   palette,
   tint,
   onClick,
 }: {
   icon: string
+  /** Inside a section: the SDK's Advanced rows' 24px left inset. */
+  indent?: boolean
   label: string
   sub?: string
   trailing?: React.ReactNode
@@ -202,7 +234,7 @@ function MenuRow({
         alignItems: 'center',
         gap:        10,
         width:      '100%',
-        padding:    '8px 14px',
+        padding:    indent ? '8px 14px 8px 24px' : '8px 14px',
         fontSize:   13,
         fontFamily: 'inherit',
         textAlign:  'left',
@@ -231,6 +263,68 @@ function MenuRow({
         )}
       </span>
       {trailing}
+    </button>
+  )
+}
+
+// A collapsible section header, drawn to match the SDK's <AdvancedMenu> header
+// (same rule above, same chevron) so File and Advanced read as a pair.
+function SectionHeader({
+  label,
+  open,
+  onToggle,
+  palette,
+}: {
+  label: string
+  open: boolean
+  onToggle: () => void
+  palette: Palette
+}) {
+  return (
+    <button
+      type="button"
+      aria-haspopup="true"
+      aria-expanded={open}
+      onClick={onToggle}
+      style={{
+        display:    'flex',
+        alignItems: 'center',
+        gap:        10,
+        width:      '100%',
+        padding:    '8px 14px',
+        fontSize:   13,
+        fontFamily: 'inherit',
+        border:     0,
+        background: 'transparent',
+        color:      palette.rest,
+        cursor:     'pointer',
+        transition: 'background 120ms',
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = palette.sectionBg }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+    >
+      <span aria-hidden style={{ display: 'inline-flex' }}>
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        </svg>
+      </span>
+      <span style={{ flex: 1, textAlign: 'left' }}>{label}</span>
+      <svg
+        viewBox="0 0 12 12"
+        width="11"
+        height="11"
+        aria-hidden="true"
+        style={{
+          flexShrink: 0,
+          color: palette.faint,
+          transform: open ? 'rotate(90deg)' : 'none',
+          transition: 'transform 150ms',
+        }}
+      >
+        <path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" strokeWidth="1.5"
+          strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
     </button>
   )
 }

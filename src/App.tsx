@@ -14,7 +14,6 @@ import { useThemeStore } from './stores/themeStore'
 import { useSystemBarsStyle } from './lib/systemBars'
 import EditShortcuts from './components/Header/EditShortcuts'
 import { CONTAINER, EDITOR_CONTAINER } from './lib/layout'
-import { KNOWLEDGE_BASE } from './knowledge'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_Images'
 
@@ -98,10 +97,10 @@ export default function App() {
         productHomeHref={import.meta.env.BASE_URL}
         onHome={hasImages ? clearAll : undefined}
         centre={hasImages ? <EditShortcuts /> : undefined}
+        // Actions ▸ Advanced ▸ Knowledge base is drawn by AppMenu itself (its
+        // own <AdvancedMenu>, which also holds Metadata) — so no
+        // `knowledgeBase` here, or the menu would get a second Advanced.
         actions={<AppMenu />}
-        // Actions ▸ Advanced ▸ Knowledge base (SDK 0.163.0): this app's own
-        // articles, bundled from ./knowledge so they read offline.
-        knowledgeBase={KNOWLEDGE_BASE}
         about={ABOUT}
         theme={theme}
         themeStore={useThemeStore}
