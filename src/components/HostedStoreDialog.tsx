@@ -6,6 +6,7 @@ import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib
 import { storeCurrentImage, deleteHostedImage, openHostedImage, HostedObjectMissingError } from '../lib/hostedStore'
 import { downloadBackup, importBackup } from '../lib/imageBackup'
 import { useFreeAllowance, nearFreeLimit } from '../lib/useFreeAllowance'
+import { useDialog } from '../lib/useDialog'
 
 const SIGNIN_URL = 'https://app.unisim.co.uk/login'
 // Nothing is for sale for the everyday apps (2026-10-03): at the free limit the
@@ -57,6 +58,7 @@ export default function HostedStoreDialog() {
   const [importMsg, setImportMsg] = useState<string | null>(null)
   const [importErr, setImportErr] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const dialog = useDialog(() => close(), true, open)
 
   if (!open) return null
 
@@ -179,11 +181,11 @@ export default function HostedStoreDialog() {
       className={`${DIALOG_OVERLAY} bg-slate-900/50`}
       onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}
     >
-      <div className={`${DIALOG_PANEL} max-w-lg rounded-2xl bg-white shadow-xl sm:max-h-[88dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
+      <div {...dialog.panelProps} className={`${DIALOG_PANEL} max-w-lg rounded-2xl bg-white shadow-xl outline-none sm:max-h-[88dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
         <div className={`${DIALOG_HEADER} flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800`}>
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">Back up this image</h2>
+          <h2 id={dialog.titleId} className="text-base font-bold text-slate-900 dark:text-slate-100">Back up this image</h2>
           <button onClick={close} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200">
-            <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" /></svg>
+            <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" /></svg>
           </button>
         </div>
 

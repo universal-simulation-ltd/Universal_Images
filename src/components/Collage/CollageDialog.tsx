@@ -20,6 +20,7 @@ import {
   type Drawable,
 } from '../../lib/collage'
 import type { SourceImage } from '../../types/image'
+import { useDialog } from '../../lib/useDialog'
 
 // Several of the open photos on one canvas — one left and one right, one above
 // the other, a big one with two beside it, a grid.
@@ -122,6 +123,7 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
   const [slots, setSlots] = useState<CollageSlot[]>(() => fillSlots([], images))
   const [selected, setSelected] = useState<number>(0)
   const [busy, setBusy] = useState<null | 'save' | 'add'>(null)
+  const dialog = useDialog(onClose, !busy)
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<Record<string, Loaded>>({})
 
@@ -340,9 +342,9 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
         if (e.target === e.currentTarget && !busy) onClose()
       }}
     >
-      <div className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl max-w-5xl sm:max-h-[92dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
+      <div {...dialog.panelProps} className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl outline-none max-w-5xl sm:max-h-[92dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
         <div className={`${DIALOG_HEADER} flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3 dark:border-slate-800`}>
-          <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
+          <h2 id={dialog.titleId} className="text-lg font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
             <span aria-hidden="true">🧩</span>
             Collage
           </h2>

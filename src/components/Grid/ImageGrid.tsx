@@ -61,12 +61,13 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
             {images.map((img) => {
               const isSelected = img.id === selectedId
               return (
-                <li key={img.id}>
+                <li key={img.id} className="group relative">
                   <button
                     type="button"
                     onClick={() => handleSelect(img.id)}
+                    aria-current={isSelected ? 'true' : undefined}
                     className={[
-                      'group relative w-full rounded-xl border-2 overflow-hidden text-left transition-all',
+                      'w-full rounded-xl border-2 overflow-hidden text-left transition-all',
                       isSelected
                         ? 'border-orange-500 shadow-md shadow-orange-500/20'
                         : 'border-slate-200 hover:border-orange-300 dark:border-slate-700 dark:hover:border-orange-500/60'
@@ -86,25 +87,19 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                         {img.width}×{img.height} · {formatBytes(img.bytes)}
                       </div>
                     </div>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Remove ${img.name}`}
-                      onClick={(e) => { e.stopPropagation(); removeImage(img.id) }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault(); e.stopPropagation(); removeImage(img.id)
-                        }
-                      }}
-                      className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-slate-900/70 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-600 transition-all cursor-pointer"
-                    >
-                      {/* ⚠️ An SVG, not `✕` — U+2715 has no glyph in iOS's
-                          system font and WebKit does not fall back, so the
-                          remove badge drew as a hollow ▯?▯ box on the phone. */}
-                      <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                        <path d="m4 4 8 8M12 4l-8 8" />
-                      </svg>
-                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${img.name}`}
+                    onClick={(e) => { e.stopPropagation(); removeImage(img.id) }}
+                    className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-slate-900/70 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 hover:bg-rose-600 transition-all cursor-pointer"
+                  >
+                    {/* ⚠️ An SVG, not `✕` — U+2715 has no glyph in iOS's
+                        system font and WebKit does not fall back, so the
+                        remove badge drew as a hollow ▯?▯ box on the phone. */}
+                    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                      <path d="m4 4 8 8M12 4l-8 8" />
+                    </svg>
                   </button>
                 </li>
               )
@@ -126,12 +121,13 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
         {images.map((img) => {
           const isSelected = img.id === selectedId
           return (
-            <li key={img.id}>
+            <li key={img.id} className="group relative">
               <button
                 type="button"
                 onClick={() => selectImage(img.id)}
+                aria-current={isSelected ? 'true' : undefined}
                 className={[
-                  'group relative w-full rounded-lg border-2 overflow-hidden text-left transition-all',
+                  'w-full rounded-lg border-2 overflow-hidden text-left transition-all',
                   isSelected
                     ? 'border-orange-500 shadow-md shadow-orange-500/20'
                     : 'border-slate-200 hover:border-orange-300 dark:border-slate-700 dark:hover:border-orange-500/60'
@@ -151,23 +147,17 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                     {img.width}×{img.height} · {formatBytes(img.bytes)}
                   </div>
                 </div>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Remove ${img.name}`}
-                  onClick={(e) => { e.stopPropagation(); removeImage(img.id) }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault(); e.stopPropagation(); removeImage(img.id)
-                    }
-                  }}
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-slate-900/70 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-600 transition-all cursor-pointer"
-                >
-                  {/* SVG, not `✕` — see the note on the badge above. */}
-                  <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                    <path d="m4 4 8 8M12 4l-8 8" />
-                  </svg>
-                </span>
+              </button>
+              <button
+                type="button"
+                aria-label={`Remove ${img.name}`}
+                onClick={(e) => { e.stopPropagation(); removeImage(img.id) }}
+                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-slate-900/70 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 hover:bg-rose-600 transition-all cursor-pointer"
+              >
+                {/* SVG, not `✕` — see the note on the badge above. */}
+                <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                  <path d="m4 4 8 8M12 4l-8 8" />
+                </svg>
               </button>
             </li>
           )

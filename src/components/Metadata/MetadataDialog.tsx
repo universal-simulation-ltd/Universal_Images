@@ -3,6 +3,7 @@ import { useImageStore } from '../../stores/imageStore'
 import type { ScrubResult } from '../../lib/metadata'
 import { DIALOG_BODY, DIALOG_FOOTER, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../../lib/dialog'
 import LocationMap from './LocationMap'
+import { useDialog } from '../../lib/useDialog'
 
 // The "Metadata (identification)" panel. Opened from the badge above the
 // preview or from Actions → Metadata. Shows exactly what the selected photo
@@ -18,6 +19,7 @@ export default function MetadataDialog({ onClose }: Props) {
   const metadataMap = useImageStore((s) => s.metadata)
   const scrubMetadata = useImageStore((s) => s.scrubMetadata)
   const scrubbing = useImageStore((s) => s.scrubbing)
+  const dialog = useDialog(onClose, !scrubbing)
 
   const selected = useMemo(
     () => images.find((i) => i.id === selectedId) ?? null,
@@ -64,10 +66,10 @@ export default function MetadataDialog({ onClose }: Props) {
         if (e.target === e.currentTarget && !scrubbing) onClose()
       }}
     >
-      <div className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl max-w-md sm:max-h-[85dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
+      <div {...dialog.panelProps} className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl outline-none max-w-md sm:max-h-[85dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
         <div className={`${DIALOG_HEADER} flex items-start justify-between gap-3 border-b border-slate-100 px-5 pt-5 pb-3 dark:border-slate-800`}>
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
+            <h2 id={dialog.titleId} className="text-lg font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
               <span aria-hidden="true">🏷</span>
               Metadata
             </h2>
