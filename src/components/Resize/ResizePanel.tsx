@@ -9,6 +9,7 @@ import {
   processAndEncode,
   computeCenteredCoverCrop,
   supportsAvifEncode,
+  supportsWebpEncode,
   imageHasAlpha
 } from '../../lib/imageResize'
 import { downloadBlob } from '../../lib/download'
@@ -112,6 +113,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   // AVIF encoding only works in Chromium browsers; probe once so we only offer
   // the format where it genuinely encodes (elsewhere it silently yields PNG).
   const [avifOk, setAvifOk] = useState(false)
+  // Assumed until asked: every engine but Safari has it.
+  const [webpOk, setWebpOk] = useState(true)
   // The export menu behind the caret: format, quality, the batch ZIP and the
   // backup dialog. Closed by default so the visible export UI is one button.
   // The homepage "Convert" entry opens it, so it's controlled state.
@@ -158,8 +161,15 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   useEffect(() => {
     let alive = true
     supportsAvifEncode().then((ok) => { if (alive) setAvifOk(ok) })
+    supportsWebpEncode().then((ok) => { if (alive) setWebpOk(ok) })
     return () => { alive = false }
   }, [])
+
+  // A WebP source defaults to WebP out — which Safari can't write. PNG keeps
+  // what WebP would have (transparency included) and says what it is.
+  useEffect(() => {
+    if (!webpOk && target?.format === 'image/webp') setTarget({ format: 'image/png' })
+  }, [webpOk, target?.format, setTarget])
 
   // Live re-render of the face redaction when its controls change (strength,
   // style, or a per-face toggle) — debounced so dragging the slider doesn't
@@ -514,6 +524,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     key={p}
                     type="button"
                     onClick={() => setPreset(p)}
+                    aria-pressed={isActive}
                     className={[
                       'p-3 rounded-lg border text-left transition-colors',
                       isActive
@@ -941,6 +952,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                             key={style}
                             type="button"
                             onClick={() => setFaceBlurStyle(style)}
+                            aria-pressed={isActive}
                             className={[
                               'py-1.5 rounded-lg border text-xs font-medium capitalize transition-colors',
                               isActive
@@ -966,6 +978,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                         max={100}
                         value={faceBlurStrength}
                         onChange={(e) => setFaceBlurStrength(Number(e.target.value))}
+                        aria-label="Face blur strength"
+                        aria-valuetext={`${faceBlurStrength}%`}
                         className="w-full accent-orange-600"
                       />
                     </div>
@@ -1111,7 +1125,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               <div className="mt-0.5 flex items-center justify-between text-slate-400">
                 <span>{target.width}×{target.height} {target.format.replace('image/', '').toUpperCase()}</span>
                 {estimate.state === 'ready' && (
-                  <span>{Math.round((1 - estimate.bytes / selected.bytes) * 100)}% vs source</span>
+                  <span>{sizeChange(estimate.bytes, selected.bytes)}</span>
                 )}
               </div>
             </div>
@@ -1163,13 +1177,15 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">Format</p>
                   <div className="px-3">
                     {/* AVIF only appears where the browser can actually encode it. */}
-                    <div className={['grid gap-1.5', avifOk ? 'grid-cols-4' : 'grid-cols-3'].join(' ')}>
-                      {(['image/jpeg', 'image/webp', 'image/png', ...(avifOk ? ['image/avif'] : [])] as OutputFormat[]).map((f) => {
+                    {/* WebP only where it can be encoded too — not Safari. */}
+                    <div className={['grid gap-1.5', avifOk && webpOk ? 'grid-cols-4' : avifOk || webpOk ? 'grid-cols-3' : 'grid-cols-2'].join(' ')}>
+                      {(['image/jpeg', ...(webpOk ? ['image/webp'] : []), 'image/png', ...(avifOk ? ['image/avif'] : [])] as OutputFormat[]).map((f) => {
                         const isActive = target.format === f
                         return (
                           <button
                             key={f}
                             type="button"
+                            aria-pressed={isActive}
                             onClick={() => {
                               setTarget({ format: f })
                               if (convertMode) setConvertMode(false)
@@ -1285,7 +1301,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 Saved <span className="font-medium text-slate-700 dark:text-slate-200">{lastResult.width}×{lastResult.height}</span>
                 {' · '}
                 <span className="font-medium text-slate-700 dark:text-slate-200">{formatBytes(lastResult.bytes)}</span>
-                {' '}({Math.round((1 - lastResult.bytes / selected.bytes) * 100)}% smaller)
+                {' '}({sizeChange(lastResult.bytes, selected.bytes)})
               </div>
             )}
           </div>
@@ -1321,7 +1337,15 @@ function useEncodedPreview(
   enabled: boolean
 ): Estimate {
   const [estimate, setEstimate] = useState<Estimate>({ state: 'idle' })
-  const sourceRef = useRef<{ url: string; image: HTMLImageElement } | null>(null)
+  // `blobUrl` is the decoder's own URL from loadImage — distinct from `url`,
+  // the image's objectUrl it is keyed on — and has to be revoked when the
+  // decoded source is dropped. It used to be discarded on the spot, leaking a
+  // URL (and pinning a whole cut-out or blur bake in memory) per source change.
+  const sourceRef = useRef<{ url: string; image: HTMLImageElement; blobUrl: string } | null>(null)
+  const dropSource = () => {
+    if (sourceRef.current) URL.revokeObjectURL(sourceRef.current.blobUrl)
+    sourceRef.current = null
+  }
   const previewUrlRef = useRef<string | null>(null)
   // Geometry (image + crop region) the held preview was encoded for. A held
   // preview may only be shown through a recompute when the geometry is unchanged
@@ -1361,7 +1385,7 @@ function useEncodedPreview(
   // mobile-visible "crop shows briefly, then reverts to the full image" bug —
   // the slower the device, the longer the stale frame was on screen.
   useEffect(() => {
-    sourceRef.current = null
+    dropSource()
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current)
       previewUrlRef.current = null
@@ -1387,9 +1411,13 @@ function useEncodedPreview(
       try {
         let source = sourceRef.current
         if (!source || source.url !== selected.objectUrl) {
-          const { image } = await loadImage(selected.file)
-          if (cancelled) return
-          sourceRef.current = { url: selected.objectUrl, image }
+          const { image, objectUrl } = await loadImage(selected.file)
+          if (cancelled) {
+            URL.revokeObjectURL(objectUrl)
+            return
+          }
+          dropSource()
+          sourceRef.current = { url: selected.objectUrl, image, blobUrl: objectUrl }
           source = sourceRef.current
         }
         const blob = await processAndEncode(
@@ -1423,6 +1451,7 @@ function useEncodedPreview(
   }, [enabled, surl, tw, th, tf, tq, ta, cx, cy, cw, ch, bgFill])
 
   useEffect(() => () => {
+    dropSource()
     if (previewUrlRef.current) {
       URL.revokeObjectURL(previewUrlRef.current)
       previewUrlRef.current = null
@@ -1581,4 +1610,12 @@ function PreviewArea({
       )}
     </div>
   )
+}
+
+/** "40% smaller", or "25% bigger" — never "-25% smaller". */
+function sizeChange(after: number, before: number): string {
+  const pct = Math.round((1 - after / before) * 100)
+  if (pct > 0) return `${pct}% smaller`
+  if (pct < 0) return `${-pct}% bigger`
+  return 'about the same size'
 }

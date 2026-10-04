@@ -292,49 +292,72 @@ export function computePresets(srcW: number, srcH: number): Record<PresetSize, {
  * High-quality resampled draw: when downscaling by more than 2× the browser's
  * default bilinear filter produces visible aliasing. We step the canvas down
  * in halves until we're within 2× of the target, then do the final draw.
+ *
+ * ⚠️ The first step draws straight from the SOURCE (or its crop) into the
+ * first half-size canvas. It used to copy the whole source into a full-size
+ * canvas first, which on a 24 MP iPhone photo is over WebKit's 16.7 MP canvas
+ * limit: getContext came back null and the preview and export failed with
+ * "null is not an object" even when the output was a small S or M. Each
+ * intermediate canvas is zeroed once used, so a run of previews doesn't use
+ * up iOS's canvas memory.
  */
 function drawDownscaled(
   source: HTMLImageElement,
   targetW: number,
   targetH: number
 ): HTMLCanvasElement {
-  let currentW = source.naturalWidth
-  let currentH = source.naturalHeight
+  return stepDown(source, 0, 0, source.naturalWidth, source.naturalHeight, targetW, targetH)
+}
 
-  // Initial canvas holds the source.
-  let canvas = document.createElement('canvas')
-  canvas.width = currentW
-  canvas.height = currentH
-  const initialCtx = canvas.getContext('2d')!
-  initialCtx.imageSmoothingEnabled = true
-  initialCtx.imageSmoothingQuality = 'high'
-  initialCtx.drawImage(source, 0, 0)
+function stepDown(
+  source: CanvasImageSource,
+  sx: number,
+  sy: number,
+  sw: number,
+  sh: number,
+  targetW: number,
+  targetH: number
+): HTMLCanvasElement {
+  let from: CanvasImageSource = source
+  let fx = sx
+  let fy = sy
+  let currentW = sw
+  let currentH = sh
+  let previous: HTMLCanvasElement | null = null
 
-  while (currentW >= targetW * 2 && currentH >= targetH * 2) {
-    const nextW = Math.max(Math.round(currentW / 2), targetW)
-    const nextH = Math.max(Math.round(currentH / 2), targetH)
+  const draw = (w: number, h: number): HTMLCanvasElement => {
     const next = document.createElement('canvas')
-    next.width = nextW
-    next.height = nextH
-    const ctx = next.getContext('2d')!
+    next.width = w
+    next.height = h
+    const ctx = next.getContext('2d')
+    if (!ctx) {
+      throw new Error(
+        `This browser wouldn’t give us a ${w} × ${h} canvas. ` +
+          'Try a smaller size: phones limit how big a picture they will draw.'
+      )
+    }
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
-    ctx.drawImage(canvas, 0, 0, currentW, currentH, 0, 0, nextW, nextH)
-    canvas = next
-    currentW = nextW
-    currentH = nextH
+    ctx.drawImage(from, fx, fy, currentW, currentH, 0, 0, w, h)
+    if (previous) {
+      previous.width = 0
+      previous.height = 0
+    }
+    previous = next
+    from = next
+    fx = 0
+    fy = 0
+    currentW = w
+    currentH = h
+    return next
   }
 
-  if (currentW === targetW && currentH === targetH) return canvas
-
-  const out = document.createElement('canvas')
-  out.width = targetW
-  out.height = targetH
-  const ctx = out.getContext('2d')!
-  ctx.imageSmoothingEnabled = true
-  ctx.imageSmoothingQuality = 'high'
-  ctx.drawImage(canvas, 0, 0, currentW, currentH, 0, 0, targetW, targetH)
-  return out
+  let canvas: HTMLCanvasElement | null = null
+  while (currentW >= targetW * 2 && currentH >= targetH * 2) {
+    canvas = draw(Math.max(Math.round(currentW / 2), targetW), Math.max(Math.round(currentH / 2), targetH))
+  }
+  if (canvas && currentW === targetW && currentH === targetH) return canvas
+  return draw(targetW, targetH)
 }
 
 export async function resizeAndEncode(
@@ -375,15 +398,22 @@ function encodeCanvas(
 ): Promise<Blob> {
   if (bgFill) {
     flattenOnto(canvas, bgFill)
-  } else if (!allowTransparency && format === 'image/png') {
-    // Only PNG carries an alpha channel here; flatten it onto white when the
-    // user has opted out of transparency.
+  } else if (format === 'image/jpeg' || (!allowTransparency && format === 'image/png')) {
+    // ⚠️ JPEG has NO alpha channel, and the encoder writes a transparent
+    // pixel as its colour channels — black. A cut-out or a transparent PNG
+    // exported as JPEG came out on black. Flatten onto white, as every other
+    // app does. PNG only when the user has opted out of transparency.
     flattenOnto(canvas, '#ffffff')
   }
   const useQuality = format === 'image/png' ? undefined : Math.min(1, Math.max(0, quality))
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
+        // Release the backing store now rather than at collection: on iOS
+        // canvas memory is a small fixed budget, and the preview encodes on
+        // every settings change.
+        canvas.width = 0
+        canvas.height = 0
         if (blob) resolve(blob)
         else reject(new Error('Encoding failed'))
       },
@@ -395,8 +425,7 @@ function encodeCanvas(
 
 /**
  * Crop a region from the source then iteratively downscale into the target
- * canvas. Mirrors the half-step logic of drawDownscaled to avoid aliasing
- * when the crop rectangle is much bigger than the requested output.
+ * canvas — the same half-steps as drawDownscaled, starting from the crop.
  */
 function drawCropAndDownscale(
   source: HTMLImageElement,
@@ -404,45 +433,7 @@ function drawCropAndDownscale(
   targetW: number,
   targetH: number
 ): HTMLCanvasElement {
-  const cropW = Math.max(1, Math.round(crop.width))
-  const cropH = Math.max(1, Math.round(crop.height))
-
-  let canvas = document.createElement('canvas')
-  canvas.width = cropW
-  canvas.height = cropH
-  const c0 = canvas.getContext('2d')!
-  c0.imageSmoothingEnabled = true
-  c0.imageSmoothingQuality = 'high'
-  c0.drawImage(source, crop.x, crop.y, crop.width, crop.height, 0, 0, cropW, cropH)
-
-  let currentW = cropW
-  let currentH = cropH
-
-  while (currentW >= targetW * 2 && currentH >= targetH * 2) {
-    const nextW = Math.max(Math.round(currentW / 2), targetW)
-    const nextH = Math.max(Math.round(currentH / 2), targetH)
-    const next = document.createElement('canvas')
-    next.width = nextW
-    next.height = nextH
-    const ctx = next.getContext('2d')!
-    ctx.imageSmoothingEnabled = true
-    ctx.imageSmoothingQuality = 'high'
-    ctx.drawImage(canvas, 0, 0, currentW, currentH, 0, 0, nextW, nextH)
-    canvas = next
-    currentW = nextW
-    currentH = nextH
-  }
-
-  if (currentW === targetW && currentH === targetH) return canvas
-
-  const out = document.createElement('canvas')
-  out.width = targetW
-  out.height = targetH
-  const ctx = out.getContext('2d')!
-  ctx.imageSmoothingEnabled = true
-  ctx.imageSmoothingQuality = 'high'
-  ctx.drawImage(canvas, 0, 0, currentW, currentH, 0, 0, targetW, targetH)
-  return out
+  return stepDown(source, crop.x, crop.y, Math.max(1, crop.width), Math.max(1, crop.height), targetW, targetH)
 }
 
 /**
@@ -823,24 +814,35 @@ export function formatFilename(originalName: string, width: number, height: numb
  * we probe once by encoding a tiny canvas and checking the MIME type we get
  * back. Memoised — the answer never changes within a session.
  */
-let avifEncodeSupport: Promise<boolean> | null = null
 export function supportsAvifEncode(): Promise<boolean> {
-  if (avifEncodeSupport) return avifEncodeSupport
-  avifEncodeSupport = new Promise<boolean>((resolve) => {
+  return supportsEncode('image/avif')
+}
+
+/**
+ * The same probe for WebP. ⚠️ Safari — so every iPhone, and this app's iOS
+ * build — DECODES WebP but cannot ENCODE it: toBlob('image/webp') quietly
+ * returns a PNG, which then saved as a ".webp" file.
+ */
+export function supportsWebpEncode(): Promise<boolean> {
+  return supportsEncode('image/webp')
+}
+
+const encodeSupport = new Map<string, Promise<boolean>>()
+function supportsEncode(mime: string): Promise<boolean> {
+  const cached = encodeSupport.get(mime)
+  if (cached) return cached
+  const probe = new Promise<boolean>((resolve) => {
     try {
       const canvas = document.createElement('canvas')
       canvas.width = 2
       canvas.height = 2
-      canvas.toBlob(
-        (blob) => resolve(!!blob && blob.type === 'image/avif'),
-        'image/avif',
-        0.5
-      )
+      canvas.toBlob((blob) => resolve(!!blob && blob.type === mime), mime, 0.5)
     } catch {
       resolve(false)
     }
   })
-  return avifEncodeSupport
+  encodeSupport.set(mime, probe)
+  return probe
 }
 
 export function formatBytes(n: number): string {

@@ -126,6 +126,15 @@ function rebakeBlur(
   return bakeFaceBlur(base, opaqueSource, boxes, state.faceBlurStrength, state.faceBlurStyle)
 }
 
+/**
+ * Which face-blur bake is the latest. The panel re-bakes 180 ms after each
+ * slider move, and a big photo takes longer than that to bake — so two bakes
+ * overlap, and the older one finishing last used to (a) put the stale
+ * strength on screen and (b) leak the newer bake's URL. Only the latest may
+ * land; a clear invalidates any bake still running.
+ */
+let faceBakeGeneration = 0
+
 function chooseDefaultFormat(file: File): OutputFormat {
   const t = file.type
   if (t === 'image/png') return 'image/png'
@@ -1022,17 +1031,25 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     // the blurred layer then ends exactly where the background was removed.
     const opaqueSource = bgOriginal && bgOriginal.id === img.id ? bgOriginal : null
 
+    const generation = ++faceBakeGeneration
     const redacted = await bakeFaceBlur(clean, opaqueSource, faceBoxes, faceBlurStrength, faceBlurStyle)
 
     const cur = get()
-    if (cur.selectedId !== img.id || !cur.images.some((i) => i.id === img.id)) {
+    if (
+      generation !== faceBakeGeneration ||
+      cur.selectedId !== img.id ||
+      !cur.images.some((i) => i.id === img.id)
+    ) {
       URL.revokeObjectURL(redacted.objectUrl)
       return
     }
 
-    // Revoke the previous redaction's URL (but never the clean original — it's
-    // held for undo). On first apply the outgoing entry IS the clean original.
-    if (!firstApply) URL.revokeObjectURL(img.objectUrl)
+    // Revoke whatever redaction is on screen NOW (not the one captured at the
+    // start, which a faster bake may already have replaced) — but never the
+    // clean original, which is held for undo.
+    const shown = cur.images.find((i) => i.id === img.id)
+    const original = firstApply ? clean : cur.faceOriginal ?? clean
+    if (shown && shown.objectUrl !== original.objectUrl) URL.revokeObjectURL(shown.objectUrl)
 
     set({
       images: cur.images.map((i) => (i.id === img.id ? redacted : i)),
@@ -1041,6 +1058,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   },
 
   clearFaceBlur() {
+    faceBakeGeneration++
     const { images, faceOriginal } = get()
     if (!faceOriginal) return
     // Revoke the shown redaction, then restore the clean original in place. The

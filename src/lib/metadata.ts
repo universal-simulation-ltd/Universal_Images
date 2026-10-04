@@ -389,15 +389,21 @@ function stripWebp(bytes: Uint8Array): Uint8Array | null {
 export async function scrubImageMetadata(file: File): Promise<ScrubResult> {
   const bytes = new Uint8Array(await file.arrayBuffer())
 
+  // By the file's own first bytes, not `file.type`: a .jpg handed over with
+  // an empty MIME type (Android pickers, some drag sources) used to come back
+  // "unsupported" with its location still in it. Each stripper checks its own
+  // signature and returns null for anything else, so trying them in turn is
+  // exact.
   let out: Uint8Array | null = null
-  if (file.type === 'image/jpeg') out = stripJpeg(bytes)
-  else if (file.type === 'image/png') out = stripPng(bytes)
-  else if (file.type === 'image/webp') out = stripWebp(bytes)
+  let type = file.type
+  if ((out = stripJpeg(bytes))) type = 'image/jpeg'
+  else if ((out = stripPng(bytes))) type = 'image/png'
+  else if ((out = stripWebp(bytes))) type = 'image/webp'
 
   if (!out) return { file, mode: 'unsupported', removedBytes: 0 }
 
   const cleaned = new File([out as BlobPart], file.name, {
-    type: file.type,
+    type,
     lastModified: file.lastModified,
   })
   return { file: cleaned, mode: 'lossless', removedBytes: bytes.length - out.length }

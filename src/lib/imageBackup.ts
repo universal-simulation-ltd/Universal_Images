@@ -1,6 +1,7 @@
 import { useImageStore } from '../stores/imageStore'
 import { saveBlob } from '@unisim/media/save'
-import type { ResizeTarget, SourceCrop } from '../types/image'
+import type { OutputFormat, ResizeTarget, SourceCrop } from '../types/image'
+import { loadImage } from './imageResize'
 
 // "Save to desktop" backup for Universal Images — the editable middle tier
 // between the free on-device resize+download and the paid "Hosted by UNI·SIM"
@@ -102,19 +103,74 @@ export async function importBackup(file: File): Promise<void> {
     throw new Error('This backup was made by a newer version of Universal Images — update the app to open it.')
   }
 
-  const bytes = base64ToBytes(data.image)
-  const restored = new File([bytes as unknown as BlobPart], data.fileName ?? 'image', {
-    type: data.fileType || 'image/png',
+  let bytes: Uint8Array
+  try {
+    bytes = base64ToBytes(data.image)
+  } catch {
+    throw new Error('This backup is damaged: the picture inside it can’t be read.')
+  }
+  const restored = new File([bytes as unknown as BlobPart], safeFileName(data.fileName), {
+    type: typeof data.fileType === 'string' && data.fileType.startsWith('image/') ? data.fileType : 'image/png',
   })
+
+  // ⚠️ Prove the picture opens BEFORE touching the workspace. The import used
+  // to clear every open image first, so a backup that wouldn't decode left
+  // the user with nothing: their work gone, and no backup either.
+  try {
+    const { objectUrl } = await loadImage(restored)
+    URL.revokeObjectURL(objectUrl)
+  } catch {
+    throw new Error('This backup is damaged: the picture inside it can’t be opened.')
+  }
+
   // Replace the workspace with the restored image, then apply the saved
   // crop/target over the defaults addFiles sets (crop is in source-pixel space,
-  // valid because it's the same image bytes).
+  // valid because it's the same image bytes). Both are checked rather than
+  // trusted: a backup is a file anyone can edit, and a width of 10^9 is a
+  // canvas no browser will make.
   const store = useImageStore.getState()
   store.clearAll()
   await store.addFiles([restored])
+  const fallback = useImageStore.getState().target
   useImageStore.setState({
-    target: data.target ?? useImageStore.getState().target,
-    crop: data.crop ?? null,
-    socialCrop: data.socialCrop ?? null,
+    target: fallback ? validTarget(data.target, fallback) : fallback,
+    crop: validCrop(data.crop),
+    socialCrop: validCrop(data.socialCrop),
   })
+}
+
+const FORMATS: OutputFormat[] = ['image/jpeg', 'image/png', 'image/webp', 'image/avif']
+const MAX_EDGE = 16384
+
+function validTarget(raw: unknown, fallback: ResizeTarget): ResizeTarget {
+  if (!raw || typeof raw !== 'object') return fallback
+  const t = raw as Partial<ResizeTarget>
+  const edge = (n: unknown, d: number) =>
+    typeof n === 'number' && Number.isFinite(n) && n >= 1 ? Math.min(MAX_EDGE, Math.round(n)) : d
+  return {
+    ...fallback,
+    width: edge(t.width, fallback.width),
+    height: edge(t.height, fallback.height),
+    aspectLocked: typeof t.aspectLocked === 'boolean' ? t.aspectLocked : fallback.aspectLocked,
+    quality:
+      typeof t.quality === 'number' && Number.isFinite(t.quality) ? Math.min(1, Math.max(0, t.quality)) : fallback.quality,
+    format: FORMATS.includes(t.format as OutputFormat) ? (t.format as OutputFormat) : fallback.format,
+    allowTransparency: typeof t.allowTransparency === 'boolean' ? t.allowTransparency : fallback.allowTransparency,
+  }
+}
+
+function validCrop(raw: unknown): SourceCrop | null {
+  if (!raw || typeof raw !== 'object') return null
+  const c = raw as Partial<SourceCrop>
+  const ok = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0
+  if (!ok(c.x) || !ok(c.y) || !ok(c.width) || !ok(c.height) || c.width < 1 || c.height < 1) return null
+  return { x: c.x, y: c.y, width: c.width, height: c.height }
+}
+
+/** A plain file name: no folders, no control characters, not absurdly long. */
+function safeFileName(raw: unknown): string {
+  const name = typeof raw === 'string' ? raw : ''
+  // eslint-disable-next-line no-control-regex
+  const clean = name.replace(/[\u0000-\u001f\u007f/\\]/g, '').trim().slice(0, 200)
+  return clean || 'image'
 }

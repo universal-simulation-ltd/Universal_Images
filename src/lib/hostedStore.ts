@@ -30,7 +30,7 @@ export interface StoreResult {
 /** Encode the currently-selected image at the chosen target (same bytes the
  *  Download button produces) and return it as a Blob + filename. */
 async function currentImageBlob(): Promise<{ blob: Blob; fileName: string; contentType: string }> {
-  const { images, selectedId, target, crop, socialCrop } = useImageStore.getState()
+  const { images, selectedId, target, crop, socialCrop, bgFill } = useImageStore.getState()
   const selected = images.find((i) => i.id === selectedId)
   if (!selected || !target) throw new Error('No image is selected.')
   const effectiveCrop = crop ?? socialCrop
@@ -44,6 +44,9 @@ async function currentImageBlob(): Promise<{ blob: Blob; fileName: string; conte
       target.format,
       target.quality,
       target.allowTransparency,
+      // The background colour too: without it the online copy came out
+      // transparent while Download (same panel, same settings) was filled.
+      bgFill,
     )
     return {
       blob,
