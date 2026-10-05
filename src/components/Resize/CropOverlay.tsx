@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { SourceCrop, SourceImage } from '../../types/image'
+import type { RedactBox, SourceCrop, SourceImage } from '../../types/image'
+import { RedactBoxesView } from './RedactLayer'
 
 interface Props {
   image: SourceImage
@@ -22,6 +23,11 @@ interface Props {
    * the pane has been measured.
    */
   resultRect: { left: number; top: number; width: number; height: number } | null
+  /**
+   * Redaction boxes, drawn over the source wherever this overlay shows it, so
+   * covering something and then editing the crop never puts it back on screen.
+   */
+  redactBoxes?: RedactBox[]
 }
 
 type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
@@ -118,7 +124,7 @@ function lockedResize(mode: Handle, r: SourceCrop, pt: { x: number; y: number },
  * the source image is never rewritten and changing the size preset just
  * re-exports the same region. Esc clears the crop.
  */
-export default function CropOverlay({ image, crop, onChange, committed, onCommittedChange, resultRect }: Props) {
+export default function CropOverlay({ image, crop, onChange, committed, onCommittedChange, resultRect, redactBoxes = [] }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
   // `started` guards the draw gesture: a fresh draw doesn't emit a crop until
@@ -441,6 +447,7 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
             className="pointer-events-none absolute max-w-none"
             style={{ left: drawnLeft, top: drawnTop, width: drawnW, height: drawnH }}
           />
+          <RedactBoxesView boxes={redactBoxes} view={fitView} clip={{ left: drawnLeft, top: drawnTop, width: drawnW, height: drawnH }} />
           <Mask view={fitView} area={whole} rect={crop!} />
 
           {/* crop rectangle — pointer-events on so dragging inside moves it */}
@@ -519,6 +526,11 @@ export default function CropOverlay({ image, crop, onChange, committed, onCommit
               width: image.width * adjustView.sx,
               height: image.height * adjustView.sy
             }}
+          />
+          <RedactBoxesView
+            boxes={redactBoxes}
+            view={adjustView}
+            clip={{ left: adjustView.left, top: adjustView.top, width: image.width * adjustView.sx, height: image.height * adjustView.sy }}
           />
           <Mask view={adjustView} area={whole} rect={crop!} />
           <div

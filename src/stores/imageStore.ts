@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { OutputFormat, ResizeTarget, SourceCrop, SourceImage } from '../types/image'
+import type { OutputFormat, RedactBox, ResizeTarget, SourceCrop, SourceImage } from '../types/image'
 import {
   computeCenteredCoverCrop,
   computeContentBounds,
@@ -10,6 +10,7 @@ import {
 import { removeImageBackground, deriveNobgName, type BgProgress } from '../lib/backgroundRemoval'
 import { detectFaces as runFaceDetection, renderRedactedFile, deriveBlurredName, type FaceBox, type FaceBlurStyle } from '../lib/faceBlur'
 import { readImageMetadata, scrubImageMetadata, type ImageMetadata, type ScrubResult } from '../lib/metadata'
+import { DEFAULT_REDACT_FILL, MIN_REDACT, clampBox, scaleRedactions } from '../lib/redact'
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10)
@@ -56,6 +57,7 @@ interface ImageEdit {
   bgCutout: SourceImage | null
   faceOriginal: SourceImage | null
   faceBoxes: FaceBox[] | null
+  redactBoxes: RedactBox[]
 }
 
 function revokeEditUrls(edit: ImageEdit | undefined) {
@@ -317,6 +319,33 @@ interface ImageStore {
   /** Put the un-blurred original back. Detected boxes are kept so re-blurring is instant. */
   clearFaceBlur: () => void
   /**
+   * Solid redaction boxes drawn on the selected image (source pixels), the
+   * Universal PDF tool's model: movable until the picture leaves the app, then
+   * painted into the pixels of every exported file. See lib/redact.ts.
+   */
+  redactBoxes: RedactBox[]
+  /** True while the preview is in "draw boxes" mode — drags draw, taps drop. */
+  redacting: boolean
+  setRedacting: (on: boolean) => void
+  /** Colour the next box is drawn in. Picking one also recolours the selected box. */
+  redactFill: string
+  setRedactFill: (fill: string) => void
+  /** The box the handles are on, or null. */
+  selectedRedactId: string | null
+  selectRedactBox: (id: string | null) => void
+  /** Add a box (clamped to the image) and select it. Returns its id. */
+  addRedactBox: (rect: { x: number; y: number; width: number; height: number }) => string | null
+  /** Move / resize a box, clamped to the image. */
+  updateRedactBox: (id: string, rect: { x: number; y: number; width: number; height: number }) => void
+  removeRedactBox: (id: string) => void
+  clearRedactBoxes: () => void
+  /**
+   * The boxes for ANY open image — the active list for the selected one, the
+   * stashed edit for the rest. What the ZIP and the collage paint with, so each
+   * picture gets its own boxes and nobody else's.
+   */
+  redactionsFor: (id: string) => RedactBox[]
+  /**
    * Saved editing state for every image that ISN'T currently selected, so
    * switching images preserves each one's size/crop/fill/background edits.
    * Keyed by image id; the selected image's state lives in the active fields.
@@ -429,6 +458,51 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   faceBlurStyle: 'blur',
   setFaceBlurStrength: (faceBlurStrength) => set({ faceBlurStrength }),
   setFaceBlurStyle: (faceBlurStyle) => set({ faceBlurStyle }),
+  redactBoxes: [],
+  redacting: false,
+  setRedacting: (redacting) => set(redacting ? { redacting } : { redacting, selectedRedactId: null }),
+  redactFill: DEFAULT_REDACT_FILL,
+  setRedactFill(fill) {
+    const { selectedRedactId, redactBoxes } = get()
+    set({
+      redactFill: fill,
+      redactBoxes: selectedRedactId
+        ? redactBoxes.map((b) => (b.id === selectedRedactId ? { ...b, fill } : b))
+        : redactBoxes
+    })
+  },
+  selectedRedactId: null,
+  selectRedactBox: (selectedRedactId) => set({ selectedRedactId }),
+  addRedactBox(rect) {
+    const { images, selectedId, redactBoxes, redactFill } = get()
+    const img = images.find((i) => i.id === selectedId)
+    if (!img) return null
+    const whole = { x: 0, y: 0, width: img.width, height: img.height }
+    const box: RedactBox = { id: makeId(), fill: redactFill, ...clampBox(rect, whole) }
+    if (box.width < MIN_REDACT || box.height < MIN_REDACT) return null
+    set({ redactBoxes: [...redactBoxes, box], selectedRedactId: box.id })
+    return box.id
+  },
+  updateRedactBox(id, rect) {
+    const { images, selectedId, redactBoxes } = get()
+    const img = images.find((i) => i.id === selectedId)
+    if (!img) return
+    const whole = { x: 0, y: 0, width: img.width, height: img.height }
+    const r = clampBox(rect, whole)
+    set({ redactBoxes: redactBoxes.map((b) => (b.id === id ? { ...b, ...r } : b)) })
+  },
+  removeRedactBox(id) {
+    const { redactBoxes, selectedRedactId } = get()
+    set({
+      redactBoxes: redactBoxes.filter((b) => b.id !== id),
+      selectedRedactId: selectedRedactId === id ? null : selectedRedactId
+    })
+  },
+  clearRedactBoxes: () => set({ redactBoxes: [], selectedRedactId: null }),
+  redactionsFor(id) {
+    const { selectedId, redactBoxes, edits } = get()
+    return id === selectedId ? redactBoxes : edits[id]?.redactBoxes ?? []
+  },
   edits: {},
   metadata: {},
   metadataOpen: false,
@@ -553,7 +627,8 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         bgOriginal: cur.bgOriginal,
         bgCutout: cur.bgCutout,
         faceOriginal: cur.faceOriginal,
-        faceBoxes: cur.faceBoxes
+        faceBoxes: cur.faceBoxes,
+        redactBoxes: cur.redactBoxes
       }
     }
     // Load the incoming image's saved state (or fresh defaults) and remove it
@@ -571,7 +646,9 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       bgOriginal: saved?.bgOriginal ?? null,
       bgCutout: saved?.bgCutout ?? null,
       faceOriginal: saved?.faceOriginal ?? null,
-      faceBoxes: saved?.faceBoxes ?? null
+      faceBoxes: saved?.faceBoxes ?? null,
+      redactBoxes: saved?.redactBoxes ?? [],
+      selectedRedactId: null
     })
   },
 
@@ -628,7 +705,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
 
     const remaining = cur.images.filter((i) => i.id !== id)
     if (remaining.length === 0) {
-      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, bgFill: null, bgOriginal: null, bgCutout: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false, collageOpen: false })
+      set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, bgFill: null, bgOriginal: null, bgCutout: null, faceOriginal: null, faceBoxes: null, redactBoxes: [], redacting: false, selectedRedactId: null, edits: {}, metadata: {}, metadataOpen: false, collageOpen: false })
       return
     }
     if (cur.selectedId === id) {
@@ -648,7 +725,9 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         bgOriginal: saved?.bgOriginal ?? null,
         bgCutout: saved?.bgCutout ?? null,
         faceOriginal: saved?.faceOriginal ?? null,
-        faceBoxes: saved?.faceBoxes ?? null
+        faceBoxes: saved?.faceBoxes ?? null,
+        redactBoxes: saved?.redactBoxes ?? [],
+        selectedRedactId: null
       })
     } else {
       set({ images: remaining, edits, metadata })
@@ -662,7 +741,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     if (cur.bgCutout) URL.revokeObjectURL(cur.bgCutout.objectUrl)
     if (cur.faceOriginal) URL.revokeObjectURL(cur.faceOriginal.objectUrl)
     for (const e of Object.values(cur.edits)) revokeEditUrls(e)
-    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, faceOriginal: null, faceBoxes: null, edits: {}, metadata: {}, metadataOpen: false, collageOpen: false })
+    set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, convertMode: false, bgOriginal: null, bgCutout: null, bgFill: null, faceOriginal: null, faceBoxes: null, redactBoxes: [], redacting: false, selectedRedactId: null, edits: {}, metadata: {}, metadataOpen: false, collageOpen: false })
   },
 
   setTarget(partial) {
@@ -910,7 +989,16 @@ export const useImageStore = create<ImageStore>((set, get) => ({
                 allowTransparency: true
               }
             : after.target,
-          ...(sameSize ? {} : { crop: null, autoCropNote: null, socialCrop: null }),
+          ...(sameSize
+            ? {}
+            : {
+                crop: null,
+                autoCropNote: null,
+                socialCrop: null,
+                // Boxes are never dropped — a redaction that silently vanished
+                // would export what the user covered. Rescale them instead.
+                redactBoxes: scaleRedactions(after.redactBoxes, clean.width, clean.height, width, height)
+              }),
           bgFill: null,
           // The cut-out is now the un-blurred base that "Remove blur" restores.
           faceOriginal: cleanCutout
@@ -934,7 +1022,10 @@ export const useImageStore = create<ImageStore>((set, get) => ({
           bgOriginal: clean,
           bgCutout: null,
           faceOriginal: cleanCutout,
-          faceBoxes: prev?.faceBoxes ?? null
+          faceBoxes: prev?.faceBoxes ?? null,
+          redactBoxes: sameSize
+            ? prev?.redactBoxes ?? []
+            : scaleRedactions(prev?.redactBoxes ?? [], clean.width, clean.height, width, height)
         }
         set({ images: nextImages, edits })
       }

@@ -46,3 +46,17 @@ export interface SourceCrop {
   width: number
   height: number
 }
+
+/**
+ * A solid redaction box in source-image pixel space. Movable markup while the
+ * image is being edited; painted into the pixels of every exported file.
+ */
+export interface RedactBox {
+  id: string
+  x: number
+  y: number
+  width: number
+  height: number
+  /** Hex colour the box is painted with. */
+  fill: string
+}

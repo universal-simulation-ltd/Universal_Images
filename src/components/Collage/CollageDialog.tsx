@@ -126,6 +126,11 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
   const dialog = useDialog(onClose, !busy)
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<Record<string, Loaded>>({})
+  // Each photo's redaction boxes ride along with its Drawable, so the collage —
+  // preview and file — covers what the editor covered.
+  const redactBoxes = useImageStore((s) => s.redactBoxes)
+  const edits = useImageStore((s) => s.edits)
+  const redactionsFor = useImageStore((s) => s.redactionsFor)
 
   // Photos added or removed while the dialog is open.
   useEffect(() => setSlots((prev) => fillSlots(prev, images)), [images])
@@ -185,9 +190,11 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
 
   const previewImages = useMemo(() => {
     const m: Record<string, Drawable> = {}
-    for (const [id, d] of Object.entries(loaded)) m[id] = d.preview
+    for (const [id, d] of Object.entries(loaded)) m[id] = { ...d.preview, redact: redactionsFor(id) }
     return m
-  }, [loaded])
+    // `redactBoxes` and `edits` are what `redactionsFor` reads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, redactBoxes, edits])
 
   useEffect(() => {
     const c = canvasRef.current
@@ -282,7 +289,7 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
     const ctx = c.getContext('2d')
     if (!ctx) throw new Error('This device could not make an image that size — try a smaller one')
     const full: Record<string, Drawable> = {}
-    for (const [id, d] of Object.entries(loaded)) full[id] = d.full
+    for (const [id, d] of Object.entries(loaded)) full[id] = { ...d.full, redact: redactionsFor(id) }
     drawCollage(ctx, { geometry, slots: active, images: full, background, radiusFrac: radius / 100 })
     const blob = await new Promise<Blob | null>((res) => c.toBlob(res, outFormat, 0.92))
     // A canvas past the device's limit returns null (or an empty file) rather than throwing.

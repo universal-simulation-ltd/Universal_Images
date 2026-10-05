@@ -150,6 +150,12 @@ Blur faces uses a small face-detection model, also running on your device, to fi
 
 Automatic detection is a help, not a guarantee. It can miss faces that are small, distant, turned away or partly hidden. Always look over the result before sharing, and use a strong setting: a light blur or large, soft pixels can leave a face recognisable.
 
+## Covering things with boxes
+
+Redact draws solid boxes over the picture: drag to cover something, or tap to drop a box and then move or resize it. Use it for a name, a number plate, a screen, or a face the detector missed. Pick the box colour in the Redact areas section.
+
+While you edit, the boxes sit on top and can still be moved; your original is not changed. The picture you download, back up online or put in a collage has them painted into its pixels, so nothing under a box can be recovered from that file. A Universal Images backup file is different: it keeps the original with the boxes still movable, so only share the downloaded picture.
+
 ## Collages
 
 The collage tool arranges several photos side by side, stacked or in a grid, with adjustable spacing, corners and background. You can download the collage or add it back to your images to resize or convert it.

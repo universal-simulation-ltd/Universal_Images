@@ -150,6 +150,12 @@ Gesichter unkenntlich machen nutzt ein kleines Modell zur Gesichtserkennung, das
 
 Die automatische Erkennung ist eine Hilfe, keine Garantie. Sie kann Gesichter übersehen, die klein, weit entfernt, abgewandt oder teilweise verdeckt sind. Sehen Sie sich das Ergebnis vor dem Teilen immer an, und verwenden Sie eine starke Einstellung: Eine leichte Unschärfe oder große, weiche Pixel können ein Gesicht erkennbar lassen.
 
+## Bereiche mit Balken abdecken
+
+Schwärzen legt deckende Balken über das Bild: Ziehen Sie über eine Stelle, um sie abzudecken, oder tippen Sie, um einen Balken abzulegen, den Sie dann verschieben oder in der Größe ändern. Das eignet sich für einen Namen, ein Kennzeichen, einen Bildschirm oder ein Gesicht, das die Erkennung übersehen hat. Die Farbe wählen Sie im Abschnitt „Redact areas“.
+
+Während Sie bearbeiten, liegen die Balken obenauf und lassen sich noch verschieben; Ihr Original bleibt unverändert. Im heruntergeladenen Bild, in der Online-Sicherung und in Collagen sind sie fest in die Pixel eingezeichnet, sodass sich darunter nichts wiederherstellen lässt. Eine Sicherungsdatei von Universal Images ist anders: Sie enthält das Original mit noch verschiebbaren Balken. Teilen Sie daher nur das heruntergeladene Bild.
+
 ## Collagen
 
 Das Collagen-Werkzeug ordnet mehrere Fotos nebeneinander, übereinander oder in einem Raster an, mit einstellbaren Abständen, Ecken und Hintergrund. Sie können die Collage herunterladen oder sie wieder zu Ihren Bildern hinzufügen, um sie zu skalieren oder umzuwandeln.

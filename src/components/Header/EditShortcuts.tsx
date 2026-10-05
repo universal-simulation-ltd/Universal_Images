@@ -19,7 +19,8 @@ import { useImageStore } from '../../stores/imageStore'
 // the breakpoint: at 390px the bar has roughly 160px of slack between the home
 // button and the Actions/profile cluster, and the two labelled buttons want
 // ~190px. So below `lg` the label is dropped and the button becomes a square
-// icon, which fits twice over.
+// icon, which fits twice over. A third square (Redact, 2026-10-05) takes the
+// row to ~122px — still inside the 160.
 //
 // What the label was carrying has to survive that. It moves to `aria-label`
 // (so a screen reader still hears "Removing…" / "Restore bg" / "Faces · 3")
@@ -37,6 +38,9 @@ export default function EditShortcuts() {
   const faceBoxes = useImageStore((s) => s.faceBoxes)
   const detectingFaces = useImageStore((s) => s.detectingFaces)
   const detectFaces = useImageStore((s) => s.detectFaces)
+  const redacting = useImageStore((s) => s.redacting)
+  const setRedacting = useImageStore((s) => s.setRedacting)
+  const redactCount = useImageStore((s) => s.redactBoxes.length)
 
   const [removingBg, setRemovingBg] = useState(false)
 
@@ -97,6 +101,15 @@ export default function EditShortcuts() {
         // name, so it is the piece that needs a home when the label goes.
         badge={facesBlurred && !detectingFaces ? blurredCount : null}
         onClick={onFaces}
+      />
+      <Shortcut
+        icon="⬛"
+        label={redacting ? 'Done' : redactCount > 0 ? `Boxes · ${redactCount}` : 'Redact'}
+        title={redacting ? 'Stop drawing boxes' : 'Cover part of the picture with solid boxes'}
+        active={redacting}
+        busy={false}
+        badge={!redacting && redactCount > 0 ? redactCount : null}
+        onClick={() => setRedacting(!redacting)}
       />
     </div>
   )

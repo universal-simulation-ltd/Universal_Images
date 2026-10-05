@@ -150,6 +150,12 @@ Sfoca volti usa un piccolo modello di rilevamento dei volti, anch'esso in funzio
 
 Il rilevamento automatico è un aiuto, non una garanzia. Può non trovare volti piccoli, lontani, girati o parzialmente nascosti. Controlla sempre il risultato prima di condividerlo e usa un'impostazione forte: una sfocatura leggera o pixel grandi e morbidi possono lasciare un volto riconoscibile.
 
+## Coprire con dei riquadri
+
+Oscura disegna riquadri pieni sull'immagine: trascina per coprire qualcosa, oppure tocca per lasciare un riquadro e poi spostalo o ridimensionalo. Serve per un nome, una targa, uno schermo o un volto che il rilevamento non ha trovato. Scegli il colore nella sezione «Redact areas».
+
+Mentre modifichi, i riquadri stanno sopra e si possono ancora spostare; l'originale non cambia. L'immagine che scarichi, salvi online o metti in un collage li ha dipinti nei suoi pixel, quindi da quel file non si può recuperare nulla di ciò che coprono. Un file di backup di Universal Images è diverso: conserva l'originale con i riquadri ancora spostabili, quindi condividi solo l'immagine scaricata.
+
 ## Collage
 
 Lo strumento collage dispone più foto affiancate, impilate o in una griglia, con spaziatura, angoli e sfondo regolabili. Puoi scaricare il collage o aggiungerlo di nuovo alle tue immagini per ridimensionarlo o convertirlo.

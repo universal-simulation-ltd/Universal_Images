@@ -150,6 +150,12 @@ Desfocar rostos usa um pequeno modelo de detecção de rostos, que também roda 
 
 A detecção automática é uma ajuda, não uma garantia. Ela pode deixar passar rostos pequenos, distantes, virados ou parcialmente escondidos. Sempre revise o resultado antes de compartilhar e use uma intensidade forte: um desfoque leve ou pixels grandes e suaves podem deixar um rosto reconhecível.
 
+## Cobrir com retângulos
+
+Ocultar desenha retângulos sólidos sobre a imagem: arraste para cobrir algo, ou toque para colocar um retângulo e depois mova ou redimensione. Serve para um nome, uma placa de carro, uma tela ou um rosto que a detecção não encontrou. Escolha a cor na seção "Redact areas".
+
+Enquanto você edita, os retângulos ficam por cima e ainda podem ser movidos; o original não muda. A imagem que você baixa, salva on-line ou coloca numa colagem leva os retângulos pintados nos pixels, então nada embaixo deles pode ser recuperado desse arquivo. Um arquivo de backup do Universal Images é diferente: ele guarda o original com os retângulos ainda móveis, então compartilhe só a imagem baixada.
+
 ## Colagens
 
 A ferramenta de colagem organiza várias fotos lado a lado, empilhadas ou em grade, com espaçamento, cantos e fundo ajustáveis. Você pode baixar a colagem ou adicioná-la de volta às suas imagens para redimensioná-la ou convertê-la.

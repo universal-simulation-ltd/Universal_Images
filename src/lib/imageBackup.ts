@@ -1,6 +1,6 @@
 import { useImageStore } from '../stores/imageStore'
 import { saveBlob } from '@unisim/media/save'
-import type { OutputFormat, ResizeTarget, SourceCrop } from '../types/image'
+import type { OutputFormat, RedactBox, ResizeTarget, SourceCrop } from '../types/image'
 import { loadImage } from './imageResize'
 
 // "Save to desktop" backup for Universal Images — the editable middle tier
@@ -25,6 +25,12 @@ interface BackupFile {
   target: ResizeTarget | null
   crop: SourceCrop | null
   socialCrop: SourceCrop | null
+  /**
+   * Redaction boxes, still movable — like Universal PDF's backup, this file is
+   * the EDITABLE copy, so the picture inside it is the uncovered original.
+   * Absent from backups made before boxes existed.
+   */
+  redactBoxes?: RedactBox[]
 }
 
 /** Encode bytes as base64 without blowing the call stack on large images. */
@@ -59,7 +65,7 @@ export function canBackup(): boolean {
 
 /** Serialise the selected image + its crop/target to a JSON backup. */
 export async function buildBackup(): Promise<{ blob: Blob; fileName: string }> {
-  const { images, selectedId, target, crop, socialCrop } = useImageStore.getState()
+  const { images, selectedId, target, crop, socialCrop, redactBoxes } = useImageStore.getState()
   const selected = images.find((i) => i.id === selectedId)
   if (!selected) throw new Error('No image is selected.')
   const buf = await selected.file.arrayBuffer()
@@ -73,6 +79,7 @@ export async function buildBackup(): Promise<{ blob: Blob; fileName: string }> {
     target,
     crop,
     socialCrop,
+    redactBoxes,
   }
   const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
   return { blob, fileName: `${safeStem(selected.name)}.uniimg.json` }
@@ -136,6 +143,7 @@ export async function importBackup(file: File): Promise<void> {
     target: fallback ? validTarget(data.target, fallback) : fallback,
     crop: validCrop(data.crop),
     socialCrop: validCrop(data.socialCrop),
+    redactBoxes: validRedactions(data.redactBoxes),
   })
 }
 
@@ -165,6 +173,22 @@ function validCrop(raw: unknown): SourceCrop | null {
   const ok = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0
   if (!ok(c.x) || !ok(c.y) || !ok(c.width) || !ok(c.height) || c.width < 1 || c.height < 1) return null
   return { x: c.x, y: c.y, width: c.width, height: c.height }
+}
+
+function validRedactions(raw: unknown): RedactBox[] {
+  if (!Array.isArray(raw)) return []
+  const out: RedactBox[] = []
+  for (const r of raw.slice(0, 500)) {
+    const c = validCrop(r)
+    const fill = (r as Partial<RedactBox>)?.fill
+    if (!c) continue
+    out.push({
+      ...c,
+      id: Math.random().toString(36).slice(2, 10),
+      fill: typeof fill === 'string' && /^#[0-9a-f]{6}$/i.test(fill) ? fill : '#000000',
+    })
+  }
+  return out
 }
 
 /** A plain file name: no folders, no control characters, not absurdly long. */

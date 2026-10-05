@@ -150,6 +150,12 @@ Yüzleri bulanıklaştır, yüzleri bulmak ve ardından bulanıklaştırmak ya d
 
 Otomatik algılama bir yardımdır, bir garanti değildir. Küçük, uzakta, başka yöne dönük ya da kısmen gizlenmiş yüzleri kaçırabilir. Paylaşmadan önce sonucu her zaman gözden geçirin ve güçlü bir ayar kullanın: hafif bir bulanıklık ya da büyük, yumuşak pikseller bir yüzü tanınabilir bırakabilir.
 
+## Kutularla örtme
+
+Karartma, resmin üzerine düz renkli kutular çizer: bir şeyi örtmek için sürükleyin ya da bir kutu bırakmak için dokunun, sonra kutuyu taşıyın veya boyutunu değiştirin. Bir isim, plaka, ekran ya da algılamanın kaçırdığı bir yüz için kullanabilirsiniz. Rengi "Redact areas" bölümünden seçin.
+
+Düzenlerken kutular üstte durur ve hâlâ taşınabilir; orijinaliniz değişmez. İndirdiğiniz, çevrimiçi yedeklediğiniz ya da kolaja koyduğunuz resimde kutular piksellere işlenmiştir, bu yüzden altlarında kalan hiçbir şey o dosyadan geri getirilemez. Universal Images yedek dosyası farklıdır: orijinali, kutular hâlâ taşınabilir hâlde saklar; bu yüzden yalnızca indirilen resmi paylaşın.
+
 ## Kolajlar
 
 Kolaj aracı birkaç fotoğrafı yan yana, üst üste ya da bir ızgara içinde düzenler; aralık, köşeler ve arka plan ayarlanabilir. Kolajı indirebilir ya da yeniden boyutlandırmak veya dönüştürmek için görüntülerinize geri ekleyebilirsiniz.

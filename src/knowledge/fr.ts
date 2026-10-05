@@ -150,6 +150,12 @@ Flouter les visages utilise un petit modèle de détection des visages, qui s'ex
 
 La détection automatique est une aide, pas une garantie. Elle peut manquer des visages petits, lointains, de profil ou partiellement cachés. Examinez toujours le résultat avant de le partager, et choisissez une intensité élevée : un léger flou ou de gros pixels peu marqués peuvent laisser un visage reconnaissable.
 
+## Masquer avec des rectangles
+
+Caviarder dessine des rectangles pleins sur l'image : faites glisser pour masquer quelque chose, ou touchez pour poser un rectangle, puis déplacez-le ou redimensionnez-le. Utile pour un nom, une plaque d'immatriculation, un écran ou un visage que la détection a manqué. Choisissez la couleur dans la section « Redact areas ».
+
+Pendant la modification, les rectangles restent au-dessus et peuvent encore être déplacés ; votre original n'est pas modifié. L'image que vous téléchargez, sauvegardez en ligne ou placez dans un collage les contient peints dans ses pixels : rien de ce qu'ils couvrent ne peut être récupéré à partir de ce fichier. Un fichier de sauvegarde Universal Images est différent : il conserve l'original avec des rectangles encore déplaçables. Ne partagez donc que l'image téléchargée.
+
 ## Les collages
 
 L'outil de collage dispose plusieurs photos côte à côte, empilées ou en grille, avec un espacement, des coins et un fond réglables. Vous pouvez télécharger le collage ou l'ajouter à vos images pour le redimensionner ou le convertir.

@@ -16,7 +16,9 @@ import { downloadBlob } from '../../lib/download'
 import { groupedPresets } from '../../lib/socialPresets'
 import CropOverlay from './CropOverlay'
 import SocialCropOverlay from './SocialCropOverlay'
-import type { OutputFormat, PresetSize, ResizeTarget, SourceCrop, SourceImage } from '../../types/image'
+import { RedactBoxesView, RedactEditor, viewFor } from './RedactLayer'
+import { REDACT_SWATCHES, redactSignature } from '../../lib/redact'
+import type { OutputFormat, PresetSize, RedactBox, ResizeTarget, SourceCrop, SourceImage } from '../../types/image'
 
 const FORMAT_LABEL: Record<OutputFormat, string> = {
   'image/jpeg': 'JPEG',
@@ -79,6 +81,18 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const metadataMap = useImageStore((s) => s.metadata)
   const setMetadataOpen = useImageStore((s) => s.setMetadataOpen)
   const renameImage = useImageStore((s) => s.renameImage)
+  const redactBoxes = useImageStore((s) => s.redactBoxes)
+  const redacting = useImageStore((s) => s.redacting)
+  const setRedacting = useImageStore((s) => s.setRedacting)
+  const redactFill = useImageStore((s) => s.redactFill)
+  const setRedactFill = useImageStore((s) => s.setRedactFill)
+  const selectedRedactId = useImageStore((s) => s.selectedRedactId)
+  const selectRedactBox = useImageStore((s) => s.selectRedactBox)
+  const addRedactBox = useImageStore((s) => s.addRedactBox)
+  const updateRedactBox = useImageStore((s) => s.updateRedactBox)
+  const removeRedactBox = useImageStore((s) => s.removeRedactBox)
+  const clearRedactBoxes = useImageStore((s) => s.clearRedactBoxes)
+  const redactionsFor = useImageStore((s) => s.redactionsFor)
 
   // The free-form crop and the social crop are mutually exclusive; either one
   // (if set) is the region the export pipeline should cut.
@@ -99,11 +113,14 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const [cropOpen, setCropOpen] = useState(false)
   const [bgOpen, setBgOpen] = useState(false)
   const [faceOpen, setFaceOpen] = useState(false)
+  const [redactOpen, setRedactOpen] = useState(false)
   const [customSizeOpen, setCustomSizeOpen] = useState(false)
   const [bgError, setBgError] = useState<string | null>(null)
   const [faceError, setFaceError] = useState<string | null>(null)
   // Hidden native colour picker backing the "+" custom background-fill swatch.
   const customColorRef = useRef<HTMLInputElement>(null)
+  // …and the one behind the "+" redaction-box colour.
+  const redactColorRef = useRef<HTMLInputElement>(null)
   // Inline rename of the filename shown in the info bar.
   const [renaming, setRenaming] = useState(false)
   const [renameDraft, setRenameDraft] = useState('')
@@ -124,7 +141,12 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   const exportWrapRef = useRef<HTMLDivElement>(null)
 
   // Hooks always run — the actual encode work is gated on having a real target.
-  const estimate = useEncodedPreview(selected, target, effectiveCrop, bgFill, !!selected && !!target)
+  // While boxes are being drawn the preview is encoded WITHOUT them: the editor
+  // draws them live on top, and re-encoding on every drag would only put the
+  // old position on screen underneath the new one. Outside the mode they are
+  // painted in, so the preview (and its size estimate) is the export.
+  const previewRedactions = useMemo(() => (redacting ? [] : redactBoxes), [redacting, redactBoxes])
+  const estimate = useEncodedPreview(selected, target, effectiveCrop, bgFill, !!selected && !!target, previewRedactions)
 
   // Convert-mode entry: open the export menu when the flag flips on (e.g. the
   // editor mounts after the homepage "Convert" click) so the format buttons are
@@ -298,7 +320,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
     try {
       const { image, objectUrl } = await loadImage(selected.file)
       try {
-        const blob = await processAndEncode(image, effectiveCrop, target.width, target.height, target.format, target.quality, target.allowTransparency, bgFill)
+        const blob = await processAndEncode(image, effectiveCrop, target.width, target.height, target.format, target.quality, target.allowTransparency, bgFill, redactBoxes)
         downloadBlob(blob, formatFilename(selected.name, target.width, target.height, target.format))
         setLastResult({ bytes: blob.size, width: target.width, height: target.height })
       } finally {
@@ -343,7 +365,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
           // The bg fill is a property of the selected image's cut-out; only apply
           // it to that image in a batch, not to every image in the ZIP.
           const fillForImage = img.id === selected!.id ? bgFill : null
-          const blob = await processAndEncode(image, cropForImage, w, h, target.format, target.quality, target.allowTransparency, fillForImage)
+          // Each picture's own redaction boxes — never only the selected one's.
+          const blob = await processAndEncode(image, cropForImage, w, h, target.format, target.quality, target.allowTransparency, fillForImage, redactionsFor(img.id))
           zip.file(formatFilename(img.name, w, h, target.format), blob)
         } finally {
           URL.revokeObjectURL(objectUrl)
@@ -497,6 +520,15 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
           previewUrl={estimate.state === 'ready' || estimate.state === 'computing' ? estimate.previewUrl : null}
           onSetCrop={setCrop}
           onMoveSocialCrop={moveSocialCrop}
+          redactBoxes={redactBoxes}
+          redacting={redacting}
+          redactFill={redactFill}
+          selectedRedactId={selectedRedactId}
+          onAddRedact={addRedactBox}
+          onUpdateRedact={updateRedactBox}
+          onRemoveRedact={removeRedactBox}
+          onSelectRedact={selectRedactBox}
+          onRedactDone={() => setRedacting(false)}
         />
       </div>
 
@@ -868,6 +900,117 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                       : 'Remove the background first to replace it with a colour.'}
                   </p>
                 </div>
+              </div>
+            )}
+          </div>
+
+          {/* Redact areas — solid boxes drawn over the picture, painted in on
+              export (Universal PDF's redaction). Collapsed by default. */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setRedactOpen((v) => !v)}
+              aria-expanded={redactOpen}
+              aria-controls={`${foldId}-redact`}
+              className="w-full flex items-center justify-between gap-2 py-1 group"
+            >
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 group-hover:text-slate-700 dark:text-slate-400 dark:group-hover:text-slate-200">Redact areas</span>
+              <span className="flex items-center gap-1.5">
+                {redactBoxes.length > 0 && (
+                  <ValueChip size="sm" label={redactBoxes.length}>{redactBoxes.length === 1 ? 'box' : 'boxes'}</ValueChip>
+                )}
+                <span
+                  aria-hidden="true"
+                  className={['text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300 transition-transform', redactOpen ? 'rotate-90' : ''].join(' ')}
+                >
+                  ▶
+                </span>
+              </span>
+            </button>
+            {redactOpen && (
+              <div id={`${foldId}-redact`} className="mt-2 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setRedacting(!redacting)}
+                  aria-pressed={redacting}
+                  className={[
+                    'w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors',
+                    redacting
+                      ? 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20'
+                      : 'border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10'
+                  ].join(' ')}
+                >
+                  <span aria-hidden="true">⬛</span>
+                  <span className="flex-1 text-left">{redacting ? 'Done drawing boxes' : 'Draw boxes on the picture'}</span>
+                </button>
+
+                <div>
+                  <div className="text-[11px] font-medium text-slate-600 mb-1.5 dark:text-slate-300">
+                    Box colour{selectedRedactId && <span className="text-slate-400"> — changes the selected box too</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {REDACT_SWATCHES.map((sw) => {
+                      const active = redactFill.toLowerCase() === sw.value
+                      return (
+                        <button
+                          key={sw.value}
+                          type="button"
+                          onClick={() => setRedactFill(sw.value)}
+                          title={sw.label}
+                          aria-label={`${sw.label} boxes`}
+                          aria-pressed={active}
+                          style={{ backgroundColor: sw.value }}
+                          className={[
+                            'w-7 h-7 rounded-full ring-1 ring-slate-300 transition-all',
+                            active ? 'ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-slate-900' : 'hover:ring-slate-400 dark:ring-slate-600 dark:hover:ring-slate-500'
+                          ].join(' ')}
+                        />
+                      )
+                    })}
+                    {(() => {
+                      const isCustom = !REDACT_SWATCHES.some((sw) => sw.value === redactFill.toLowerCase())
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => redactColorRef.current?.click()}
+                          title="Custom colour"
+                          aria-label="Custom box colour"
+                          aria-pressed={isCustom}
+                          style={isCustom ? { backgroundColor: redactFill } : undefined}
+                          className={[
+                            'w-7 h-7 rounded-full ring-1 ring-slate-300 flex items-center justify-center text-slate-500 dark:text-slate-400 transition-all',
+                            isCustom ? 'ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-slate-900' : 'hover:ring-slate-400 dark:ring-slate-600 dark:hover:ring-slate-500'
+                          ].join(' ')}
+                        >
+                          {!isCustom && <span aria-hidden="true" className="text-sm leading-none">+</span>}
+                        </button>
+                      )
+                    })()}
+                    <input
+                      ref={redactColorRef}
+                      type="color"
+                      className="sr-only"
+                      value={/^#[0-9a-fA-F]{6}$/.test(redactFill) ? redactFill : '#000000'}
+                      onChange={(e) => setRedactFill(e.target.value)}
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
+                  </div>
+                </div>
+
+                {redactBoxes.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearRedactBoxes}
+                    className="text-[11px] font-medium text-orange-700 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300"
+                  >
+                    Remove all {redactBoxes.length} {redactBoxes.length === 1 ? 'box' : 'boxes'}
+                  </button>
+                )}
+
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  Cover names, number plates or anything else with a solid box. Boxes stay movable while you edit; the picture you download has them painted in for good.
+                </p>
               </div>
             )}
           </div>
@@ -1334,7 +1477,8 @@ function useEncodedPreview(
   target: ResizeTarget | null,
   socialCrop: SourceCrop | null,
   bgFill: string | null,
-  enabled: boolean
+  enabled: boolean,
+  redactions: RedactBox[]
 ): Estimate {
   const [estimate, setEstimate] = useState<Estimate>({ state: 'idle' })
   // `blobUrl` is the decoder's own URL from loadImage — distinct from `url`,
@@ -1372,7 +1516,10 @@ function useEncodedPreview(
   // Identity of the *shape* being previewed (source + crop region), independent
   // of output resolution/format/quality. Only when this is unchanged is a held
   // preview still valid to show during a recompute.
-  const geomKey = surl === null ? null : `${surl}|${cx},${cy},${cw},${ch}`
+  // The boxes are part of the shape too: a held preview still carrying a box
+  // the user has just moved or removed must not stay on screen under it.
+  const rsig = redactSignature(redactions)
+  const geomKey = surl === null ? null : `${surl}|${cx},${cy},${cw},${ch}|${rsig}`
 
   // When the underlying image changes identity — most importantly after a crop,
   // which swaps the file + objectUrl while keeping the same id — drop BOTH caches
@@ -1428,7 +1575,8 @@ function useEncodedPreview(
           target.format,
           target.quality,
           target.allowTransparency,
-          bgFill
+          bgFill,
+          redactions
         )
         if (cancelled) return
         const url = URL.createObjectURL(blob)
@@ -1448,7 +1596,7 @@ function useEncodedPreview(
       window.clearTimeout(tid)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, surl, tw, th, tf, tq, ta, cx, cy, cw, ch, bgFill])
+  }, [enabled, surl, tw, th, tf, tq, ta, cx, cy, cw, ch, bgFill, rsig])
 
   useEffect(() => () => {
     dropSource()
@@ -1469,6 +1617,16 @@ interface PreviewAreaProps {
   previewUrl: string | null
   onSetCrop: (rect: { x: number; y: number; width: number; height: number } | null) => void
   onMoveSocialCrop: (x: number, y: number) => void
+  redactBoxes: RedactBox[]
+  /** "Draw boxes" mode: the RedactEditor takes the pane over from the crop tools. */
+  redacting: boolean
+  redactFill: string
+  selectedRedactId: string | null
+  onAddRedact: (rect: { x: number; y: number; width: number; height: number }) => void
+  onUpdateRedact: (id: string, rect: { x: number; y: number; width: number; height: number }) => void
+  onRemoveRedact: (id: string) => void
+  onSelectRedact: (id: string | null) => void
+  onRedactDone: () => void
 }
 
 /**
@@ -1485,7 +1643,16 @@ function PreviewArea({
   socialCrop,
   previewUrl,
   onSetCrop,
-  onMoveSocialCrop
+  onMoveSocialCrop,
+  redactBoxes,
+  redacting,
+  redactFill,
+  selectedRedactId,
+  onAddRedact,
+  onUpdateRedact,
+  onRemoveRedact,
+  onSelectRedact,
+  onRedactDone
 }: PreviewAreaProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
@@ -1535,25 +1702,33 @@ function PreviewArea({
   // right crop" every time a crop was adjusted. Show the crop region cut out of
   // the source with CSS instead: same picture the encode is about to produce,
   // on screen immediately, so there is nothing to flash away from.
-  const cropFallback = !previewUrl && crop && crop.width > 0 && crop.height > 0
+  //
+  // While boxes are being drawn the social crop is shown the same way — as its
+  // result, not the pannable whole-photo window — so `shownCrop` covers both.
+  const shownCrop = crop ?? (redacting ? socialCrop : null)
+  const cropFallback = !previewUrl && shownCrop && shownCrop.width > 0 && shownCrop.height > 0
     ? (() => {
-        const kx = displayW / crop.width
-        const ky = displayH / crop.height
+        const kx = displayW / shownCrop.width
+        const ky = displayH / shownCrop.height
         return {
           backgroundImage: `url(${image.objectUrl})`,
           backgroundSize: `${image.width * kx}px ${image.height * ky}px`,
-          backgroundPosition: `${-crop.x * kx}px ${-crop.y * ky}px`,
+          backgroundPosition: `${-shownCrop.x * kx}px ${-shownCrop.y * ky}px`,
           backgroundRepeat: 'no-repeat'
         }
       })()
     : null
+  // The part of the source the result preview shows, and so what redaction
+  // boxes are mapped through to sit over it.
+  const region: SourceCrop = shownCrop ?? { x: 0, y: 0, width: image.width, height: image.height }
+  const showResult = !crop || committed || redacting
 
   return (
     // `checker-pane`: the pasteboard goes dark with the theme (index.css). The
     // preview <img> below keeps its own white ground and its pixels in both.
     <div ref={wrapperRef} className="relative flex flex-1 min-h-[55vh] lg:min-h-0 overflow-hidden checker-bg checker-pane">
-      {socialCrop ? (
-        <SocialCropOverlay image={image} crop={socialCrop} onMove={onMoveSocialCrop} />
+      {socialCrop && !redacting ? (
+        <SocialCropOverlay image={image} crop={socialCrop} onMove={onMoveSocialCrop} redactBoxes={redactBoxes} />
       ) : (
         <>
           {/* Encoded-output preview at the TARGET size. Hidden while a crop is
@@ -1561,7 +1736,7 @@ function PreviewArea({
               showing both at once made the target-size preview peek out behind
               it ("two overlapping images"). Shown again once the crop is
               committed, so the cropped result previews through. */}
-          {(!crop || committed) && (
+          {showResult && (
             <div className="relative flex flex-1 min-h-0 items-center justify-center p-6">
               {cropFallback ? (
                 <div
@@ -1582,7 +1757,7 @@ function PreviewArea({
               )}
             </div>
           )}
-          {!crop && (
+          {!crop && !redacting && (
             <div className="absolute bottom-3 right-3 pointer-events-none flex items-center gap-2">
               <span className="bg-slate-900/85 text-white text-[11px] font-medium tabular-nums px-2 py-1 rounded-md">
                 {target.width} × {target.height}
@@ -1598,14 +1773,40 @@ function PreviewArea({
               </span>
             </div>
           )}
-          <CropOverlay
-            image={image}
-            crop={crop}
-            onChange={onSetCrop}
-            committed={committed}
-            onCommittedChange={setCommitted}
-            resultRect={resultRect}
-          />
+          {/* The boxes over the result. Always drawn here as well as painted
+              into the encode: a re-encode is a debounce away, and in the gap
+              the picture underneath must never show what a box covers. */}
+          {showResult && resultRect && !redacting && (
+            <RedactBoxesView boxes={redactBoxes} view={viewFor(region, resultRect)} clip={resultRect} />
+          )}
+          {redacting ? (
+            resultRect && (
+              <RedactEditor
+                imageWidth={image.width}
+                imageHeight={image.height}
+                region={region}
+                rect={resultRect}
+                boxes={redactBoxes}
+                selectedId={selectedRedactId}
+                fill={redactFill}
+                onAdd={onAddRedact}
+                onUpdate={onUpdateRedact}
+                onRemove={onRemoveRedact}
+                onSelect={onSelectRedact}
+                onDone={onRedactDone}
+              />
+            )
+          ) : (
+            <CropOverlay
+              image={image}
+              crop={crop}
+              onChange={onSetCrop}
+              committed={committed}
+              onCommittedChange={setCommitted}
+              resultRect={resultRect}
+              redactBoxes={redactBoxes}
+            />
+          )}
         </>
       )}
     </div>

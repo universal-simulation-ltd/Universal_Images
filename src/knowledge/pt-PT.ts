@@ -150,6 +150,12 @@ Desfocar rostos usa um pequeno modelo de deteção de rostos, também executado 
 
 A deteção automática é uma ajuda, não uma garantia. Pode falhar rostos pequenos, distantes, virados de lado ou parcialmente escondidos. Reveja sempre o resultado antes de partilhar e use uma intensidade forte: uma desfocagem ligeira ou píxeis grandes e suaves podem deixar um rosto reconhecível.
 
+## Tapar com retângulos
+
+Ocultar desenha retângulos sólidos sobre a imagem: arraste para tapar algo, ou toque para colocar um retângulo e depois mova-o ou redimensione-o. Serve para um nome, uma matrícula, um ecrã ou um rosto que a deteção falhou. Escolha a cor na secção «Redact areas».
+
+Enquanto edita, os retângulos ficam por cima e ainda podem ser movidos; o original não é alterado. A imagem que transfere, guarda online ou coloca numa colagem leva-os pintados nos píxeis, pelo que nada por baixo deles pode ser recuperado desse ficheiro. Um ficheiro de cópia de segurança do Universal Images é diferente: guarda o original com os retângulos ainda móveis, por isso partilhe apenas a imagem transferida.
+
 ## Colagens
 
 A ferramenta de colagem dispõe várias fotografias lado a lado, empilhadas ou numa grelha, com espaçamento, cantos e fundo ajustáveis. Pode transferir a colagem ou voltar a adicioná-la às suas imagens para a redimensionar ou converter.

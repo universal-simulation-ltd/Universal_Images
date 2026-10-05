@@ -1,4 +1,5 @@
-import type { OutputFormat, PresetSize, SourceCrop } from '../types/image'
+import type { OutputFormat, PresetSize, RedactBox, SourceCrop } from '../types/image'
+import { paintRedactions } from './redact'
 
 const HEIC_EXT_RE = /\.(heic|heif)$/i
 const HEIC_MIME = new Set(['image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence'])
@@ -439,6 +440,10 @@ function drawCropAndDownscale(
 /**
  * Run the source through an optional crop, then resize and encode to the
  * given output format. Used for both export and the live preview encode.
+ *
+ * `redactions` are painted onto the finished canvas, mapped through the crop
+ * and the resize — never onto a full-size copy of the source, which on a big
+ * iPhone photo is over WebKit's canvas limit (see `drawDownscaled`).
  */
 export async function processAndEncode(
   source: HTMLImageElement,
@@ -448,13 +453,15 @@ export async function processAndEncode(
   format: OutputFormat,
   quality: number,
   allowTransparency = true,
-  bgFill?: string | null
+  bgFill?: string | null,
+  redactions?: RedactBox[] | null
 ): Promise<Blob> {
   const tw = Math.max(1, Math.round(targetW))
   const th = Math.max(1, Math.round(targetH))
   const canvas = crop
     ? drawCropAndDownscale(source, crop, tw, th)
     : drawDownscaled(source, tw, th)
+  paintRedactions(canvas, redactions, crop ?? { x: 0, y: 0, width: source.naturalWidth, height: source.naturalHeight })
   return encodeCanvas(canvas, format, quality, allowTransparency, bgFill)
 }
 

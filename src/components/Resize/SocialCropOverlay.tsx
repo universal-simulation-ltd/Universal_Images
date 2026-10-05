@@ -1,11 +1,14 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import type { SourceCrop, SourceImage } from '../../types/image'
+import type { RedactBox, SourceCrop, SourceImage } from '../../types/image'
+import { RedactBoxesView } from './RedactLayer'
 
 interface Props {
   image: SourceImage
   crop: SourceCrop
   /** Called with new (x,y) in source pixels while the user drags. */
   onMove: (x: number, y: number) => void
+  /** Redaction boxes, drawn over the source so reframing never uncovers them. */
+  redactBoxes?: RedactBox[]
 }
 
 /**
@@ -13,7 +16,7 @@ interface Props {
  * rectangle is fixed in size (the largest covering rect at the preset's
  * aspect ratio); the user drags it to reframe what goes into the export.
  */
-export default function SocialCropOverlay({ image, crop, onMove }: Props) {
+export default function SocialCropOverlay({ image, crop, onMove, redactBoxes = [] }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [box, setBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
   const dragRef = useRef<{
@@ -80,6 +83,11 @@ export default function SocialCropOverlay({ image, crop, onMove }: Props) {
         draggable={false}
         className="pointer-events-none absolute"
         style={{ left: drawnLeft, top: drawnTop, width: drawnW, height: drawnH }}
+      />
+      <RedactBoxesView
+        boxes={redactBoxes}
+        view={{ left: drawnLeft, top: drawnTop, sx: scale, sy: scale }}
+        clip={{ left: drawnLeft, top: drawnTop, width: drawnW, height: drawnH }}
       />
 
       <div

@@ -150,6 +150,12 @@ Difuminar caras usa un pequeño modelo de detección de caras, que también se e
 
 La detección automática es una ayuda, no una garantía. Puede pasar por alto caras pequeñas, lejanas, de espaldas o parcialmente ocultas. Revise siempre el resultado antes de compartirlo y use un ajuste fuerte: un difuminado ligero o unos píxeles grandes y suaves pueden dejar una cara reconocible.
 
+## Tapar con recuadros
+
+Ocultar dibuja recuadros sólidos sobre la imagen: arrastre para tapar algo, o toque para colocar un recuadro y después muévalo o cambie su tamaño. Sirve para un nombre, una matrícula, una pantalla o una cara que la detección no encontró. Elija el color en la sección «Redact areas».
+
+Mientras edita, los recuadros quedan por encima y aún se pueden mover; el original no cambia. La imagen que descarga, guarda en línea o pone en un collage los lleva pintados en sus píxeles, así que nada de lo que hay debajo se puede recuperar de ese archivo. Un archivo de copia de seguridad de Universal Images es distinto: conserva el original con los recuadros todavía movibles, así que comparta solo la imagen descargada.
+
 ## Collages
 
 La herramienta de collage coloca varias fotos una al lado de otra, apiladas o en cuadrícula, con espaciado, esquinas y fondo ajustables. Puede descargar el collage o volver a añadirlo a sus imágenes para redimensionarlo o convertirlo.

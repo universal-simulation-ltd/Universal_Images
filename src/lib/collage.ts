@@ -11,6 +11,8 @@
 // so a white 2% gap reads as a consistent border rather than thin lines inside
 // a fat frame.
 
+import type { RedactBox } from '../types/image'
+
 export type LayoutNode = { dir: 'row' | 'col'; children: (LayoutNode | 'slot')[]; weights?: number[] }
 
 export interface CollageLayout {
@@ -180,8 +182,12 @@ export function coverPlacement(space: Rect, iw: number, ih: number, slot: Pick<C
 
 export const clamp01 = (v: number) => Math.min(1, Math.max(0, v))
 
-/** Anything drawImage takes and knows the size of. */
-export type Drawable = { source: CanvasImageSource; width: number; height: number }
+/**
+ * Anything drawImage takes and knows the size of. `redact` is the picture's
+ * redaction boxes, in the same `width × height` space, painted over it in its
+ * space — a collage is an export like any other.
+ */
+export type Drawable = { source: CanvasImageSource; width: number; height: number; redact?: RedactBox[] }
 
 export interface DrawOptions {
   geometry: CollageGeometry
@@ -216,6 +222,17 @@ export function drawCollage(ctx: CanvasRenderingContext2D, o: DrawOptions) {
     if (img && slot) {
       const d = coverPlacement(r, img.width, img.height, slot)
       ctx.drawImage(img.source, d.x, d.y, d.w, d.h)
+      if (img.redact?.length) {
+        const kx = d.w / img.width
+        const ky = d.h / img.height
+        for (const b of img.redact) {
+          // Outward to whole pixels, as in paintRedactions: no half-covered edge.
+          const x0 = Math.floor(d.x + b.x * kx)
+          const y0 = Math.floor(d.y + b.y * ky)
+          ctx.fillStyle = b.fill
+          ctx.fillRect(x0, y0, Math.ceil(d.x + (b.x + b.width) * kx) - x0, Math.ceil(d.y + (b.y + b.height) * ky) - y0)
+        }
+      }
     } else if (o.preview) {
       ctx.fillStyle = o.preview.dark ? '#1e293b' : '#e2e8f0'
       ctx.fillRect(r.x, r.y, r.w, r.h)
