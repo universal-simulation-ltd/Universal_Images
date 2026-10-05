@@ -133,8 +133,12 @@ export default function LandingPage() {
                 <br />
                 That <span className="text-orange-600 dark:text-orange-500">just work</span>.
               </h1>
+              {/* What it does and where it happens, in the first line read —
+                  the headline is the suite's promise shape and says neither.
+                  "On your device" is the PrivacyNote's claim in short: that
+                  note sits under the card, below the fold on most screens. */}
               <p className="mt-3 text-slate-600 max-w-md dark:text-slate-300">
-                Drop one or many. Pick a size, get a smaller file.
+                Resize, crop, convert and shrink photos right here on your device. Drop one or many.
               </p>
 
               <div className="@container mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6 dark:bg-slate-900 dark:border-slate-800">
@@ -185,7 +189,13 @@ export default function LandingPage() {
                       <span className="text-[15px] font-bold text-slate-900">
                         {picker.over ? 'Drop to open' : 'Drop images here'}
                       </span>
-                                            <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
+                      {/* What it takes, on the circle itself — Compress and the
+                          Converter both say so here, and until now this one
+                          only said it once a drag was already under way. */}
+                      <span className="text-[11.5px] leading-relaxed text-slate-500">
+                        JPEG · PNG · WebP · HEIC · GIF
+                      </span>
+                      <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
                     </DropRing>
                   </div>
                   <input {...picker.inputProps} className="hidden" />
