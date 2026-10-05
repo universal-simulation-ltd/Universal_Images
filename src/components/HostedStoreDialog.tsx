@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Chip, useUniversal, useUser, useOrg, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
+import { Chip, SignInDialog, useUniversal, useUser, useOrg, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
 import { useImageStore } from '../stores/imageStore'
 import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib/dialog'
 import { storeCurrentImage, deleteHostedImage, openHostedImage, HostedObjectMissingError } from '../lib/hostedStore'
@@ -8,6 +8,10 @@ import { downloadBackup, importBackup } from '../lib/imageBackup'
 import { useFreeAllowance, nearFreeLimit } from '../lib/useFreeAllowance'
 import { useDialog } from '../lib/useDialog'
 
+// Only its origin is used, by the in-app sign-in's "manage your account" link.
+// Sign-in itself happens in <SignInDialog /> on top of this one: linking to the
+// hub's /login navigated away from the image being worked on, and the hub then
+// sent a newcomer on to the Assess portal, not back here.
 const SIGNIN_URL = 'https://app.unisim.co.uk/login'
 // Nothing is for sale for the everyday apps (2026-10-03): at the free limit the
 // note says how to make room, and one quiet link asks people who need more to
@@ -58,7 +62,10 @@ export default function HostedStoreDialog() {
   const [importMsg, setImportMsg] = useState<string | null>(null)
   const [importErr, setImportErr] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const dialog = useDialog(() => close(), true, open)
+  const [signInOpen, setSignInOpen] = useState(false)
+  // Stood down while the sign-in dialog is up: this one's Tab trap would pull
+  // focus out of the sign-in form, and its Escape would close both at once.
+  const dialog = useDialog(() => close(), true, open && !signInOpen)
 
   if (!open) return null
 
@@ -77,6 +84,7 @@ export default function HostedStoreDialog() {
 
   function close() {
     setOpen(false)
+    setSignInOpen(false)
     setError(null)
     setMissingId(null)
     setJustStored(false)
@@ -264,9 +272,10 @@ export default function HostedStoreDialog() {
             {!signedIn ? (
               <div className="mt-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
                 <p className="text-sm text-slate-700 dark:text-slate-200">Create a <strong>Universal ID</strong> to back up images online for FREE.</p>
-                <a href={SIGNIN_URL} className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
+                <button type="button" onClick={() => setSignInOpen(true)} className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
                   Create / sign in with Universal ID →
-                </a>
+                </button>
+                <SignInDialog open={signInOpen} onClose={() => setSignInOpen(false)} hubLoginHref={SIGNIN_URL} initialMode="signup" />
               </div>
             ) : (
               <div className="mt-3">
