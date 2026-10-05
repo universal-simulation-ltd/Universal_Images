@@ -839,10 +839,9 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         images: cur.images.map((i) => (i.id === img.id ? shown : i)),
         bgOriginal: clean, // the un-blurred original — enables Restore again
         bgCutout: null,
+        // The crop is kept: the cached cut-out has the source's pixel size, so
+        // the rectangle (and the target sized to it) still line up.
         target: t ? { ...t, format: 'image/png', allowTransparency: true } : t,
-        crop: null,
-        autoCropNote: null,
-        socialCrop: null,
         bgFill: null,
         // The cut-out is the un-blurred base for this background state — it's
         // what "Remove blur" restores, and what the blur is re-baked over.
@@ -868,6 +867,10 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       const file = new File([blob], name, { type: 'image/png' })
       const objectUrl = URL.createObjectURL(file)
       const cutout: SourceImage = { id: img.id, name, file, width, height, objectUrl, bytes: file.size }
+      // The model preserves the source size, so a crop drawn on the photo still
+      // fits the cut-out and is kept. Only if it ever came back a different size
+      // would the crop (and the target sized to it) stop lining up.
+      const sameSize = width === clean.width && height === clean.height
 
       // Re-bake the blur over the finished cut-out (stencilled by it) before
       // swapping anything in, so the cut-out is never shown un-redacted. The
@@ -899,11 +902,15 @@ export const useImageStore = create<ImageStore>((set, get) => ({
           bgCutout: null,
           // The cut-out has transparency, so force PNG output so it isn't
           // flattened onto white on export.
-          target: after.target ? { ...after.target, format: 'image/png', allowTransparency: true } : after.target,
-          // Crops referenced the old bitmap coordinates; clear them for clarity.
-          crop: null,
-          autoCropNote: null,
-          socialCrop: null,
+          target: after.target
+            ? {
+                ...after.target,
+                ...(sameSize ? {} : { width, height }),
+                format: 'image/png',
+                allowTransparency: true
+              }
+            : after.target,
+          ...(sameSize ? {} : { crop: null, autoCropNote: null, socialCrop: null }),
           bgFill: null,
           // The cut-out is now the un-blurred base that "Remove blur" restores.
           faceOriginal: cleanCutout
@@ -920,9 +927,9 @@ export const useImageStore = create<ImageStore>((set, get) => ({
         )
         const base = prev?.target ?? makeDefaultTarget(img)
         edits[img.id] = {
-          target: { ...base, format: 'image/png', allowTransparency: true },
-          crop: null,
-          socialCrop: null,
+          target: { ...base, ...(sameSize ? {} : { width, height }), format: 'image/png', allowTransparency: true },
+          crop: sameSize ? prev?.crop ?? null : null,
+          socialCrop: sameSize ? prev?.socialCrop ?? null : null,
           bgFill: null,
           bgOriginal: clean,
           bgCutout: null,
@@ -971,10 +978,12 @@ export const useImageStore = create<ImageStore>((set, get) => ({
       images: get().images.map((i) => (i.id === bgOriginal.id ? shown : i)),
       bgOriginal: null,
       bgCutout: cutout,
-      target: isSelected && target ? makeDefaultTarget(bgOriginal) : target,
+      // Only the format reverts (the cut-out forced PNG). The size and crop are
+      // kept: the original has the cut-out's pixel size, so they still line up.
+      target: isSelected && target ? { ...target, format: chooseDefaultFormat(bgOriginal.file), allowTransparency: true } : target,
       // The restored original is the un-blurred base again, and the boxes are
       // kept so the strength/style controls keep driving the re-bake.
-      ...(isSelected ? { crop: null, autoCropNote: null, socialCrop: null, bgFill: null, faceOriginal: shown === bgOriginal ? null : bgOriginal } : {})
+      ...(isSelected ? { bgFill: null, faceOriginal: shown === bgOriginal ? null : bgOriginal } : {})
     })
   },
 
