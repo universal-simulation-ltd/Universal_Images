@@ -10,7 +10,8 @@ import {
   computeCenteredCoverCrop,
   supportsAvifEncode,
   supportsWebpEncode,
-  imageHasAlpha
+  imageHasAlpha,
+  openingLadder
 } from '../../lib/imageResize'
 import { downloadBlob } from '../../lib/download'
 import { groupedPresets } from '../../lib/socialPresets'
@@ -147,6 +148,35 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   // painted in, so the preview (and its size estimate) is the export.
   const previewRedactions = useMemo(() => (redacting ? [] : redactBoxes), [redacting, redactBoxes])
   const estimate = useEncodedPreview(selected, target, effectiveCrop, bgFill, !!selected && !!target, previewRedactions)
+
+  // The opening ladder (`openingLadder`): while a newly opened image is still
+  // as it opened and its estimate is no smaller than the original, step to the
+  // next rung — and say nothing about the bigger figure in between, so the
+  // first size anybody reads is a smaller one. Settled, per image, once the
+  // estimate is smaller, the ladder runs out, or the user changes anything.
+  const openingSettled = useRef(new Set<string>())
+  const openingNext = (() => {
+    if (!selected || !target || estimate.state !== 'ready') return null
+    if (estimate.forKey !== estimateKey(selected, target)) return null
+    if (openingSettled.current.has(selected.id)) return null
+    if (crop || socialCrop || redactBoxes.length > 0 || bgOriginal) return null
+    if (estimate.bytes < selected.bytes) return null
+    const ladder = openingLadder(selected.width, selected.height, target.format)
+    const at = ladder.findIndex(
+      (r) =>
+        r.width === target.width &&
+        r.height === target.height &&
+        (target.format === 'image/png' || Math.abs(r.quality - target.quality) < 0.001)
+    )
+    return at >= 0 && at < ladder.length - 1 ? ladder[at + 1] : null
+  })()
+  useEffect(() => {
+    if (!selected || !target || estimate.state !== 'ready') return
+    if (estimate.forKey !== estimateKey(selected, target)) return
+    if (openingNext) setTarget({ width: openingNext.width, height: openingNext.height, quality: openingNext.quality })
+    else openingSettled.current.add(selected.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimate, openingNext])
 
   // Convert-mode entry: open the export menu when the flag flips on (e.g. the
   // editor mounts after the homepage "Convert" click) so the format buttons are
@@ -533,7 +563,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
       </div>
 
       <div className="border-t lg:border-t-0 lg:border-l border-slate-200 bg-white shrink-0 lg:shrink lg:overflow-y-auto dark:border-slate-800 dark:bg-slate-900">
-        <div className="p-5 space-y-6">
+        <div className="p-5 flex flex-col gap-6">
           {/* Size — presets + custom dimensions, the primary control, pinned to
               the top of the column. Custom width/height is a collapsed disclosure. */}
           <div>
@@ -1244,7 +1274,10 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               opens the menu and rings the card instead of that section. */}
           <div
             className={[
-              'space-y-2 pt-2 border-t border-slate-200 transition-colors dark:border-slate-800',
+              // ⚠️ On a phone (the stacked layout, below lg) this card comes
+              // FIRST, straight under the preview: last in the column, Download
+              // sat ~1,100px down on a 390×844 screen (James, 2026-10-09).
+              'space-y-2 pt-2 border-t border-slate-200 transition-colors dark:border-slate-800 max-lg:order-first max-lg:border-t-0 max-lg:pt-0',
               convertMode ? 'rounded-lg ring-2 ring-orange-500/60 bg-orange-50/50 -mx-1.5 px-1.5 pb-1.5 dark:bg-orange-500/10' : ''
             ].join(' ')}
           >
@@ -1258,16 +1291,16 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               <div className="flex items-center justify-between">
                 <span className="text-slate-500 dark:text-slate-400">Estimated output</span>
                 <span className="font-medium tabular-nums text-slate-800 dark:text-slate-100">
-                  {estimate.state === 'ready'
+                  {estimate.state === 'ready' && !openingNext
                     ? formatBytes(estimate.bytes)
-                    : estimate.state === 'computing'
+                    : estimate.state === 'computing' || openingNext
                       ? '…'
                       : '—'}
                 </span>
               </div>
               <div className="mt-0.5 flex items-center justify-between text-slate-400">
                 <span>{target.width}×{target.height} {target.format.replace('image/', '').toUpperCase()}</span>
-                {estimate.state === 'ready' && (
+                {estimate.state === 'ready' && !openingNext && (
                   <span>{sizeChange(estimate.bytes, selected.bytes)}</span>
                 )}
               </div>
@@ -1461,8 +1494,15 @@ type Estimate =
   // the cropped result instead of flashing the full source stretched to the crop
   // size. Null when the source image itself changed (nothing valid to hold).
   | { state: 'computing'; previewUrl: string | null }
-  | { state: 'ready'; bytes: number; previewUrl: string }
+  // `forKey` names the image and settings it was encoded for (`estimateKey`):
+  // for one render after a change it is still the OLD target's figure.
+  | { state: 'ready'; bytes: number; previewUrl: string; forKey: string }
   | { state: 'error' }
+
+/** Which image and output settings an estimate was encoded for. */
+function estimateKey(image: SourceImage, target: ResizeTarget): string {
+  return `${image.objectUrl}|${target.width}x${target.height}|${target.format}|${target.quality}|${target.allowTransparency}`
+}
 
 /**
  * Debounced live encode of the currently-selected image at the current output
@@ -1583,7 +1623,7 @@ function useEncodedPreview(
         if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
         previewUrlRef.current = url
         geomKeyRef.current = geomKey
-        setEstimate({ state: 'ready', bytes: blob.size, previewUrl: url })
+        setEstimate({ state: 'ready', bytes: blob.size, previewUrl: url, forKey: estimateKey(selected, target) })
       } catch (err) {
         if (!cancelled) {
           console.error('Encode preview failed', err)

@@ -5,6 +5,7 @@ import {
   computeContentBounds,
   contentCropForMode,
   loadImage,
+  openingLadder,
   type AutoCropMode
 } from '../lib/imageResize'
 import { removeImageBackground, deriveNobgName, type BgProgress } from '../lib/backgroundRemoval'
@@ -366,13 +367,16 @@ interface ImageStore {
   setConvertMode: (on: boolean) => void
 }
 
+// Opens at M, not at the source size — see `openingLadder` (James, 2026-10-09).
 function makeDefaultTarget(img: SourceImage): ResizeTarget {
+  const format = chooseDefaultFormat(img.file)
+  const [first] = openingLadder(img.width, img.height, format)
   return {
-    width: img.width,
-    height: img.height,
+    width: first.width,
+    height: first.height,
     aspectLocked: true,
-    quality: 0.85,
-    format: chooseDefaultFormat(img.file),
+    quality: first.quality,
+    format,
     allowTransparency: true
   }
 }

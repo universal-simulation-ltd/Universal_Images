@@ -289,6 +289,42 @@ export function computePresets(srcW: number, srcH: number): Record<PresetSize, {
   }
 }
 
+/** The JPEG/WebP/AVIF quality a new image opens at. */
+export const OPENING_QUALITY = 0.85
+
+/**
+ * Where a newly opened image starts, and where it steps to while its first
+ * estimate is no smaller than the file it came from.
+ *
+ * ⚠️ James, 2026-10-09: the first thing a newcomer read after opening a photo
+ * was "1% bigger" — the app's whole point is making pictures smaller, and its
+ * opening offer was a slightly larger copy at the same size. So a new image
+ * opens at M (never at the source size of a big photo, which is L), and if
+ * even that would not come out smaller, the editor takes one quiet step at a
+ * time down this list until it does, or the list runs out. Only while nothing
+ * has been touched: the first change the user makes ends it (`ResizePanel`).
+ *
+ * PNG ignores quality, so its only step is the size.
+ */
+export function openingLadder(
+  srcW: number,
+  srcH: number,
+  format: OutputFormat
+): { width: number; height: number; quality: number }[] {
+  const p = computePresets(srcW, srcH)
+  if (format === 'image/png') {
+    return [
+      { ...p.M, quality: OPENING_QUALITY },
+      { ...p.S, quality: OPENING_QUALITY }
+    ]
+  }
+  return [
+    { ...p.M, quality: OPENING_QUALITY },
+    { ...p.M, quality: 0.75 },
+    { ...p.S, quality: 0.75 }
+  ]
+}
+
 /**
  * High-quality resampled draw: when downscaling by more than 2× the browser's
  * default bilinear filter produces visible aliasing. We step the canvas down
