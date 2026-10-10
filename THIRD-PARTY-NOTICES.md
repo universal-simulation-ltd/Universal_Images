@@ -626,10 +626,10 @@ form of a separately written license, or stated as exc
 …
 ```
 
-## @mediapipe/tasks-vision 0.10.35
+## MediaPipe 0.10.35
 
-mediapipe@google.com et al.
-
+The MediaPipe Authors et al.
+<https://github.com/google-ai-edge/mediapipe>
 Licence: Apache-2.0
 
 _Licence text not found in the published package._
@@ -672,7 +672,7 @@ Licence: MIT
 
 _Licence text not found in the published package._
 
-## @unisim/sdk 0.180.11
+## @unisim/sdk 0.183.2
 
 Universal Simulation Ltd et al.
 <https://github.com/universal-simulation-ltd/universal-platform>

@@ -1,7 +1,7 @@
 {
   "app": "universal-images",
   "appVersion": "0.1.0",
-  "generated": "2026-10-09",
+  "generated": "2026-10-10",
   "noticesCount": 40,
   "ships": [
     {
@@ -30,11 +30,13 @@
     },
     {
       "name": "@mediapipe/tasks-vision",
+      "title": "MediaPipe",
       "version": "0.10.35",
       "licence": "Apache-2.0",
+      "repo": "https://github.com/google-ai-edge/mediapipe",
       "homepage": "http://mediapipe.dev",
       "authors": [
-        "mediapipe@google.com"
+        "The MediaPipe Authors"
       ],
       "source": "node_modules"
     },

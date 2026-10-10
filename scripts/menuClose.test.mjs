@@ -19,11 +19,16 @@
 // behaviour was verified in Playwright at 390×844 on 2026-09-18 — before the
 // fix the menu sat over the metadata dialog, after it the dialog is alone.
 //
-// ⚠️ NOT every row. `Open images…` / `Add more images…` deliberately does NOT
-// close the menu: the <input type="file"> it drives is rendered by AppMenu
-// itself, so closing the menu unmounts the input while the OS picker is still
-// up, and the files chosen never arrive. That one is asserted below too, so a
-// later tidy-up does not "finish the job" and break the picker.
+// ⚠️ The picker row is the exception in HOW, not in whether. `Open images…` /
+// `Add more images…` must NOT call closeMenu() itself: the <input type="file">
+// it drives is rendered by AppMenu, so closing the menu as the picker opens
+// unmounts the input while the OS dialog is still up, and the files chosen
+// never arrive. Since SDK 0.183.0 the SDK's AppMenuProvider handles it: a click
+// that reaches a file input HOLDS the menu's close until the input reports
+// `change` or `cancel`, so the menu now closes AFTER the pick (or the cancel),
+// with the files already delivered. That row is asserted below so a later
+// tidy-up does not "finish the job" with an explicit closeMenu() and break the
+// picker.
 
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -69,8 +74,8 @@ for (const [row, setter] of [['Metadata', 'setMetadataOpen'], ['Make a collage�
 // The negative control, and a real constraint — see the header.
 ok(
   /onClick=\{picker\.open\}/.test(menu),
-  'the image picker row still opens the file dialog and nothing else',
-  'closing the menu here unmounts the <input> mid-pick',
+  'the image picker row opens the file dialog and leaves the close to the SDK',
+  'an explicit closeMenu() here unmounts the <input> mid-pick; the SDK closes the menu after the pick instead',
 )
 
 console.log(`\n${pass} passed, ${fail} failed`)
