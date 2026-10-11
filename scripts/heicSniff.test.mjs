@@ -2,8 +2,9 @@
 //
 //   npm run test:heic-sniff
 //
-// Runs under Node's type-stripping, so `imageResize.ts` is imported directly —
-// its only import is a type, and nothing at module scope touches the DOM.
+// Runs under Node's type-stripping, so `heicSniff.ts` is imported directly — it
+// imports nothing. (Not `imageResize.ts`: Node's loader cannot resolve that
+// file's extensionless `./redact` import, which is what this test died on.)
 //
 // This is the Android half of HEIC support. On a desktop the name or the MIME
 // answers; inside the Android app neither can be relied on — the picker hands
@@ -25,7 +26,7 @@
 //   · returning true for any `ftyp` at all → 1 red, the MP4, which is the same
 //     container and not a photograph
 
-import { heicFromBytes } from '../src/lib/imageResize.ts'
+import { heicFromBytes } from '../src/lib/heicSniff.ts'
 
 let failed = 0
 const check = (label, actual, expected) => {
