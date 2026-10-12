@@ -221,7 +221,7 @@ Bu, uçtan uca şifreleme değil sıradan bir bulut depolamadır. Aktarım sıra
 
 ## Her Universal uygulamasının gönderdikleri
 
-Uygulama açıkken, menünün onu kaç kişinin kullandığını gösterebilmesi için sunucumuza kullanımda olduğunu belirten küçük bir sinyal gönderir. Bu sinyal uygulamanın adını, cihaz türünü (web, telefon ya da masaüstü), bu cihazda oluşturulan rastgele bir kimliği ve oturum açtıysanız hesabınızı içerir. Oturum açtıysanız uygulama, hesabınızın etkinlik sayfası için uygulamayı açtığınızı da kaydeder. Bunların hiçbiri görüntülerinizle ilgili bir şey içermez: ne adlarını, ne boyutlarını ne de içeriklerini.
+Web sitesinde uygulama açıkken, menünün onu kaç kişinin kullandığını gösterebilmesi için sunucumuza kullanımda olduğunu belirten küçük bir sinyal gönderir. Bu sinyal uygulamanın adını, tarayıcınızda oluşturulan rastgele bir kimliği ve oturum açtıysanız hesabınızı içerir. Telefon ve masaüstü uygulamaları bu sinyali göndermez ve böyle bir kimlik tutmaz. Oturum açtıysanız uygulama, hesabınızın etkinlik sayfası için uygulamayı açtığınızı da kaydeder. Bunların hiçbiri görüntülerinizle ilgili bir şey içermez: ne adlarını, ne boyutlarını ne de içeriklerini.
 
 Uygulamada üçüncü taraf analiz, izleme ya da reklam yoktur.`,
   },

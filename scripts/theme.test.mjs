@@ -15,6 +15,7 @@
 // The first three are the same assertions as Universal Jukebox's `src/lib/theme.test.ts`, in this
 // repo's plain-node test style.
 
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -69,6 +70,17 @@ ok(
 ok(
   !head.includes("classList.remove('dark')"),
   'never removes the class — light is the default, so it only ever adds',
+)
+
+// public/_headers allows this one inline script by its sha256 (script-src has
+// no 'unsafe-inline'). Edit the script without updating the hash and the live
+// site refuses it: dark-mode visitors get the light page first again.
+const inline = /<script>([\s\S]*?)<\/script>/.exec(head)
+const hash = inline ? `'sha256-${createHash('sha256').update(inline[1]).digest('base64')}'` : null
+ok(
+  !!hash && read('public/_headers').includes(hash),
+  "public/_headers' Content-Security-Policy carries the script's sha256",
+  `public/_headers script-src lacks ${hash}`,
 )
 
 console.log(`\n${pass} passed, ${fail} failed`)

@@ -221,7 +221,7 @@ Si tratta di un normale archivio cloud, non di crittografia end-to-end. È cifra
 
 ## Cosa invia ogni app Universal
 
-Mentre l'app è aperta, invia al nostro server un piccolo segnale per indicare che è in uso, così il menu può mostrare quante persone la usano. Il segnale contiene il nome dell'app, il tipo di dispositivo (web, telefono o computer), un ID casuale creato su questo dispositivo e, se hai effettuato l'accesso, il tuo account. Se hai effettuato l'accesso, l'app registra anche che l'hai aperta, per la pagina delle attività del tuo account. Nessuno dei due include qualcosa sulle tue immagini: né i nomi, né le dimensioni, né il contenuto.
+Sul sito web, mentre l'app è aperta, invia al nostro server un piccolo segnale per indicare che è in uso, così il menu può mostrare quante persone la usano. Il segnale contiene il nome dell'app, un ID casuale creato nel tuo browser e, se hai effettuato l'accesso, il tuo account. Le app per telefono e computer non inviano questo segnale e non conservano alcun ID di questo tipo. Se hai effettuato l'accesso, l'app registra anche che l'hai aperta, per la pagina delle attività del tuo account. Nessuno dei due include qualcosa sulle tue immagini: né i nomi, né le dimensioni, né il contenuto.
 
 Nell'app non ci sono strumenti di analisi, tracciamento o pubblicità di terze parti.`,
   },

@@ -221,7 +221,7 @@ Se trata de un almacenamiento en la nube normal, no de un cifrado de extremo a e
 
 ## Lo que envían todas las aplicaciones Universal
 
-Mientras la aplicación está abierta, envía a nuestro servidor una pequeña señal de que se está usando, para que el menú pueda mostrar cuántas personas la usan. Esa señal contiene el nombre de la aplicación, el tipo de dispositivo (web, teléfono u ordenador), un identificador aleatorio creado en este dispositivo y, si ha iniciado sesión, su cuenta. Si ha iniciado sesión, la aplicación también registra que la ha abierto, para la página de actividad de su cuenta. Ninguna de las dos incluye nada sobre sus imágenes: ni sus nombres, ni sus tamaños, ni su contenido.
+En el sitio web, mientras la aplicación está abierta, envía a nuestro servidor una pequeña señal de que se está usando, para que el menú pueda mostrar cuántas personas la usan. Esa señal contiene el nombre de la aplicación, un identificador aleatorio creado en su navegador y, si ha iniciado sesión, su cuenta. Las aplicaciones para teléfono y ordenador no envían esta señal ni guardan ningún identificador de ese tipo. Si ha iniciado sesión, la aplicación también registra que la ha abierto, para la página de actividad de su cuenta. Ninguna de las dos incluye nada sobre sus imágenes: ni sus nombres, ni sus tamaños, ni su contenido.
 
 La aplicación no incluye analítica, seguimiento ni publicidad de terceros.`,
   },

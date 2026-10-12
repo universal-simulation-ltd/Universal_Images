@@ -91,7 +91,7 @@ choose to do.
 
 ### "Save to desktop" backups keep your original — metadata and all
 
-Every export (Download, convert, crop, resize, and the online store below) is a
+Every export (Download, convert, crop, resize, and the online backup below) is a
 newly encoded image, so it does not carry the original's EXIF, including GPS.
 The **Save to desktop** backup is the deliberate exception: it exists so you can
 re-import it and carry on editing, which needs the untouched original, so it
@@ -107,9 +107,9 @@ first; the backup then holds the scrubbed copy.
 
 ## The one way an image *can* leave — a button you press
 
-### "Store with UNI·SIM"
+### "Back up this image online"
 
-If you are signed in with a Universal ID and you choose to store an image
+If you are signed in with a Universal ID and you choose to back an image up
 online, the app uploads it so you can get it back on another device. It uploads
 the processed image — the same bytes the Download button would have given you.
 
@@ -147,29 +147,38 @@ with the request.
 
 **What this does mean honestly:** those two CDNs see a request from your IP
 address, the way any CDN does. They do not see your image. Both paths can be
-pointed at self-hosted copies at build time (`VITE_BG_REMOVAL_PATH` and its
-face-detection equivalent) if you would rather they never happened — which is
-how the offline builds are made.
+pointed at self-hosted copies at build time (`VITE_BG_REMOVAL_PATH` and
+`VITE_FACE_MODEL_PATH`) if you build the app yourself and would rather they
+never happened. The published website, phone and desktop apps use the CDNs
+above.
 
 ---
 
 ## What the app talks to a server for, even when your images don't
 
-- **Signing in.** Only if you choose to.
+- **Signing in.** Only if you choose to, with a Universal ID. You can delete
+  your account from **Delete my account** in the profile menu; that deletes it
+  in every UNI·SIM app.
 - **"You opened the app".** When you are signed in, the app records one event
   saying the app was opened, so your account's activity page is accurate. It
   does not include anything about your images — not their names, not their
-  sizes. See [`src/UsageTracker.tsx`](src/UsageTracker.tsx).
-- **"This app is in use".** While the app is open and on screen, it tells our
-  server every 45 seconds that this app is in use on this device, so the menu
-  can say how many people use it and how many are using it now. That message
-  holds the app's name and a random ID made on this device, and your account
-  if you are signed in: nothing about what you are working on. See `presence.ts`
-  in `@unisim/sdk`.
+  sizes. This is `UsageTracker` from
+  [`@unisim/sdk`](https://www.npmjs.com/package/@unisim/sdk), mounted in
+  [`src/main.tsx`](src/main.tsx).
+- **"This app is in use" — the website only.** While the website is open and
+  on screen, it tells our server every 45 seconds that this app is in use, so
+  the menu can say how many people use it and how many are using it now. That
+  message holds the app's name and a random ID made in your browser, and your
+  account if you are signed in: nothing about what you are working on. See
+  `presence.ts` in `@unisim/sdk`. **The iPhone, iPad, Android and desktop apps
+  don't send this and keep no such ID** — `presence` is switched off for them
+  in [`src/main.tsx`](src/main.tsx).
 - **The changelog and update notice.**
 
 **There is no third-party analytics, no tracking pixel, and no advertising
-script.**
+script.** The website's Content-Security-Policy
+([`public/_headers`](public/_headers)) only lets the page run scripts from our
+own domain, Google's sign-in script and MediaPipe's face-detection runtime.
 
 ---
 

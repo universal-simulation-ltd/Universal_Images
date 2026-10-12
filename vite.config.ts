@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process'
-import { defineConfig, loadEnv } from 'vite'
+import { appendFileSync, readFileSync } from 'node:fs'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -50,6 +51,46 @@ function resolveBuildSha(): string {
 }
 const BUILD_SHA = resolveBuildSha()
 
+// Serves public/_headers' Content-Security-Policy on the dev server too, as
+// Report-Only, so a new origin shows up in development rather than on the live
+// site. Dev needs a little more than production: Vite's HMR websocket and
+// React Refresh's inline preamble. A hash in script-src would make the browser
+// ignore 'unsafe-inline', so the dev copy drops it. Set CSP_REPORT_LOG to a
+// file path to collect the reports.
+function cspDev(): Plugin {
+  const headers = readFileSync(new URL('./public/_headers', import.meta.url), 'utf8')
+  const line = headers.split('\n').find((l) => /^\s*Content-Security-Policy(-Report-Only)?:/.test(l) && /default-src/.test(l))
+  const policy = line ? line.slice(line.indexOf(':') + 1).trim() : ''
+  const dev = policy
+    // Report-Only can't carry frame-ancestors (the browser warns and ignores it).
+    .replace(/;\s*frame-ancestors[^;]*/, '')
+    .replace(/'sha256-[^']+'\s*/g, '')
+    .replace(/script-src ([^;]*)/, "script-src $1 'unsafe-inline'")
+    .replace(/connect-src ([^;]*)/, 'connect-src $1 ws: wss:')
+  return {
+    name: 'csp-dev',
+    apply: 'serve',
+    configureServer(server) {
+      if (!policy) return
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.startsWith('/__csp-report')) {
+          let body = ''
+          req.on('data', (c) => (body += c))
+          req.on('end', () => {
+            const log = process.env.CSP_REPORT_LOG
+            if (log) appendFileSync(log, body.replace(/\n/g, ' ') + '\n')
+            res.statusCode = 204
+            res.end()
+          })
+          return
+        }
+        res.setHeader('Content-Security-Policy-Report-Only', `${dev}; report-uri /__csp-report`)
+        next()
+      })
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   // Merge .env files with process.env (Cloudflare Pages injects vars into
   // process.env at build time without the VITE_ prefix requirement).
@@ -88,6 +129,7 @@ export default defineConfig(({ mode }) => {
       },
       react(),
       tailwindcss(),
+      cspDev(),
       // The PWA service worker is for the hosted web app only — under Electron's
       // `file://` origin it cannot register and is unnecessary, so skip it.
       ...(isDesktop ? [] : [VitePWA({

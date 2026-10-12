@@ -221,7 +221,7 @@ This is ordinary cloud storage, not end-to-end encryption. It is encrypted in tr
 
 ## What every Universal app sends
 
-While the app is open, it sends our server a small signal that it is in use, so the menu can show how many people use it. That signal holds the app's name, the kind of device (web, phone or desktop), a random ID created on this device and, if you are signed in, your account. If you are signed in, the app also records that you opened it, for your account's activity page. Neither includes anything about your images: not their names, sizes or contents.
+On the website, while the app is open, it sends our server a small signal that it is in use, so the menu can show how many people use it. That signal holds the app's name, a random ID created in your browser and, if you are signed in, your account. The phone and desktop apps do not send this signal and keep no such ID. If you are signed in, the app also records that you opened it, for your account's activity page. Neither includes anything about your images: not their names, sizes or contents.
 
 There is no third-party analytics, tracking or advertising in the app.`,
   },

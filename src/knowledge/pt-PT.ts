@@ -221,7 +221,7 @@ Trata-se de armazenamento na nuvem comum, não de encriptação ponto a ponto. �
 
 ## O que todas as aplicações Universal enviam
 
-Enquanto a aplicação está aberta, envia ao nosso servidor um pequeno sinal de que está a ser usada, para que o menu possa mostrar quantas pessoas a usam. Esse sinal contém o nome da aplicação, o tipo de dispositivo (web, telemóvel ou computador), um ID aleatório criado neste dispositivo e, se tiver sessão iniciada, a sua conta. Se tiver sessão iniciada, a aplicação regista também que a abriu, para a página de atividade da sua conta. Nenhum dos dois inclui qualquer informação sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
+No site, enquanto a aplicação está aberta, envia ao nosso servidor um pequeno sinal de que está a ser usada, para que o menu possa mostrar quantas pessoas a usam. Esse sinal contém o nome da aplicação, um ID aleatório criado no seu navegador e, se tiver sessão iniciada, a sua conta. As aplicações para telemóvel e computador não enviam este sinal nem guardam nenhum ID deste tipo. Se tiver sessão iniciada, a aplicação regista também que a abriu, para a página de atividade da sua conta. Nenhum dos dois inclui qualquer informação sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
 
 Não há análises de terceiros, rastreio nem publicidade na aplicação.`,
   },
