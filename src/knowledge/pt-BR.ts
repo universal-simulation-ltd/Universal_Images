@@ -221,7 +221,7 @@ Isso é um armazenamento em nuvem comum, não criptografia de ponta a ponta. É 
 
 ## O que todo app Universal envia
 
-No site, enquanto o app está aberto, ele envia ao nosso servidor um pequeno sinal de que está em uso, para que o menu possa mostrar quantas pessoas o usam. Esse sinal contém o nome do app, um ID aleatório criado no seu navegador e, se você tiver entrado, a sua conta. Os apps para celular e computador não enviam esse sinal e não guardam nenhum ID desse tipo. Se você tiver entrado, o app também registra que você o abriu, para a página de atividade da sua conta. Nenhum dos dois inclui nada sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
+No site, na primeira vez que você abre o app a cada dia, ele soma um à contagem anônima de aberturas do dia, enviada depois do seu primeiro clique ou tecla pressionada. Essa contagem contém só o nome do app e o tipo de plataforma ("web" no site): nenhum identificador, nenhuma conta e nada sobre o que você faz. Uma marca de "já contado hoje" fica no seu dispositivo e nunca é enviada. Os apps para celular e computador não a enviam. Se você tiver entrado, o app também registra que você o abriu, para a página de atividade da sua conta. Nenhum dos dois inclui nada sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
 
 Não há análise de dados, rastreamento nem publicidade de terceiros no app.`,
   },

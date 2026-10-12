@@ -221,7 +221,7 @@ Se trata de un almacenamiento en la nube normal, no de un cifrado de extremo a e
 
 ## Lo que envían todas las aplicaciones Universal
 
-En el sitio web, mientras la aplicación está abierta, envía a nuestro servidor una pequeña señal de que se está usando, para que el menú pueda mostrar cuántas personas la usan. Esa señal contiene el nombre de la aplicación, un identificador aleatorio creado en su navegador y, si ha iniciado sesión, su cuenta. Las aplicaciones para teléfono y ordenador no envían esta señal ni guardan ningún identificador de ese tipo. Si ha iniciado sesión, la aplicación también registra que la ha abierto, para la página de actividad de su cuenta. Ninguna de las dos incluye nada sobre sus imágenes: ni sus nombres, ni sus tamaños, ni su contenido.
+En el sitio web, la primera vez que abre la aplicación cada día, suma uno al recuento anónimo de aperturas del día, que se envía tras su primer clic o pulsación de tecla. Ese recuento solo contiene el nombre de la aplicación y el tipo de plataforma («web» en el sitio): ningún identificador, ninguna cuenta y nada sobre lo que hace. Una marca de «ya contado hoy» se queda en su dispositivo y nunca se envía. Las aplicaciones para teléfono y ordenador no lo envían. Si ha iniciado sesión, la aplicación también registra que la ha abierto, para la página de actividad de su cuenta. Ninguna de las dos incluye nada sobre sus imágenes: ni sus nombres, ni sus tamaños, ni su contenido.
 
 La aplicación no incluye analítica, seguimiento ni publicidad de terceros.`,
   },

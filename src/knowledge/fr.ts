@@ -221,7 +221,7 @@ Il s'agit d'un stockage cloud ordinaire, pas d'un chiffrement de bout en bout. I
 
 ## Ce que chaque application Universal envoie
 
-Sur le site web, pendant que l'application est ouverte, elle envoie à notre serveur un petit signal indiquant qu'elle est utilisée, afin que le menu puisse afficher combien de personnes l'utilisent. Ce signal contient le nom de l'application, un identifiant aléatoire créé dans votre navigateur et, si vous êtes connecté, votre compte. Les applications pour téléphone et pour ordinateur n'envoient pas ce signal et ne conservent aucun identifiant de ce type. Si vous êtes connecté, l'application enregistre aussi que vous l'avez ouverte, pour la page d'activité de votre compte. Ni l'un ni l'autre ne contient quoi que ce soit sur vos images : ni leur nom, ni leur taille, ni leur contenu.
+Sur le site web, la première fois que vous ouvrez l'application chaque jour, elle ajoute un au décompte anonyme des ouvertures du jour, envoyé après votre premier clic ou votre première frappe au clavier. Ce décompte ne contient que le nom de l'application et le type de plateforme (« web » sur le site) : aucun identifiant, aucun compte et rien sur ce que vous faites. Une marque « déjà compté aujourd'hui » reste sur votre appareil et n'est jamais envoyée. Les applications pour téléphone et pour ordinateur ne l'envoient pas. Si vous êtes connecté, l'application enregistre aussi que vous l'avez ouverte, pour la page d'activité de votre compte. Ni l'un ni l'autre ne contient quoi que ce soit sur vos images : ni leur nom, ni leur taille, ni leur contenu.
 
 L'application ne contient aucun outil d'analyse, de suivi ou de publicité tiers.`,
   },

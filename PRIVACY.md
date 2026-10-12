@@ -165,14 +165,18 @@ above.
   sizes. This is `UsageTracker` from
   [`@unisim/sdk`](https://www.npmjs.com/package/@unisim/sdk), mounted in
   [`src/main.tsx`](src/main.tsx).
-- **"This app is in use" — the website only.** While the website is open and
-  on screen, it tells our server every 45 seconds that this app is in use, so
-  the menu can say how many people use it and how many are using it now. That
-  message holds the app's name and a random ID made in your browser, and your
-  account if you are signed in: nothing about what you are working on. See
-  `presence.ts` in `@unisim/sdk`. **The iPhone, iPad, Android and desktop apps
-  don't send this and keep no such ID** — `presence` is switched off for them
-  in [`src/main.tsx`](src/main.tsx).
+- **An anonymous daily open count — the website only.** Once a day, the first
+  time you open the website (after your first click or key press), it adds one
+  to that day's total for this app. It sends the app's name and the kind of
+  platform ("web") and nothing else: no identifier, no account even if you are
+  signed in, and nothing about what you are working on. A "counted today" mark
+  stays in your browser and is never sent. The totals identify nobody and are
+  kept indefinitely. See `countDailyOpen` in `presence.ts` in `@unisim/sdk`.
+  **The iPhone, iPad, Android and desktop apps don't send it** — `openCount`
+  is switched off for them in [`src/main.tsx`](src/main.tsx). This replaced
+  the old "this app is in use" signal, a random install ID sent every 45
+  seconds, which `@unisim/sdk` 0.187.0 retired: no install ID is sent or kept
+  any more, on any platform.
 - **The changelog and update notice.**
 
 **There is no third-party analytics, no tracking pixel, and no advertising
