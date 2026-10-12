@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Chip, SignInDialog, useUniversal, useUser, useOrg, useCredits, useHostedUploads, useAppFreeToken, type HostedUpload } from '@unisim/sdk'
+import { Chip, SignInDialog, useUniversal, useUser, useOrg, useCredits, useHostedUploads, useAppFreeToken, withReturnUrl, type HostedUpload } from '@unisim/sdk'
 import { useImageStore } from '../stores/imageStore'
 import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib/dialog'
 import { storeCurrentImage, deleteHostedImage, openHostedImage, HostedObjectMissingError } from '../lib/hostedStore'
@@ -293,7 +293,7 @@ export default function HostedStoreDialog() {
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                       Online images are kept with your company, and your Universal ID doesn’t have one yet. Setting one up is free.
                     </p>
-                    <a href={SET_UP_COMPANY_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
+                    <a href={withReturnUrl(SET_UP_COMPANY_URL)} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-lg bg-orange-700 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-800">
                       Set up a company →
                     </a>
                   </div>
