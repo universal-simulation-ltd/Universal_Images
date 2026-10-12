@@ -31,11 +31,11 @@ const universalConfig = {
   supabaseAnonKey: __SUPABASE_ANON_KEY__ || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5Z2Z4Z2Fsb2pvanBweG1oZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTY4MjUsImV4cCI6MjA5NDMzMjgyNX0.hLy_vt9vY_rdPKF3nL32yAuMCD604E3CH5VM7D7CaNE',
   product: 'images' as const,
   cookieDomain: !isDesktop && import.meta.env.PROD ? '.unisim.co.uk' : undefined,
-  // The suite user count (the SDK's presence beat) runs on the website only.
-  // The phone app (Capacitor, built in the same `desktop` mode) and the desktop
-  // app (Electron) never send it, so they keep no install id and the store
-  // privacy answers carry no Device ID.
-  presence: !isNativeShell() && !isDesktop,
+  // The SDK's anonymous daily open count (0.187.0: once a day, product + kind
+  // of device, no identifier) runs on the website only. The phone app
+  // (Capacitor, built in the same `desktop` mode) and the desktop app
+  // (Electron) never send it, so the store privacy answers stay "no data".
+  openCount: !isNativeShell() && !isDesktop,
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
