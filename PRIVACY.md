@@ -7,7 +7,8 @@ go and read it.
 
 The short version: **your images are resized, converted, blurred and stripped
 by your own browser.** They are not uploaded to us to be processed, and there
-is no copy of them on our servers unless you pressed a button that says so.
+is no copy of them on our servers. There is no sign-in, either: no account to
+make, and nothing to hold one against.
 
 ---
 
@@ -91,7 +92,7 @@ choose to do.
 
 ### "Save to desktop" backups keep your original — metadata and all
 
-Every export (Download, convert, crop, resize, and the online backup below) is a
+Every export (Download, convert, crop, resize, the collage) is a
 newly encoded image, so it does not carry the original's EXIF, including GPS.
 The **Save to desktop** backup is the deliberate exception: it exists so you can
 re-import it and carry on editing, which needs the untouched original, so it
@@ -102,26 +103,6 @@ exception: it is converted to JPEG as it is added, which already drops its
 EXIF, so its backup holds that JPEG.) It never leaves your device unless you send
 it somewhere — and if you might, press **Scrub metadata** in the metadata panel
 first; the backup then holds the scrubbed copy.
-
----
-
-## The one way an image *can* leave — a button you press
-
-### "Back up this image online"
-
-If you are signed in with a Universal ID and you choose to back an image up
-online, the app uploads it so you can get it back on another device. It uploads
-the processed image — the same bytes the Download button would have given you.
-
-- The code: [`src/lib/hostedStore.ts`](src/lib/hostedStore.ts)
-- The dialog that asks you: [`src/components/HostedStoreDialog.tsx`](src/components/HostedStoreDialog.tsx)
-- Deleting it in the app deletes it from storage.
-
-⚠️ **This is ordinary cloud storage, not end-to-end encryption.** It is
-encrypted in transit and at rest, and access is restricted to your own account,
-but we hold the keys — so this is a promise about our conduct, not a
-mathematical guarantee. If that distinction matters for a particular photo,
-don't store it; the app works completely without an account.
 
 ---
 
@@ -156,33 +137,21 @@ above.
 
 ## What the app talks to a server for, even when your images don't
 
-- **Signing in.** Only if you choose to, with a Universal ID. You can delete
-  your account from **Delete my account** in the profile menu; that deletes it
-  in every UNI·SIM app.
-- **"You opened the app".** When you are signed in, the app records one event
-  saying the app was opened, so your account's activity page is accurate. It
-  does not include anything about your images — not their names, not their
-  sizes. This is `UsageTracker` from
-  [`@unisim/sdk`](https://www.npmjs.com/package/@unisim/sdk), mounted in
-  [`src/main.tsx`](src/main.tsx).
-- **An anonymous daily open count — the website only.** Once a day, the first
-  time you open the website (after your first click or key press), it adds one
-  to that day's total for this app. It sends the app's name and the kind of
-  platform ("web") and nothing else: no identifier, no account even if you are
-  signed in, and nothing about what you are working on. A "counted today" mark
-  stays in your browser and is never sent. The totals identify nobody and are
-  kept indefinitely. See `countDailyOpen` in `presence.ts` in `@unisim/sdk`.
-  **The iPhone, iPad, Android and desktop apps don't send it** — `openCount`
-  is switched off for them in [`src/main.tsx`](src/main.tsx). This replaced
-  the old "this app is in use" signal, a random install ID sent every 45
-  seconds, which `@unisim/sdk` 0.187.0 retired: no install ID is sent or kept
-  any more, on any platform.
+- **Nothing about you.** There is no sign-in in any build — the website, the
+  phone apps or the desktop app (`noAccounts: true` in
+  [`src/main.tsx`](src/main.tsx)) — so there is no account, no "you opened the
+  app" event and no online copy of anything. The `@unisim/sdk` anonymous daily
+  open count is off with it, so the app does not count you either: no
+  identifier, no install ID, no tally of opens, on any platform. (Until
+  2026-10-20 a Universal ID could keep a backup of an image online. That was
+  removed; the **Save to desktop** backup file above does the same job without
+  leaving your hands.)
 - **The changelog and update notice.**
 
 **There is no third-party analytics, no tracking pixel, and no advertising
 script.** The website's Content-Security-Policy
 ([`public/_headers`](public/_headers)) only lets the page run scripts from our
-own domain, Google's sign-in script and MediaPipe's face-detection runtime.
+own domain and MediaPipe's face-detection runtime.
 
 ---
 

@@ -1456,14 +1456,14 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     role="menuitem"
                     onClick={() => {
                       setExportMenuOpen(false)
-                      useImageStore.setState({ hostedStoreOpen: true })
+                      useImageStore.setState({ backupOpen: true })
                     }}
                     className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-orange-50/70 hover:text-orange-800 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-300 transition-colors"
                   >
                     <svg viewBox="0 0 20 20" className="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M16 17H4a1.5 1.5 0 0 1-1.5-1.5v-11A1.5 1.5 0 0 1 4 3h8l4 4v8.5A1.5 1.5 0 0 1 16 17z M14 17v-6H6v6 M6 3v4h6" />
                     </svg>
-                    Back up online to unisim.co.uk
+                    Back up to edit later
                   </button>
                 </div>
               )}

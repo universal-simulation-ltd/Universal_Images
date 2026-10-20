@@ -352,9 +352,9 @@ interface ImageStore {
    * Keyed by image id; the selected image's state lives in the active fields.
    */
   edits: Record<string, ImageEdit>
-  /** "Hosted by UNI·SIM" cloud-store dialog open state. */
-  hostedStoreOpen: boolean
-  setHostedStoreOpen: (open: boolean) => void
+  /** "Back up this image" (backup file) dialog open state. */
+  backupOpen: boolean
+  setBackupOpen: (open: boolean) => void
   /** The collage dialog — several of the open images on one canvas. */
   collageOpen: boolean
   setCollageOpen: (open: boolean) => void
@@ -439,8 +439,8 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   loading: false,
   loadErrors: [],
   dismissLoadErrors: () => set({ loadErrors: [] }),
-  hostedStoreOpen: false,
-  setHostedStoreOpen: (hostedStoreOpen) => set({ hostedStoreOpen }),
+  backupOpen: false,
+  setBackupOpen: (backupOpen) => set({ backupOpen }),
   collageOpen: false,
   setCollageOpen: (collageOpen) => set({ collageOpen }),
   convertMode: false,

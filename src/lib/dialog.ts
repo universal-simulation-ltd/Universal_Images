@@ -27,7 +27,7 @@
 //
 // The panel is a flex COLUMN and the body is the only part that scrolls, so the
 // header and the action row stay pinned inside the dialog's own box. Scrolling
-// the whole panel instead — which is what `HostedStoreDialog` used to do — hides
+// the whole panel instead — which is what the backup dialog used to do — hides
 // the title as soon as there is more content than room, which on a phone is
 // nearly always.
 

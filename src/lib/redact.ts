@@ -5,7 +5,7 @@ import type { RedactBox, SourceCrop } from '../types/image'
  * number plate, a face the detector missed. The Universal PDF tool's model:
  * while you edit they are movable markup sitting over the image (the source is
  * never rewritten, the way a crop isn't), and every way out of the app —
- * Download, the ZIP, Back up online, the collage — paints them into the pixels
+ * Download, the ZIP, the collage — paints them into the pixels
  * of the file it writes.
  *
  * ⚠️ Every exit has to go through `paintRedactions` (or, in the collage, the

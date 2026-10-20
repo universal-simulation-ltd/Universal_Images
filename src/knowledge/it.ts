@@ -154,7 +154,7 @@ Il rilevamento automatico è un aiuto, non una garanzia. Può non trovare volti 
 
 Oscura disegna riquadri pieni sull'immagine: trascina per coprire qualcosa, oppure tocca per lasciare un riquadro e poi spostalo o ridimensionalo. Serve per un nome, una targa, uno schermo o un volto che il rilevamento non ha trovato. Scegli il colore nella sezione «Redact areas».
 
-Mentre modifichi, i riquadri stanno sopra e si possono ancora spostare; l'originale non cambia. L'immagine che scarichi, salvi online o metti in un collage li ha dipinti nei suoi pixel, quindi da quel file non si può recuperare nulla di ciò che coprono. Un file di backup di Universal Images è diverso: conserva l'originale con i riquadri ancora spostabili, quindi condividi solo l'immagine scaricata.
+Mentre modifichi, i riquadri stanno sopra e si possono ancora spostare; l'originale non cambia. L'immagine che scarichi o metti in un collage li ha dipinti nei suoi pixel, quindi da quel file non si può recuperare nulla di ciò che coprono. Un file di backup di Universal Images è diverso: conserva l'originale con i riquadri ancora spostabili, quindi condividi solo l'immagine scaricata.
 
 ## Collage
 
@@ -213,15 +213,9 @@ La prima volta che usi la rimozione dello sfondo o la sfocatura dei volti, l'app
 
 Se ingrandisci la mappa della posizione fino al livello di contea, la versione web dell'app scarica il file dei confini di un Paese dal sito di Universal Images. La richiesta indica il Paese, non le coordinate della foto.
 
-## Solo se lo scegli tu: archiviazione online
-
-Se accedi con il tuo Universal ID e scegli di archiviare un'immagine con UNI·SIM, l'app carica l'immagine finita, la stessa che ti darebbe il pulsante Scarica, così puoi recuperarla su un altro dispositivo. Archiviare immagini online è gratuito con un Universal ID. Gli account gratuiti hanno un limite generoso; se mai lo raggiungi, elimina un'immagine che non ti serve più. Eliminando un'immagine, questa viene rimossa dall'archivio.
-
-Si tratta di un normale archivio cloud, non di crittografia end-to-end. È cifrato in transito e a riposo e l'accesso è limitato al tuo account, ma le chiavi le abbiamo noi. Se per una certa immagine questo è importante, non archiviarla; l'app funziona pienamente anche senza account.
-
 ## Cosa invia ogni app Universal
 
-Sul sito web, la prima volta che apri l'app ogni giorno, aggiunge uno al conteggio anonimo delle aperture del giorno, inviato dopo il tuo primo clic o tasto premuto. Quel conteggio contiene solo il nome dell'app e il tipo di piattaforma («web» sul sito): nessun identificativo, nessun account e niente su ciò che fai. Un segno «già contato oggi» resta sul tuo dispositivo e non viene mai inviato. Le app per telefono e computer non lo inviano. Se hai effettuato l'accesso, l'app registra anche che l'hai aperta, per la pagina delle attività del tuo account. Nessuno dei due include qualcosa sulle tue immagini: né i nomi, né le dimensioni, né il contenuto.
+Non c'è nessun accesso e nessun conteggio d'uso: l'app non ci dice quando la apri né cosa ci fai, e non c'è alcun account a cui collegare qualcosa. Niente di ciò che invia include qualcosa sulle tue immagini: né i nomi, né le dimensioni, né il contenuto.
 
 Nell'app non ci sono strumenti di analisi, tracciamento o pubblicità di terze parti.`,
   },

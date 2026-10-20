@@ -154,7 +154,7 @@ La détection automatique est une aide, pas une garantie. Elle peut manquer des 
 
 Caviarder dessine des rectangles pleins sur l'image : faites glisser pour masquer quelque chose, ou touchez pour poser un rectangle, puis déplacez-le ou redimensionnez-le. Utile pour un nom, une plaque d'immatriculation, un écran ou un visage que la détection a manqué. Choisissez la couleur dans la section « Redact areas ».
 
-Pendant la modification, les rectangles restent au-dessus et peuvent encore être déplacés ; votre original n'est pas modifié. L'image que vous téléchargez, sauvegardez en ligne ou placez dans un collage les contient peints dans ses pixels : rien de ce qu'ils couvrent ne peut être récupéré à partir de ce fichier. Un fichier de sauvegarde Universal Images est différent : il conserve l'original avec des rectangles encore déplaçables. Ne partagez donc que l'image téléchargée.
+Pendant la modification, les rectangles restent au-dessus et peuvent encore être déplacés ; votre original n'est pas modifié. L'image que vous téléchargez ou placez dans un collage les contient peints dans ses pixels : rien de ce qu'ils couvrent ne peut être récupéré à partir de ce fichier. Un fichier de sauvegarde Universal Images est différent : il conserve l'original avec des rectangles encore déplaçables. Ne partagez donc que l'image téléchargée.
 
 ## Les collages
 
@@ -213,15 +213,9 @@ La première fois que vous utilisez la suppression de l'arrière-plan ou le flou
 
 Si vous zoomez sur la carte de localisation jusqu'au niveau du département ou de la région, la version web de l'application télécharge le fichier de limites d'un pays depuis le site web d'Universal Images. Cette requête indique le pays, pas les coordonnées de la photo.
 
-## Uniquement si vous le choisissez : le stockage en ligne
-
-Si vous vous connectez avec votre Universal ID et choisissez de stocker une image chez UNI·SIM, l'application envoie l'image finale, la même que celle que vous donnerait le bouton Télécharger, pour que vous puissiez la récupérer sur un autre appareil. Le stockage d'images en ligne est gratuit avec un Universal ID. Les comptes gratuits disposent d'une limite généreuse ; si vous l'atteignez un jour, supprimez une image dont vous n'avez plus besoin. Supprimer une image la retire du stockage.
-
-Il s'agit d'un stockage cloud ordinaire, pas d'un chiffrement de bout en bout. Il est chiffré pendant le transfert et au repos, et l'accès est limité à votre compte, mais c'est nous qui détenons les clés. Si cela compte pour une image en particulier, ne la stockez pas ; l'application fonctionne entièrement sans compte.
-
 ## Ce que chaque application Universal envoie
 
-Sur le site web, la première fois que vous ouvrez l'application chaque jour, elle ajoute un au décompte anonyme des ouvertures du jour, envoyé après votre premier clic ou votre première frappe au clavier. Ce décompte ne contient que le nom de l'application et le type de plateforme (« web » sur le site) : aucun identifiant, aucun compte et rien sur ce que vous faites. Une marque « déjà compté aujourd'hui » reste sur votre appareil et n'est jamais envoyée. Les applications pour téléphone et pour ordinateur ne l'envoient pas. Si vous êtes connecté, l'application enregistre aussi que vous l'avez ouverte, pour la page d'activité de votre compte. Ni l'un ni l'autre ne contient quoi que ce soit sur vos images : ni leur nom, ni leur taille, ni leur contenu.
+Il n'y a ni connexion ni décompte d'utilisation : l'application ne nous dit pas quand vous l'ouvrez ni ce que vous y faites, et il n'existe aucun compte auquel rattacher quoi que ce soit. Rien de ce qu'elle envoie ne contient quoi que ce soit sur vos images : ni leur nom, ni leur taille, ni leur contenu.
 
 L'application ne contient aucun outil d'analyse, de suivi ou de publicité tiers.`,
   },

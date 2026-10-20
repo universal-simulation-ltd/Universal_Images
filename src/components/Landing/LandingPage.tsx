@@ -314,7 +314,6 @@ export default function LandingPage() {
                 proof="https://github.com/universal-simulation-ltd/Universal_Images/blob/main/PRIVACY.md"
                 subject="Your images"
                 plural
-                except="backup"
               />
             </div>
           </div>

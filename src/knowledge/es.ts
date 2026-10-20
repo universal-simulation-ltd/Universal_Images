@@ -154,7 +154,7 @@ La detección automática es una ayuda, no una garantía. Puede pasar por alto c
 
 Ocultar dibuja recuadros sólidos sobre la imagen: arrastre para tapar algo, o toque para colocar un recuadro y después muévalo o cambie su tamaño. Sirve para un nombre, una matrícula, una pantalla o una cara que la detección no encontró. Elija el color en la sección «Redact areas».
 
-Mientras edita, los recuadros quedan por encima y aún se pueden mover; el original no cambia. La imagen que descarga, guarda en línea o pone en un collage los lleva pintados en sus píxeles, así que nada de lo que hay debajo se puede recuperar de ese archivo. Un archivo de copia de seguridad de Universal Images es distinto: conserva el original con los recuadros todavía movibles, así que comparta solo la imagen descargada.
+Mientras edita, los recuadros quedan por encima y aún se pueden mover; el original no cambia. La imagen que descarga o pone en un collage los lleva pintados en sus píxeles, así que nada de lo que hay debajo se puede recuperar de ese archivo. Un archivo de copia de seguridad de Universal Images es distinto: conserva el original con los recuadros todavía movibles, así que comparta solo la imagen descargada.
 
 ## Collages
 
@@ -213,15 +213,9 @@ La primera vez que use la eliminación de fondo o el difuminado de caras, es pos
 
 Si acerca el mapa de ubicación al nivel de provincia o región, la versión web de la aplicación descarga el archivo de límites de un país desde el sitio web de Universal Images. Esa solicitud indica el país, no las coordenadas de la foto.
 
-## Solo cuando usted lo decide: guardar en internet
-
-Si inicia sesión con su Universal ID y decide guardar una imagen en UNI·SIM, la aplicación sube la imagen terminada, la misma que le daría el botón Descargar, para que pueda recuperarla en otro dispositivo. Guardar imágenes en línea es gratis con un Universal ID. Las cuentas gratuitas tienen un límite generoso; si alguna vez lo alcanza, elimine una imagen que ya no necesite. Al eliminar una imagen, se borra del almacenamiento.
-
-Se trata de un almacenamiento en la nube normal, no de un cifrado de extremo a extremo. Está cifrado en tránsito y en reposo y el acceso está limitado a su cuenta, pero nosotros tenemos las claves. Si eso le importa en el caso de una imagen concreta, no la guarde; la aplicación funciona por completo sin cuenta.
-
 ## Lo que envían todas las aplicaciones Universal
 
-En el sitio web, la primera vez que abre la aplicación cada día, suma uno al recuento anónimo de aperturas del día, que se envía tras su primer clic o pulsación de tecla. Ese recuento solo contiene el nombre de la aplicación y el tipo de plataforma («web» en el sitio): ningún identificador, ninguna cuenta y nada sobre lo que hace. Una marca de «ya contado hoy» se queda en su dispositivo y nunca se envía. Las aplicaciones para teléfono y ordenador no lo envían. Si ha iniciado sesión, la aplicación también registra que la ha abierto, para la página de actividad de su cuenta. Ninguna de las dos incluye nada sobre sus imágenes: ni sus nombres, ni sus tamaños, ni su contenido.
+No hay inicio de sesión ni recuento de uso: la aplicación no nos dice cuándo la abre ni lo que hace en ella, y no hay ninguna cuenta a la que vincular nada. Nada de lo que envía incluye nada sobre sus imágenes: ni sus nombres, ni sus tamaños, ni su contenido.
 
 La aplicación no incluye analítica, seguimiento ni publicidad de terceros.`,
   },

@@ -3,13 +3,13 @@ import { saveBlob } from '@unisim/media/save'
 import type { OutputFormat, RedactBox, ResizeTarget, SourceCrop } from '../types/image'
 import { loadImage } from './imageResize'
 
-// "Save to desktop" backup for Universal Images — the editable middle tier
-// between the free on-device resize+download and the paid "Hosted by UNI·SIM"
-// cloud. A backup bundles the ORIGINAL (un-resized) source image plus the crop
-// and target settings, so re-importing drops you back into editing exactly
-// where you left off. This is deliberately NOT the processed output the
-// Download button / hosted store produce — re-importing a resized image would
-// lose the original and the crop.
+// "Save to desktop" backup for Universal Images — the editable copy, beside the
+// free on-device resize+download (the online "Hosted by UNI·SIM" tier went
+// with sign-in on 2026-10-20). A backup bundles the ORIGINAL (un-resized)
+// source image plus the crop and target settings, so re-importing drops you
+// back into editing exactly where you left off. This is deliberately NOT the
+// processed output the Download button produces — re-importing a resized
+// image would lose the original and the crop.
 
 const MAGIC = 'universal-images-backup'
 const VERSION = 1

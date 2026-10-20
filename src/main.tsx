@@ -1,8 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { UniversalProvider, isNativeShell } from '@unisim/sdk'
+import { UniversalProvider } from '@unisim/sdk'
 import App from './App'
-import { UsageTracker } from '@unisim/sdk'
 import { useImageStore } from './stores/imageStore'
 import './index.css'
 
@@ -24,24 +23,29 @@ const isDesktop = import.meta.env.MODE === 'desktop'
 // (publishable anon key — safe to ship; RLS is the security boundary). A
 // placeholder fallback left the SDK on a dead project when the build lacked the
 // VITE_SUPABASE_*/SUPABASE_* env vars, so the suite session never resolved and
-// the navbar showed no profile/avatar. The local-first image tool still works
-// without auth; env vars (via the vite define) still override.
+// the navbar showed no profile/avatar. Env vars (via the vite define) still
+// override.
+//
+// No sign-in, in every build: web, phone and desktop (James, 2026-10-20: no
+// logins in first iterations unless they improve the experience;
+// Docs_UNI_SIM/login-free-plan.md). The only thing a Universal ID ever gave
+// here was "Back up this image online", and it is gone; the backup FILE (Save
+// to desktop, Import a backup) does that job with no account. `noAccounts:
+// true` drops the account rows and keeps the app signed out of the suite
+// session; with it the SDK's anonymous open count is off too (SDK 0.187), as
+// in Charts, Beam and the rest. No <UsageTracker /> either: it only ever
+// recorded signed-in opens.
 const universalConfig = {
   supabaseUrl: __SUPABASE_URL__ || 'https://rygfxgalojojppxmhddo.supabase.co',
   supabaseAnonKey: __SUPABASE_ANON_KEY__ || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5Z2Z4Z2Fsb2pvanBweG1oZGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTY4MjUsImV4cCI6MjA5NDMzMjgyNX0.hLy_vt9vY_rdPKF3nL32yAuMCD604E3CH5VM7D7CaNE',
   product: 'images' as const,
   cookieDomain: !isDesktop && import.meta.env.PROD ? '.unisim.co.uk' : undefined,
-  // The SDK's anonymous daily open count (0.187.0: once a day, product + kind
-  // of device, no identifier) runs on the website only. The phone app
-  // (Capacitor, built in the same `desktop` mode) and the desktop app
-  // (Electron) never send it, so the store privacy answers stay "no data".
-  openCount: !isNativeShell() && !isDesktop,
+  noAccounts: true,
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <UniversalProvider config={universalConfig}>
-      <UsageTracker />
       <App />
     </UniversalProvider>
   </React.StrictMode>

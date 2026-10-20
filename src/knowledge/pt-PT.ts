@@ -154,7 +154,7 @@ A deteção automática é uma ajuda, não uma garantia. Pode falhar rostos pequ
 
 Ocultar desenha retângulos sólidos sobre a imagem: arraste para tapar algo, ou toque para colocar um retângulo e depois mova-o ou redimensione-o. Serve para um nome, uma matrícula, um ecrã ou um rosto que a deteção falhou. Escolha a cor na secção «Redact areas».
 
-Enquanto edita, os retângulos ficam por cima e ainda podem ser movidos; o original não é alterado. A imagem que transfere, guarda online ou coloca numa colagem leva-os pintados nos píxeis, pelo que nada por baixo deles pode ser recuperado desse ficheiro. Um ficheiro de cópia de segurança do Universal Images é diferente: guarda o original com os retângulos ainda móveis, por isso partilhe apenas a imagem transferida.
+Enquanto edita, os retângulos ficam por cima e ainda podem ser movidos; o original não é alterado. A imagem que transfere ou coloca numa colagem leva-os pintados nos píxeis, pelo que nada por baixo deles pode ser recuperado desse ficheiro. Um ficheiro de cópia de segurança do Universal Images é diferente: guarda o original com os retângulos ainda móveis, por isso partilhe apenas a imagem transferida.
 
 ## Colagens
 
@@ -213,15 +213,9 @@ Da primeira vez que usar a remoção de fundo ou a desfocagem de rostos, a aplic
 
 Se aproximar o mapa de localização até ao nível do distrito, a versão web da aplicação transfere o ficheiro de limites de um país a partir do site do Universal Images. Esse pedido indica o país, não as coordenadas da fotografia.
 
-## Só quando escolher: guardar online
-
-Se iniciar sessão com o seu Universal ID e optar por guardar uma imagem na UNI·SIM, a aplicação carrega a imagem final, a mesma que o botão Transferir lhe daria, para que a possa recuperar noutro dispositivo. Guardar imagens online é gratuito com um Universal ID. As contas gratuitas têm um limite generoso; se alguma vez o atingir, elimine uma imagem de que já não precise. Eliminar uma imagem apaga-a do armazenamento.
-
-Trata-se de armazenamento na nuvem comum, não de encriptação ponto a ponto. É encriptado em trânsito e em repouso e o acesso está limitado à sua conta, mas somos nós que detemos as chaves. Se isso for importante para uma determinada imagem, não a guarde; a aplicação funciona plenamente sem conta.
-
 ## O que todas as aplicações Universal enviam
 
-No site, na primeira vez que abre a aplicação em cada dia, soma um à contagem anónima de aberturas do dia, enviada depois do seu primeiro clique ou da primeira tecla premida. Essa contagem contém apenas o nome da aplicação e o tipo de plataforma («web» no site): nenhum identificador, nenhuma conta e nada sobre o que faz. Uma marca de «já contado hoje» fica no seu dispositivo e nunca é enviada. As aplicações para telemóvel e computador não a enviam. Se tiver sessão iniciada, a aplicação regista também que a abriu, para a página de atividade da sua conta. Nenhum dos dois inclui qualquer informação sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
+Não há início de sessão nem contagem de utilização: a aplicação não nos diz quando a abre nem o que faz nela, e não existe nenhuma conta à qual associar seja o que for. Nada do que envia inclui qualquer informação sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
 
 Não há análises de terceiros, rastreio nem publicidade na aplicação.`,
   },

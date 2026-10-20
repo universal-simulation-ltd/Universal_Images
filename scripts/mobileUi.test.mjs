@@ -123,7 +123,7 @@ ok(
   overlays.length ? `hand-rolled in: ${overlays.join(', ')}` : '',
 )
 
-const dialogs = ['src/components/Metadata/MetadataDialog.tsx', 'src/components/HostedStoreDialog.tsx']
+const dialogs = ['src/components/Metadata/MetadataDialog.tsx', 'src/components/BackupDialog.tsx']
 for (const f of dialogs) {
   const src = read(f)
   const name = f.split('/').pop()

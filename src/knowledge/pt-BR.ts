@@ -154,7 +154,7 @@ A detecção automática é uma ajuda, não uma garantia. Ela pode deixar passar
 
 Ocultar desenha retângulos sólidos sobre a imagem: arraste para cobrir algo, ou toque para colocar um retângulo e depois mova ou redimensione. Serve para um nome, uma placa de carro, uma tela ou um rosto que a detecção não encontrou. Escolha a cor na seção "Redact areas".
 
-Enquanto você edita, os retângulos ficam por cima e ainda podem ser movidos; o original não muda. A imagem que você baixa, salva on-line ou coloca numa colagem leva os retângulos pintados nos pixels, então nada embaixo deles pode ser recuperado desse arquivo. Um arquivo de backup do Universal Images é diferente: ele guarda o original com os retângulos ainda móveis, então compartilhe só a imagem baixada.
+Enquanto você edita, os retângulos ficam por cima e ainda podem ser movidos; o original não muda. A imagem que você baixa ou coloca numa colagem leva os retângulos pintados nos pixels, então nada embaixo deles pode ser recuperado desse arquivo. Um arquivo de backup do Universal Images é diferente: ele guarda o original com os retângulos ainda móveis, então compartilhe só a imagem baixada.
 
 ## Colagens
 
@@ -213,15 +213,9 @@ Na primeira vez que você usa a remoção de fundo ou o desfoque de rostos, o ap
 
 Se você aproximar o mapa de localização até o nível de condado, a versão web do app baixa o arquivo de limites de um país do site do Universal Images. Essa solicitação informa o país, não as coordenadas da foto.
 
-## Só quando você escolhe: armazenamento na internet
-
-Se você entrar com o seu Universal ID e escolher guardar uma imagem na UNI·SIM, o app envia a imagem final, a mesma que o botão Baixar lhe daria, para que você possa recuperá-la em outro dispositivo. Guardar imagens online é gratuito com um Universal ID. Contas gratuitas têm um limite generoso; se algum dia você chegar a ele, exclua uma imagem de que não precisa mais. Excluir uma imagem a remove do armazenamento.
-
-Isso é um armazenamento em nuvem comum, não criptografia de ponta a ponta. É criptografado em trânsito e em repouso, e o acesso é limitado à sua conta, mas nós temos as chaves. Se isso for importante para uma imagem específica, não a guarde; o app funciona completamente sem conta.
-
 ## O que todo app Universal envia
 
-No site, na primeira vez que você abre o app a cada dia, ele soma um à contagem anônima de aberturas do dia, enviada depois do seu primeiro clique ou tecla pressionada. Essa contagem contém só o nome do app e o tipo de plataforma ("web" no site): nenhum identificador, nenhuma conta e nada sobre o que você faz. Uma marca de "já contado hoje" fica no seu dispositivo e nunca é enviada. Os apps para celular e computador não a enviam. Se você tiver entrado, o app também registra que você o abriu, para a página de atividade da sua conta. Nenhum dos dois inclui nada sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
+Não há login nem contagem de uso: o app não nos diz quando você o abre nem o que você faz nele, e não há conta à qual ligar nada. Nada do que ele envia inclui algo sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
 
 Não há análise de dados, rastreamento nem publicidade de terceiros no app.`,
   },

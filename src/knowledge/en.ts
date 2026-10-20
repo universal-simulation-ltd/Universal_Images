@@ -154,7 +154,7 @@ Automatic detection is a help, not a guarantee. It can miss faces that are small
 
 Redact draws solid boxes over the picture: drag to cover something, or tap to drop a box and then move or resize it. Use it for a name, a number plate, a screen, or a face the detector missed. Pick the box colour in the Redact areas section.
 
-While you edit, the boxes sit on top and can still be moved; your original is not changed. The picture you download, back up online or put in a collage has them painted into its pixels, so nothing under a box can be recovered from that file. A Universal Images backup file is different: it keeps the original with the boxes still movable, so only share the downloaded picture.
+While you edit, the boxes sit on top and can still be moved; your original is not changed. The picture you download or put in a collage has them painted into its pixels, so nothing under a box can be recovered from that file. A Universal Images backup file is different: it keeps the original with the boxes still movable, so only share the downloaded picture.
 
 ## Collages
 
@@ -213,15 +213,9 @@ The first time you use background removal or face blurring, the app may download
 
 If you zoom the location map in to county level, the web version of the app downloads one country's boundary file from the Universal Images website. That request names the country, not the photo's coordinates.
 
-## Only when you choose: storing online
-
-If you sign in with your Universal ID and choose to store an image with UNI·SIM, the app uploads the finished image, the same one the Download button would give you, so you can get it back on another device. Storing images online is free with a Universal ID. Free accounts have a generous limit; if you ever reach it, delete an image you no longer need. Deleting an image removes it from storage.
-
-This is ordinary cloud storage, not end-to-end encryption. It is encrypted in transit and at rest and access is limited to your account, but we hold the keys. If that matters for a particular picture, do not store it; the app works fully without an account.
-
 ## What every Universal app sends
 
-On the website, the first time you open the app each day, it adds one to an anonymous count of daily opens, sent after your first click or key press. That count holds only the app's name and the kind of platform (on the website, "web"): no identifier, no account and nothing about what you do. A "counted today" mark stays on your device and is never sent. The phone and desktop apps do not send it. If you are signed in, the app also records that you opened it, for your account's activity page. Neither includes anything about your images: not their names, sizes or contents.
+There is no sign-in and no usage count: the app does not tell us when you open it or what you do in it, and it has no account to tie anything to. Nothing it sends includes anything about your images: not their names, sizes or contents.
 
 There is no third-party analytics, tracking or advertising in the app.`,
   },

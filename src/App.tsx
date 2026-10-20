@@ -5,7 +5,7 @@ import ProductLogo from './components/Header/ProductLogo'
 import LandingPage from './components/Landing/LandingPage'
 import ImageGrid from './components/Grid/ImageGrid'
 import ResizePanel from './components/Resize/ResizePanel'
-import HostedStoreDialog from './components/HostedStoreDialog'
+import BackupDialog from './components/BackupDialog'
 import LoadErrorNotice from './components/LoadErrorNotice'
 import MetadataDialog from './components/Metadata/MetadataDialog'
 import CollageDialog from './components/Collage/CollageDialog'
@@ -187,7 +187,7 @@ export default function App() {
         icon={<span aria-hidden="true">🖼</span>}
       />
 
-      <HostedStoreDialog />
+      <BackupDialog />
       {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
       {collageOpen && hasImages && <CollageDialog onClose={() => setCollageOpen(false)} />}
     </div>

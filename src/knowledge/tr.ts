@@ -154,7 +154,7 @@ Otomatik algılama bir yardımdır, bir garanti değildir. Küçük, uzakta, ba�
 
 Karartma, resmin üzerine düz renkli kutular çizer: bir şeyi örtmek için sürükleyin ya da bir kutu bırakmak için dokunun, sonra kutuyu taşıyın veya boyutunu değiştirin. Bir isim, plaka, ekran ya da algılamanın kaçırdığı bir yüz için kullanabilirsiniz. Rengi "Redact areas" bölümünden seçin.
 
-Düzenlerken kutular üstte durur ve hâlâ taşınabilir; orijinaliniz değişmez. İndirdiğiniz, çevrimiçi yedeklediğiniz ya da kolaja koyduğunuz resimde kutular piksellere işlenmiştir, bu yüzden altlarında kalan hiçbir şey o dosyadan geri getirilemez. Universal Images yedek dosyası farklıdır: orijinali, kutular hâlâ taşınabilir hâlde saklar; bu yüzden yalnızca indirilen resmi paylaşın.
+Düzenlerken kutular üstte durur ve hâlâ taşınabilir; orijinaliniz değişmez. İndirdiğiniz ya da kolaja koyduğunuz resimde kutular piksellere işlenmiştir, bu yüzden altlarında kalan hiçbir şey o dosyadan geri getirilemez. Universal Images yedek dosyası farklıdır: orijinali, kutular hâlâ taşınabilir hâlde saklar; bu yüzden yalnızca indirilen resmi paylaşın.
 
 ## Kolajlar
 
@@ -213,15 +213,9 @@ Arka plan kaldırmayı ya da yüz bulanıklaştırmayı ilk kez kullandığını
 
 Konum haritasını il düzeyine yakınlaştırırsanız uygulamanın web sürümü Universal Images web sitesinden bir ülkenin sınır dosyasını indirir. Bu istek fotoğrafın koordinatlarını değil, ülkenin adını içerir.
 
-## Yalnızca siz seçtiğinizde: çevrimiçi saklama
-
-Universal ID'nizle oturum açar ve bir görüntüyü UNI·SIM'de saklamayı seçerseniz uygulama, başka bir cihazda geri alabilmeniz için bitmiş görüntüyü, yani İndir düğmesinin size vereceği görüntünün aynısını yükler. Görüntüleri çevrimiçi saklamak Universal ID ile ücretsizdir. Ücretsiz hesapların cömert bir sınırı vardır; bu sınıra bir gün ulaşırsanız artık ihtiyacınız olmayan bir görüntüyü silin. Bir görüntüyü silmek onu depolamadan kaldırır.
-
-Bu, uçtan uca şifreleme değil sıradan bir bulut depolamadır. Aktarım sırasında ve depolandığı yerde şifrelenir ve erişim hesabınızla sınırlıdır, ancak anahtarlar bizdedir. Belirli bir resim için bu önemliyse onu saklamayın; uygulama hesap olmadan da tam olarak çalışır.
-
 ## Her Universal uygulamasının gönderdikleri
 
-Web sitesinde, uygulamayı her gün ilk açışınızda, ilk tıklamanızdan veya tuşa basmanızdan sonra anonim günlük açılış sayısına bir ekler. Bu sayım yalnızca uygulamanın adını ve platform türünü (sitede "web") içerir: hiçbir tanımlayıcı, hesap ya da ne yaptığınıza dair bir şey yoktur. "Bugün sayıldı" işareti cihazınızda kalır ve asla gönderilmez. Telefon ve bilgisayar uygulamaları bunu göndermez. Oturum açtıysanız uygulama, hesabınızın etkinlik sayfası için uygulamayı açtığınızı da kaydeder. Bunların hiçbiri görüntülerinizle ilgili bir şey içermez: ne adlarını, ne boyutlarını ne de içeriklerini.
+Oturum açma ve kullanım sayımı yoktur: uygulama, onu ne zaman açtığınızı ya da içinde ne yaptığınızı bize bildirmez ve herhangi bir şeyin bağlanabileceği bir hesap yoktur. Gönderdiği hiçbir şey görüntülerinizle ilgili bir şey içermez: ne adlarını, ne boyutlarını ne de içeriklerini.
 
 Uygulamada üçüncü taraf analiz, izleme ya da reklam yoktur.`,
   },

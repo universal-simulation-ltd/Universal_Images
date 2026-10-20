@@ -154,7 +154,7 @@ Die automatische Erkennung ist eine Hilfe, keine Garantie. Sie kann Gesichter ü
 
 Schwärzen legt deckende Balken über das Bild: Ziehen Sie über eine Stelle, um sie abzudecken, oder tippen Sie, um einen Balken abzulegen, den Sie dann verschieben oder in der Größe ändern. Das eignet sich für einen Namen, ein Kennzeichen, einen Bildschirm oder ein Gesicht, das die Erkennung übersehen hat. Die Farbe wählen Sie im Abschnitt „Redact areas“.
 
-Während Sie bearbeiten, liegen die Balken obenauf und lassen sich noch verschieben; Ihr Original bleibt unverändert. Im heruntergeladenen Bild, in der Online-Sicherung und in Collagen sind sie fest in die Pixel eingezeichnet, sodass sich darunter nichts wiederherstellen lässt. Eine Sicherungsdatei von Universal Images ist anders: Sie enthält das Original mit noch verschiebbaren Balken. Teilen Sie daher nur das heruntergeladene Bild.
+Während Sie bearbeiten, liegen die Balken obenauf und lassen sich noch verschieben; Ihr Original bleibt unverändert. Im heruntergeladenen Bild und in Collagen sind sie fest in die Pixel eingezeichnet, sodass sich darunter nichts wiederherstellen lässt. Eine Sicherungsdatei von Universal Images ist anders: Sie enthält das Original mit noch verschiebbaren Balken. Teilen Sie daher nur das heruntergeladene Bild.
 
 ## Collagen
 
@@ -213,15 +213,9 @@ Wenn Sie Hintergrund entfernen oder Gesichter unkenntlich machen zum ersten Mal 
 
 Wenn Sie die Standortkarte bis auf Regionsebene heranzoomen, lädt die Webversion der App die Grenzdatei eines Landes von der Website von Universal Images herunter. Diese Anfrage nennt das Land, nicht die Koordinaten des Fotos.
 
-## Nur wenn Sie es wählen: online speichern
-
-Wenn Sie sich mit Ihrer Universal ID anmelden und ein Bild bei UNI·SIM speichern, lädt die App das fertige Bild hoch, dasselbe, das Sie über die Schaltfläche Herunterladen bekommen würden, damit Sie es auf einem anderen Gerät wieder abrufen können. Bilder online zu speichern ist mit einer Universal ID kostenlos. Kostenlose Konten haben ein großzügiges Limit; sollten Sie es einmal erreichen, löschen Sie ein Bild, das Sie nicht mehr brauchen. Wenn Sie ein Bild löschen, wird es aus dem Speicher entfernt.
-
-Das ist gewöhnlicher Cloud-Speicher und keine Ende-zu-Ende-Verschlüsselung. Die Daten sind bei der Übertragung und im Ruhezustand verschlüsselt, und der Zugriff ist auf Ihr Konto beschränkt, aber die Schlüssel liegen bei uns. Wenn Ihnen das bei einem bestimmten Bild wichtig ist, speichern Sie es nicht; die App funktioniert vollständig ohne Konto.
-
 ## Was jede Universal-App sendet
 
-Auf der Website zählt sie beim ersten Öffnen jedes Tages eins zur anonymen Tageszählung der Öffnungen hinzu, gesendet nach Ihrem ersten Klick oder Tastendruck. Diese Zählung enthält nur den Namen der App und die Art der Plattform („web“ auf der Website): keine Kennung, kein Konto und nichts darüber, was Sie tun. Eine Markierung „heute schon gezählt“ bleibt auf Ihrem Gerät und wird nie gesendet. Die Telefon- und Desktop-Apps senden sie nicht. Wenn Sie angemeldet sind, vermerkt die App außerdem für die Aktivitätsseite Ihres Kontos, dass Sie sie geöffnet haben. Keines von beiden enthält etwas über Ihre Bilder: weder ihre Namen noch ihre Größen oder Inhalte.
+Es gibt keine Anmeldung und keine Nutzungszählung: Die App teilt uns weder mit, wann Sie sie öffnen, noch, was Sie darin tun, und es gibt kein Konto, mit dem etwas verknüpft werden könnte. Nichts, was sie sendet, enthält etwas über Ihre Bilder: weder ihre Namen noch ihre Größen oder Inhalte.
 
 Die App enthält keine Analyse-, Tracking- oder Werbedienste von Drittanbietern.`,
   },

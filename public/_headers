@@ -6,8 +6,7 @@
 # for, and nothing else (the same recipe as Universal PDF):
 #   • script-src: its own bundle; the inline pre-paint theme script in
 #     index.html, by its sha256 (scripts/theme.test.mjs fails if the script
-#     changes without this hash following); Google's sign-in script (the SDK
-#     loads accounts.google.com/gsi/client on demand); MediaPipe's WASM loader
+#     changes without this hash following); MediaPipe's WASM loader
 #     for "Blur faces", from its pinned jsDelivr folder (src/lib/faceBlur.ts);
 #     blob: for the module the ONNX runtime behind "Remove background" builds
 #     and imports at run time.
@@ -17,8 +16,8 @@
 #     functions at run time; it does not let any other origin's script in.
 #     No 'unsafe-inline'.
 #   • style-src 'unsafe-inline': React style attributes, everywhere.
-#   • connect-src: Supabase (API, auth, storage, realtime), the suite
-#     changelog, the R2 hosted-files Worker, Google sign-in, and the two AI
+#   • connect-src: Supabase (the SDK's client; no sign-in since 2026-10-20,
+#     `noAccounts` in src/main.tsx), the suite changelog, and the two AI
 #     model downloads — background removal's model and runtime
 #     (staticimgly.com) and the face detector's runtime (jsDelivr) and model
 #     (Google's model storage). Pictures never go to any of them.
@@ -33,10 +32,10 @@
 # The dev server serves the same policy Report-Only (vite.config.ts, cspDev()).
 #
 # Hardening. Nothing in the suite frames this app, so refusing to be framed
-# elsewhere costs nothing and closes off click-jacking the account actions.
+# elsewhere costs nothing and closes off click-jacking.
 /*
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: SAMEORIGIN
-  Content-Security-Policy: default-src 'self'; script-src 'self' blob: 'unsafe-eval' 'wasm-unsafe-eval' 'sha256-J6EIRN5aZTJK+dDLx2Ffx8Mvt+eVCVvObQFpJiUvlOI=' https://accounts.google.com/gsi/client https://cdn.jsdelivr.net/npm/@mediapipe/; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https:; font-src 'self' data: blob:; connect-src 'self' data: blob: https://rygfxgalojojppxmhddo.supabase.co wss://rygfxgalojojppxmhddo.supabase.co https://changelog.unisim.co.uk https://unisim-hosted-files.inbox-12f.workers.dev https://accounts.google.com/gsi/ https://staticimgly.com https://cdn.jsdelivr.net/npm/@mediapipe/ https://storage.googleapis.com/mediapipe-models/; worker-src 'self' blob:; frame-src 'self' blob: https://accounts.google.com/gsi/; media-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' blob: 'unsafe-eval' 'wasm-unsafe-eval' 'sha256-J6EIRN5aZTJK+dDLx2Ffx8Mvt+eVCVvObQFpJiUvlOI=' https://cdn.jsdelivr.net/npm/@mediapipe/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: blob:; connect-src 'self' data: blob: https://rygfxgalojojppxmhddo.supabase.co wss://rygfxgalojojppxmhddo.supabase.co https://changelog.unisim.co.uk https://staticimgly.com https://cdn.jsdelivr.net/npm/@mediapipe/ https://storage.googleapis.com/mediapipe-models/; worker-src 'self' blob:; frame-src 'self' blob:; media-src 'self' blob: data:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'

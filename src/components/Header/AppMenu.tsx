@@ -96,7 +96,6 @@ export const ABOUT: AboutAppConfig = {
   proof:   'https://github.com/universal-simulation-ltd/Universal_Images/blob/main/PRIVACY.md',
   subject: 'Your images',
   plural:  true,
-  except:  'backup',
   version: __APP_VERSION__,
   credits,
   noticesHref: 'https://github.com/universal-simulation-ltd/Universal_Images/blob/main/THIRD-PARTY-NOTICES.md',
