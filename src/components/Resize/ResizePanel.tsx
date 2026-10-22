@@ -15,6 +15,8 @@ import {
 } from '../../lib/imageResize'
 import { downloadBlob } from '../../lib/download'
 import { groupedPresets } from '../../lib/socialPresets'
+import { say, Sheet } from '../../native/parts'
+import { PHONE } from '../../native/shell'
 import CropOverlay from './CropOverlay'
 import SocialCropOverlay from './SocialCropOverlay'
 import { RedactBoxesView, RedactEditor, viewFor } from './RedactLayer'
@@ -188,14 +190,17 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
   // Close the export menu on a click anywhere else, or on Escape. Both
   // listeners only exist while it is open. Clicks *inside* it are ignored —
   // format and quality are settings, so changing one must not shut the menu.
+  // Dismissing the menu is also the end of convert mode — otherwise the card
+  // keeps its orange ring after the thing it was pointing at is gone.
+  function closeExportMenu() {
+    setExportMenuOpen(false)
+    if (convertMode) setConvertMode(false)
+  }
+  // On the phone the menu is a bottom sheet, which closes itself (scrim,
+  // swipe down, Back): a tap inside it is not "outside" the button.
   useEffect(() => {
-    if (!exportMenuOpen) return
-    function close() {
-      setExportMenuOpen(false)
-      // Dismissing the menu is also the end of convert mode — otherwise the
-      // card keeps its orange ring after the thing it was pointing at is gone.
-      if (convertMode) setConvertMode(false)
-    }
+    if (!exportMenuOpen || PHONE) return
+    const close = closeExportMenu
     function onPointerDown(e: MouseEvent) {
       if (!exportWrapRef.current?.contains(e.target as Node)) close()
     }
@@ -358,7 +363,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
       }
     } catch (err) {
       console.error(err)
-      alert(`Export failed: ${(err as Error).message}`)
+      say(`Export failed: ${(err as Error).message}`)
     } finally {
       setExporting(false)
     }
@@ -407,7 +412,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
       downloadBlob(zipBlob, `universal-images_${stamp}.zip`)
     } catch (err) {
       console.error(err)
-      alert(`Batch export failed: ${(err as Error).message}`)
+      say(`Batch export failed: ${(err as Error).message}`)
     } finally {
       setBatchExporting(false)
     }
@@ -454,6 +459,129 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
     }
     return null
   })()
+
+  // What the ⌄ beside Download holds: format, transparency, quality, the
+  // ZIP and the backup. A dropdown on the website; a bottom sheet on the phone,
+  // rendered at the foot of this panel.
+  const exportMenuItems = (
+    <>
+                  <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">Format</p>
+                  <div className="px-3">
+                    {/* AVIF only appears where the browser can actually encode it. */}
+                    {/* WebP only where it can be encoded too — not Safari. */}
+                    <div className={['grid gap-1.5', avifOk && webpOk ? 'grid-cols-4' : avifOk || webpOk ? 'grid-cols-3' : 'grid-cols-2'].join(' ')}>
+                      {(['image/jpeg', ...(webpOk ? ['image/webp'] : []), 'image/png', ...(avifOk ? ['image/avif'] : [])] as OutputFormat[]).map((f) => {
+                        const isActive = target.format === f
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            aria-pressed={isActive}
+                            onClick={() => {
+                              setTarget({ format: f })
+                              if (convertMode) setConvertMode(false)
+                            }}
+                            className={[
+                              'py-1.5 rounded-lg border text-xs font-medium transition-colors',
+                              isActive
+                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300'
+                                : 'border-slate-200 text-slate-600 hover:border-orange-400 dark:border-slate-600 dark:text-slate-300 dark:hover:border-orange-500'
+                            ].join(' ')}
+                          >
+                            {FORMAT_LABEL[f]}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {avifOk && target.format === 'image/avif' && (
+                      <p className="mt-2 text-[10px] text-slate-400 leading-snug">
+                        AVIF gives the smallest files, but isn't supported everywhere for viewing yet.
+                      </p>
+                    )}
+                    {target.format === 'image/png' && (
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Allow transparency</div>
+                          <p className="text-[10px] text-slate-400 leading-snug">
+                            Off fills the background white behind the image.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={target.allowTransparency}
+                          onClick={() => setTarget({ allowTransparency: !target.allowTransparency })}
+                          className={[
+                            'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
+                            target.allowTransparency ? 'bg-orange-600' : 'bg-slate-300 dark:bg-slate-600'
+                          ].join(' ')}
+                        >
+                          <span
+                            className={[
+                              'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                              target.allowTransparency ? 'translate-x-4' : 'translate-x-0.5'
+                            ].join(' ')}
+                          />
+                        </button>
+                      </div>
+                    )}
+                    {showQuality && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 dark:text-slate-400">
+                          <span className="font-semibold uppercase tracking-wide text-[10px] text-slate-400">Quality</span>
+                          <span className="tabular-nums">{Math.round(target.quality * 100)}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={10}
+                          max={100}
+                          value={Math.round(target.quality * 100)}
+                          onChange={(e) => setTarget({ quality: Number(e.target.value) / 100 })}
+                          aria-label="Quality"
+                          className="w-full accent-orange-600"
+                        />
+                        <p className="mt-1 text-[10px] text-slate-400 leading-snug">
+                          The preview reflects the chosen quality.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="my-2 border-t border-slate-100 dark:border-slate-700" />
+
+                  {images.length > 1 && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setExportMenuOpen(false)
+                        exportAll()
+                      }}
+                      disabled={batchExporting}
+                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-orange-50/70 hover:text-orange-800 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-300 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-700 dark:disabled:hover:bg-transparent dark:disabled:hover:text-slate-200 transition-colors"
+                    >
+                      <svg viewBox="0 0 20 20" className="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5M4 16h12" />
+                      </svg>
+                      {batchExporting ? `Zipping ${images.length}…` : `Download all as .zip (${images.length})`}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setExportMenuOpen(false)
+                      useImageStore.setState({ backupOpen: true })
+                    }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-orange-50/70 hover:text-orange-800 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-300 transition-colors"
+                  >
+                    <svg viewBox="0 0 20 20" className="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M16 17H4a1.5 1.5 0 0 1-1.5-1.5v-11A1.5 1.5 0 0 1 4 3h8l4 4v8.5A1.5 1.5 0 0 1 16 17z M14 17v-6H6v6 M6 3v4h6" />
+                    </svg>
+                    Back up to edit later
+                  </button>
+    </>
+  )
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-y-auto lg:grid lg:grid-cols-[1fr_360px] lg:overflow-hidden">
@@ -1340,7 +1468,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 </button>
               </div>
 
-              {exportMenuOpen && (
+              {exportMenuOpen && !PHONE && (
                 <div
                   role="menu"
                   className={[
@@ -1350,121 +1478,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     exportMenuUp ? 'bottom-full mb-2' : 'mt-2'
                   ].join(' ')}
                 >
-                  <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">Format</p>
-                  <div className="px-3">
-                    {/* AVIF only appears where the browser can actually encode it. */}
-                    {/* WebP only where it can be encoded too — not Safari. */}
-                    <div className={['grid gap-1.5', avifOk && webpOk ? 'grid-cols-4' : avifOk || webpOk ? 'grid-cols-3' : 'grid-cols-2'].join(' ')}>
-                      {(['image/jpeg', ...(webpOk ? ['image/webp'] : []), 'image/png', ...(avifOk ? ['image/avif'] : [])] as OutputFormat[]).map((f) => {
-                        const isActive = target.format === f
-                        return (
-                          <button
-                            key={f}
-                            type="button"
-                            aria-pressed={isActive}
-                            onClick={() => {
-                              setTarget({ format: f })
-                              if (convertMode) setConvertMode(false)
-                            }}
-                            className={[
-                              'py-1.5 rounded-lg border text-xs font-medium transition-colors',
-                              isActive
-                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300'
-                                : 'border-slate-200 text-slate-600 hover:border-orange-400 dark:border-slate-600 dark:text-slate-300 dark:hover:border-orange-500'
-                            ].join(' ')}
-                          >
-                            {FORMAT_LABEL[f]}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    {avifOk && target.format === 'image/avif' && (
-                      <p className="mt-2 text-[10px] text-slate-400 leading-snug">
-                        AVIF gives the smallest files, but isn't supported everywhere for viewing yet.
-                      </p>
-                    )}
-                    {target.format === 'image/png' && (
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <div>
-                          <div className="text-[11px] font-medium text-slate-600 dark:text-slate-300">Allow transparency</div>
-                          <p className="text-[10px] text-slate-400 leading-snug">
-                            Off fills the background white behind the image.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={target.allowTransparency}
-                          onClick={() => setTarget({ allowTransparency: !target.allowTransparency })}
-                          className={[
-                            'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
-                            target.allowTransparency ? 'bg-orange-600' : 'bg-slate-300 dark:bg-slate-600'
-                          ].join(' ')}
-                        >
-                          <span
-                            className={[
-                              'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
-                              target.allowTransparency ? 'translate-x-4' : 'translate-x-0.5'
-                            ].join(' ')}
-                          />
-                        </button>
-                      </div>
-                    )}
-                    {showQuality && (
-                      <div className="mt-3">
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1 dark:text-slate-400">
-                          <span className="font-semibold uppercase tracking-wide text-[10px] text-slate-400">Quality</span>
-                          <span className="tabular-nums">{Math.round(target.quality * 100)}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={10}
-                          max={100}
-                          value={Math.round(target.quality * 100)}
-                          onChange={(e) => setTarget({ quality: Number(e.target.value) / 100 })}
-                          aria-label="Quality"
-                          className="w-full accent-orange-600"
-                        />
-                        <p className="mt-1 text-[10px] text-slate-400 leading-snug">
-                          The preview reflects the chosen quality.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="my-2 border-t border-slate-100 dark:border-slate-700" />
-
-                  {images.length > 1 && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setExportMenuOpen(false)
-                        exportAll()
-                      }}
-                      disabled={batchExporting}
-                      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-orange-50/70 hover:text-orange-800 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-300 disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-700 dark:disabled:hover:bg-transparent dark:disabled:hover:text-slate-200 transition-colors"
-                    >
-                      <svg viewBox="0 0 20 20" className="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5M4 16h12" />
-                      </svg>
-                      {batchExporting ? `Zipping ${images.length}…` : `Download all as .zip (${images.length})`}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setExportMenuOpen(false)
-                      useImageStore.setState({ backupOpen: true })
-                    }}
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-orange-50/70 hover:text-orange-800 dark:text-slate-200 dark:hover:bg-orange-500/15 dark:hover:text-orange-300 transition-colors"
-                  >
-                    <svg viewBox="0 0 20 20" className="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M16 17H4a1.5 1.5 0 0 1-1.5-1.5v-11A1.5 1.5 0 0 1 4 3h8l4 4v8.5A1.5 1.5 0 0 1 16 17z M14 17v-6H6v6 M6 3v4h6" />
-                    </svg>
-                    Back up to edit later
-                  </button>
+                  {exportMenuItems}
                 </div>
               )}
             </div>
@@ -1483,6 +1497,14 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
           </div>
         </div>
       </div>
+
+      {exportMenuOpen && PHONE && (
+        <Sheet label="Export options" onClose={closeExportMenu}>
+          <div className="rounded-2xl border border-slate-200 bg-white py-3 dark:border-slate-700 dark:bg-slate-800">
+            {exportMenuItems}
+          </div>
+        </Sheet>
+      )}
     </div>
   )
 }

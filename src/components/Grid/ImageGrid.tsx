@@ -1,5 +1,7 @@
 import { useImageStore } from '../../stores/imageStore'
 import { formatBytes } from '../../lib/imageResize'
+import { Page } from '../../native/parts'
+import { PHONE } from '../../native/shell'
 
 interface Props {
   /** Full-screen overlay mode used on mobile. */
@@ -36,27 +38,7 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
   }
 
   if (mobileExpanded) {
-    return (
-      <div className="flex flex-col flex-1 bg-white overflow-hidden dark:bg-slate-900">
-        {/* Header */}
-        <div className="px-4 py-2.5 border-b border-slate-100 bg-white sticky top-0 z-10 flex items-center justify-between dark:border-slate-800 dark:bg-slate-900">
-          <span className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
-            {images.length} image{images.length === 1 ? '' : 's'}
-          </span>
-          <span className="ml-auto mr-1">{collageButton}</span>
-          {onBack && (
-            <button
-              type="button"
-              onClick={onBack}
-              className="text-xs font-semibold text-orange-700 hover:text-orange-800 px-2 py-1 rounded-md hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-500/10 transition-colors"
-            >
-              Done
-            </button>
-          )}
-        </div>
-
-        {/* Grid */}
-        <div className="flex-1 overflow-y-auto">
+    const grid = (
           <ul className="grid grid-cols-2 gap-3 p-3">
             {images.map((img) => {
               const isSelected = img.id === selectedId
@@ -105,6 +87,41 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
               )
             })}
           </ul>
+    )
+
+    // The phone app: a page of its own, back on a swipe from the left edge
+    // (Done is the page's Back). See src/native/.
+    if (PHONE) {
+      return (
+        <Page title={`${images.length} image${images.length === 1 ? '' : 's'}`} onBack={() => onBack?.()}>
+          {collageButton && <div className="flex justify-end px-3 pt-3">{collageButton}</div>}
+          {grid}
+        </Page>
+      )
+    }
+
+    return (
+      <div className="flex flex-col flex-1 bg-white overflow-hidden dark:bg-slate-900">
+        {/* Header */}
+        <div className="px-4 py-2.5 border-b border-slate-100 bg-white sticky top-0 z-10 flex items-center justify-between dark:border-slate-800 dark:bg-slate-900">
+          <span className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
+            {images.length} image{images.length === 1 ? '' : 's'}
+          </span>
+          <span className="ml-auto mr-1">{collageButton}</span>
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-xs font-semibold text-orange-700 hover:text-orange-800 px-2 py-1 rounded-md hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-500/10 transition-colors"
+            >
+              Done
+            </button>
+          )}
+        </div>
+
+        {/* Grid */}
+        <div className="flex-1 overflow-y-auto">
+          {grid}
         </div>
       </div>
     )

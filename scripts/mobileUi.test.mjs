@@ -116,7 +116,11 @@ ok(
 // `className={"…"}` or `className={`…`}`, and a pattern anchored straight onto
 // the quote matches neither — it reported a clean sweep against a deliberately
 // re-broken MetadataDialog (negative control, 2026-08-30).
-const overlays = TSX.filter((f) => /className=\{?["`][^"`]*fixed inset-0/.test(read(f)))
+// The one exception is the phone app's own shell, `src/native/parts.tsx`: its
+// Page and Sheet are the iOS/Android build's replacement for these dialogs
+// (z 1200+, above the navbar the phone build doesn't have, and padded for both
+// safe areas itself), and they are what the dialogs render in that build.
+const overlays = TSX.filter((f) => f !== 'src/native/parts.tsx' && /className=\{?["`][^"`]*fixed inset-0/.test(read(f)))
 ok(
   overlays.length === 0,
   'no component hand-rolls a `fixed inset-0` overlay class',

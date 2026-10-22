@@ -4,6 +4,8 @@ import type { ScrubResult } from '../../lib/metadata'
 import { DIALOG_BODY, DIALOG_FOOTER, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../../lib/dialog'
 import LocationMap from './LocationMap'
 import { useDialog } from '../../lib/useDialog'
+import { Page } from '../../native/parts'
+import { PHONE } from '../../native/shell'
 
 // The "Metadata (identification)" panel. Opened from the badge above the
 // preview or from Actions → Metadata. Shows exactly what the selected photo
@@ -19,7 +21,8 @@ export default function MetadataDialog({ onClose }: Props) {
   const metadataMap = useImageStore((s) => s.metadata)
   const scrubMetadata = useImageStore((s) => s.scrubMetadata)
   const scrubbing = useImageStore((s) => s.scrubbing)
-  const dialog = useDialog(onClose, !scrubbing)
+  // Not on the phone, where it is a page (which has its own focus and Escape).
+  const dialog = useDialog(onClose, !scrubbing, !PHONE)
 
   const selected = useMemo(
     () => images.find((i) => i.id === selectedId) ?? null,
@@ -59,35 +62,8 @@ export default function MetadataDialog({ onClose }: Props) {
   const scrubbed = result?.mode === 'lossless'
   const unsupported = result?.mode === 'unsupported'
 
-  return (
-    <div
-      className={`${DIALOG_OVERLAY} bg-black/50`}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !scrubbing) onClose()
-      }}
-    >
-      <div {...dialog.panelProps} className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl outline-none max-w-md sm:max-h-[85dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
-        <div className={`${DIALOG_HEADER} flex items-start justify-between gap-3 border-b border-slate-100 px-5 pt-5 pb-3 dark:border-slate-800`}>
-          <div className="min-w-0">
-            <h2 id={dialog.titleId} className="text-lg font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
-              <span aria-hidden="true">🏷</span>
-              Metadata
-            </h2>
-            <p className="text-xs text-slate-500 truncate dark:text-slate-400" title={selected.name}>
-              {selected.name}
-            </p>
-          </div>
-          {!scrubbing && (
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="shrink-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-2xl leading-none w-8 h-8 flex items-center justify-center"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
+  const body = (
+    <>
         {/* Everything from here down scrolls; the title above and the actions
             below stay put. The "What is metadata?" disclosure moved INSIDE the
             scroller when the panel was capped to the visible viewport — it is
@@ -235,7 +211,10 @@ export default function MetadataDialog({ onClose }: Props) {
           )}
         </div>
 
-        <div className={`${DIALOG_FOOTER} flex items-center gap-2 justify-end border-t border-slate-100 px-5 py-4 dark:border-slate-800`}>
+    </>
+  )
+  const actions = (
+    <>
           <button
             onClick={onClose}
             disabled={scrubbing}
@@ -252,6 +231,58 @@ export default function MetadataDialog({ onClose }: Props) {
               {scrubbing ? 'Stripping…' : 'Scrub metadata'}
             </button>
           )}
+    </>
+  )
+
+  // The phone app opens this as a page of its own (back on a swipe from the
+  // left edge), not a dialog over the editor: see src/native/.
+  if (PHONE) {
+    return (
+      <Page
+        title="Metadata"
+        onBack={onClose}
+        canGoBack={!scrubbing}
+        footer={<div className="flex items-center justify-end gap-2">{actions}</div>}
+      >
+        <p className="truncate px-5 pt-3 text-xs text-slate-500 dark:text-slate-400">{selected.name}</p>
+        {body}
+      </Page>
+    )
+  }
+
+  return (
+    <div
+      className={`${DIALOG_OVERLAY} bg-black/50`}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !scrubbing) onClose()
+      }}
+    >
+      <div {...dialog.panelProps} className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl outline-none max-w-md sm:max-h-[85dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
+        <div className={`${DIALOG_HEADER} flex items-start justify-between gap-3 border-b border-slate-100 px-5 pt-5 pb-3 dark:border-slate-800`}>
+          <div className="min-w-0">
+            <h2 id={dialog.titleId} className="text-lg font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
+              <span aria-hidden="true">🏷</span>
+              Metadata
+            </h2>
+            <p className="text-xs text-slate-500 truncate dark:text-slate-400" title={selected.name}>
+              {selected.name}
+            </p>
+          </div>
+          {!scrubbing && (
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="shrink-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-2xl leading-none w-8 h-8 flex items-center justify-center"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {body}
+
+        <div className={`${DIALOG_FOOTER} flex items-center gap-2 justify-end border-t border-slate-100 px-5 py-4 dark:border-slate-800`}>
+          {actions}
         </div>
       </div>
     </div>

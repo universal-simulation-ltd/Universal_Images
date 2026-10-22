@@ -21,6 +21,8 @@ import {
 } from '../../lib/collage'
 import type { SourceImage } from '../../types/image'
 import { useDialog } from '../../lib/useDialog'
+import { Page, useScrollHint } from '../../native/parts'
+import { PHONE } from '../../native/shell'
 
 // Several of the open photos on one canvas — one left and one right, one above
 // the other, a big one with two beside it, a grid.
@@ -123,7 +125,10 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
   const [slots, setSlots] = useState<CollageSlot[]>(() => fillSlots([], images))
   const [selected, setSelected] = useState<number>(0)
   const [busy, setBusy] = useState<null | 'save' | 'add'>(null)
-  const dialog = useDialog(onClose, !busy)
+  // Not on the phone, where it is a page (which has its own focus and Escape).
+  const dialog = useDialog(onClose, !busy, !PHONE)
+  // The photo strip scrolls sideways: on the phone its edges fade to say so.
+  const strip = useScrollHint<HTMLUListElement>()
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState<Record<string, Loaded>>({})
   // Each photo's redaction boxes ride along with its Drawable, so the collage —
@@ -342,32 +347,7 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
     ].join(' ')
   const label = 'text-[11px] uppercase tracking-wide text-slate-400 font-medium'
 
-  return (
-    <div
-      className={`${DIALOG_OVERLAY} bg-black/50`}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !busy) onClose()
-      }}
-    >
-      <div {...dialog.panelProps} className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl outline-none max-w-5xl sm:max-h-[92dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
-        <div className={`${DIALOG_HEADER} flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3 dark:border-slate-800`}>
-          <h2 id={dialog.titleId} className="text-lg font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
-            <span aria-hidden="true">🧩</span>
-            Collage
-          </h2>
-          {!busy && (
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="shrink-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-2xl leading-none w-8 h-8 flex items-center justify-center"
-            >
-              <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                <path d="m4 4 8 8M12 4l-8 8" />
-              </svg>
-            </button>
-          )}
-        </div>
-
+  const body = (
         <div className={`${DIALOG_BODY} md:flex md:gap-5 px-5 py-4`}>
           {/* Preview + photo strip */}
           <div className="md:flex-1 md:min-w-0 flex flex-col gap-3">
@@ -399,7 +379,7 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
               <input {...picker.inputProps} hidden />
-              <ul className="flex gap-2 overflow-x-auto pb-1">
+              <ul ref={strip.ref} style={PHONE ? strip.style : undefined} className="flex gap-2 overflow-x-auto pb-1">
                 {images.map((img) => {
                   const at = active.findIndex((s) => s.imageId === img.id)
                   const here = at === selected
@@ -566,8 +546,9 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         </div>
-
-        <div className={`${DIALOG_FOOTER} border-t border-slate-100 px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-2 dark:border-slate-800`}>
+  )
+  const actions = (
+    <>
           <div className="text-xs sm:mr-auto">
             {error ? (
               <span className="text-red-600 dark:text-red-400">{error}</span>
@@ -596,6 +577,54 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
               {busy === 'save' ? 'Saving…' : 'Download'}
             </button>
           </div>
+    </>
+  )
+
+  // The phone app opens the collage as a page of its own (back on a swipe
+  // from the left edge), not a dialog over the editor: see src/native/.
+  if (PHONE) {
+    return (
+      <Page
+        title="Collage"
+        onBack={onClose}
+        canGoBack={!busy}
+        footer={<div className="flex flex-col gap-2">{actions}</div>}
+      >
+        {body}
+      </Page>
+    )
+  }
+
+  return (
+    <div
+      className={`${DIALOG_OVERLAY} bg-black/50`}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !busy) onClose()
+      }}
+    >
+      <div {...dialog.panelProps} className={`${DIALOG_PANEL} bg-white rounded-xl shadow-2xl outline-none max-w-5xl sm:max-h-[92dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
+        <div className={`${DIALOG_HEADER} flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3 dark:border-slate-800`}>
+          <h2 id={dialog.titleId} className="text-lg font-semibold text-slate-900 flex items-center gap-2 dark:text-slate-100">
+            <span aria-hidden="true">🧩</span>
+            Collage
+          </h2>
+          {!busy && (
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="shrink-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-2xl leading-none w-8 h-8 flex items-center justify-center"
+            >
+              <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="m4 4 8 8M12 4l-8 8" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {body}
+
+        <div className={`${DIALOG_FOOTER} border-t border-slate-100 px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-2 dark:border-slate-800`}>
+          {actions}
         </div>
       </div>
     </div>

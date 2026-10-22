@@ -5,6 +5,8 @@ import { useImageStore } from '../stores/imageStore'
 import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib/dialog'
 import { downloadBackup, importBackup } from '../lib/imageBackup'
 import { useDialog } from '../lib/useDialog'
+import { Page } from '../native/parts'
+import { PHONE } from '../native/shell'
 
 // "Back up this image" — a backup FILE the person keeps (the original plus the
 // crop, size and boxes), to import later on any device and carry on editing.
@@ -24,7 +26,8 @@ export default function BackupDialog() {
   const [importMsg, setImportMsg] = useState<string | null>(null)
   const [importErr, setImportErr] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const dialog = useDialog(() => close(), true, open)
+  // Not on the phone, where it is a page (which has its own focus and Escape).
+  const dialog = useDialog(() => close(), true, open && !PHONE)
 
   if (!open) return null
 
@@ -62,19 +65,8 @@ export default function BackupDialog() {
     }
   }
 
-  return createPortal(
-    <div
-      className={`${DIALOG_OVERLAY} bg-slate-900/50`}
-      onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}
-    >
-      <div {...dialog.panelProps} className={`${DIALOG_PANEL} max-w-lg rounded-2xl bg-white shadow-xl outline-none sm:max-h-[88dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
-        <div className={`${DIALOG_HEADER} flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800`}>
-          <h2 id={dialog.titleId} className="text-base font-bold text-slate-900 dark:text-slate-100">Back up this image</h2>
-          <button onClick={close} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200">
-            <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" /></svg>
-          </button>
-        </div>
-
+  const body = (
+    <>
         {/* Only the body scrolls. It used to be the whole panel, so on a phone
             the "Back up this image" title and its close button scrolled away
             the moment the cards outgrew the screen. */}
@@ -137,6 +129,33 @@ export default function BackupDialog() {
             {importErr && <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{importErr}</p>}
           </div>
         </div>
+    </>
+  )
+
+  // The phone app opens this as a page of its own (back on a swipe from the
+  // left edge), not a dialog over the editor: see src/native/.
+  if (PHONE) {
+    return (
+      <Page title="Back up this image" onBack={close}>
+        {body}
+      </Page>
+    )
+  }
+
+  return createPortal(
+    <div
+      className={`${DIALOG_OVERLAY} bg-slate-900/50`}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}
+    >
+      <div {...dialog.panelProps} className={`${DIALOG_PANEL} max-w-lg rounded-2xl bg-white shadow-xl outline-none sm:max-h-[88dvh] dark:bg-slate-900 dark:ring-1 dark:ring-slate-800`}>
+        <div className={`${DIALOG_HEADER} flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800`}>
+          <h2 id={dialog.titleId} className="text-base font-bold text-slate-900 dark:text-slate-100">Back up this image</h2>
+          <button onClick={close} aria-label="Close" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200">
+            <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" strokeLinecap="round" /></svg>
+          </button>
+        </div>
+
+        {body}
       </div>
     </div>,
     document.body,

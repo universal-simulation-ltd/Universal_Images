@@ -14,6 +14,8 @@ import { useThemeStore } from './stores/themeStore'
 import { useSystemBarsStyle } from './lib/systemBars'
 import EditShortcuts from './components/Header/EditShortcuts'
 import { CONTAINER, EDITOR_CONTAINER } from './lib/layout'
+import { PHONE } from './native/shell'
+import { ImagesPhoneBar, ImagesPhoneLayers } from './native/PhoneApp'
 
 const REPO_URL = 'https://github.com/universal-simulation-ltd/Universal_Images'
 
@@ -72,7 +74,11 @@ export default function App() {
     // in most apps because with an image open this bar IS the editor's toolbar
     // — losing its top edge behind the notch takes the edit controls with it.
     // In a browser the inset is 0, so it is a no-op on web and on desktop.
-    <div className="flex flex-col h-full bg-slate-100 dark:bg-slate-950 pt-[env(safe-area-inset-top)]">
+    //
+    // The phone app (PHONE) has no navbar at all: its bar pads itself under
+    // the status bar, and everything the navbar's dropdowns and dialogs held is
+    // a page or a bottom sheet (`src/native/`).
+    <div className={`flex flex-col h-full bg-slate-100 dark:bg-slate-950 ${PHONE ? '' : 'pt-[env(safe-area-inset-top)]'}`}>
       {/* With an image open the bar stops being a navbar and becomes the
           editor's toolbar: identity out for a home button, brand claim out for
           the quick edits, and the whole row widened to the viewport so its two
@@ -91,7 +97,7 @@ export default function App() {
           `themeStore` puts this app's colour scheme override in the SDK's App
           preferences dialog (Follow global / Light / Dark / System, since SDK
           0.143). `theme` stays the RESOLVED value the bar paints with. */}
-      <UniversalAppsNavBar
+      {PHONE ? <ImagesPhoneBar /> : <UniversalAppsNavBar
         product="images"
         productLogo={<ProductLogo />}
         productHomeHref={import.meta.env.BASE_URL}
@@ -106,7 +112,7 @@ export default function App() {
         themeStore={useThemeStore}
         suiteSwitcherIconSrc={`${import.meta.env.BASE_URL}unisim-icon.png`}
         contentClassName={hasImages ? EDITOR_CONTAINER : CONTAINER}
-      />
+      />}
 
       {/* Renders nothing until this tab is genuinely running superseded code.
           See the SDK's useAppUpdate: an autoUpdate PWA hands the new worker
@@ -116,7 +122,7 @@ export default function App() {
         <LoadErrorNotice />
       </div>
 
-      <main className="flex-1 min-h-0 flex relative">
+      <main className={`flex-1 min-h-0 flex relative ${PHONE ? 'pb-[env(safe-area-inset-bottom)]' : ''}`}>
         {loading && !hasImages ? (
           <div className="flex-1 flex items-center justify-center text-slate-500 dark:text-slate-400">
             Decoding images…
@@ -131,8 +137,12 @@ export default function App() {
             {/* Editor panel — full-width on mobile since sidebar is hidden */}
             <ResizePanel onShowGrid={() => setMobileSidebarOpen(true)} />
 
-            {/* Mobile image-picker overlay */}
-            {mobileSidebarOpen && (
+            {/* Mobile image-picker overlay. On the phone app it is a page of
+                its own (ImageGrid draws it), so no overlay box here. */}
+            {mobileSidebarOpen && PHONE && (
+              <ImageGrid mobileExpanded onBack={() => setMobileSidebarOpen(false)} />
+            )}
+            {mobileSidebarOpen && !PHONE && (
               <div className="absolute inset-0 z-30 flex md:hidden">
                 <ImageGrid
                   mobileExpanded
@@ -148,7 +158,8 @@ export default function App() {
         )}
       </main>
 
-      {!hasImages && !loading && (
+      {/* The website's footer. The phone app's credit is on its About page. */}
+      {!hasImages && !loading && !PHONE && (
         <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
           <div className={`${CONTAINER} py-4 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-xs text-slate-500 dark:text-slate-400`}>
             <span>
@@ -190,6 +201,7 @@ export default function App() {
       <BackupDialog />
       {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
       {collageOpen && hasImages && <CollageDialog onClose={() => setCollageOpen(false)} />}
+      {PHONE && <ImagesPhoneLayers />}
     </div>
   )
 }

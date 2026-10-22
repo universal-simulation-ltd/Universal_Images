@@ -5,6 +5,7 @@ import { useImageStore } from '../../stores/imageStore'
 import ImageIllustration from './ImageIllustration'
 import { CONTAINER } from '../../lib/layout'
 import { useThemeStore } from '../../stores/themeStore'
+import { say } from '../../native/parts'
 // The third column of the closing grid. These are not features, they are the
 // answer to "what does it cost me when it isn't money", so each one names the
 // thing it is refusing — a struck-through cloud, eye and megaphone — rather than
@@ -112,7 +113,7 @@ export default function LandingPage() {
       await addFiles([file])
     } catch (err) {
       console.error(err)
-      alert(`Couldn't load the example image: ${(err as Error).message}`)
+      say(`Couldn't load the example image: ${(err as Error).message}`)
     } finally {
       setLoadingExample(false)
     }
