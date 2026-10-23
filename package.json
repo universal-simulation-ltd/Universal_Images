@@ -13,6 +13,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "credits": "node ../scripts/gen-credits.mjs . --repo https://github.com/universal-simulation-ltd/Universal_Images",
+    "test": "node scripts/run-unit-tests.mjs",
     "test:mobile-ui": "node scripts/mobileUi.test.mjs",
     "test:menu-close": "node scripts/menuClose.test.mjs",
     "test:theme": "node scripts/theme.test.mjs",
