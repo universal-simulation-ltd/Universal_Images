@@ -1,11 +1,10 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Chip } from '@unisim/sdk'
+import { Chip, PhonePage } from '@unisim/sdk'
 import { useImageStore } from '../stores/imageStore'
 import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib/dialog'
 import { downloadBackup, importBackup } from '../lib/imageBackup'
 import { useDialog } from '../lib/useDialog'
-import { Page } from '../native/parts'
 import { PHONE } from '../native/shell'
 
 // "Back up this image" — a backup FILE the person keeps (the original plus the
@@ -136,9 +135,9 @@ export default function BackupDialog() {
   // left edge), not a dialog over the editor: see src/native/.
   if (PHONE) {
     return (
-      <Page title="Back up this image" onBack={close}>
+      <PhonePage title="Back up this image" onBack={close}>
         {body}
-      </Page>
+      </PhonePage>
     )
   }
 

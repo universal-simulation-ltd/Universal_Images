@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { Chip, ChipToggle, ValueChip } from '@unisim/sdk'
+import { BottomSheet, Chip, ChipToggle, phoneAlert, ValueChip } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import {
   computePresets,
@@ -15,7 +15,6 @@ import {
 } from '../../lib/imageResize'
 import { downloadBlob } from '../../lib/download'
 import { groupedPresets } from '../../lib/socialPresets'
-import { say, Sheet } from '../../native/parts'
 import { PHONE } from '../../native/shell'
 import CropOverlay from './CropOverlay'
 import SocialCropOverlay from './SocialCropOverlay'
@@ -363,7 +362,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
       }
     } catch (err) {
       console.error(err)
-      say(`Export failed: ${(err as Error).message}`)
+      phoneAlert(`Export failed: ${(err as Error).message}`)
     } finally {
       setExporting(false)
     }
@@ -412,7 +411,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
       downloadBlob(zipBlob, `universal-images_${stamp}.zip`)
     } catch (err) {
       console.error(err)
-      say(`Batch export failed: ${(err as Error).message}`)
+      phoneAlert(`Batch export failed: ${(err as Error).message}`)
     } finally {
       setBatchExporting(false)
     }
@@ -1499,11 +1498,11 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
       </div>
 
       {exportMenuOpen && PHONE && (
-        <Sheet label="Export options" onClose={closeExportMenu}>
+        <BottomSheet label="Export options" onClose={closeExportMenu}>
           <div className="rounded-2xl border border-slate-200 bg-white py-3 dark:border-slate-700 dark:bg-slate-800">
             {exportMenuItems}
           </div>
-        </Sheet>
+        </BottomSheet>
       )}
     </div>
   )

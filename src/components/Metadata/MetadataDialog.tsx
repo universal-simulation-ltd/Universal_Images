@@ -1,10 +1,10 @@
 import { useId, useMemo, useState } from 'react'
+import { PhonePage } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import type { ScrubResult } from '../../lib/metadata'
 import { DIALOG_BODY, DIALOG_FOOTER, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../../lib/dialog'
 import LocationMap from './LocationMap'
 import { useDialog } from '../../lib/useDialog'
-import { Page } from '../../native/parts'
 import { PHONE } from '../../native/shell'
 
 // The "Metadata (identification)" panel. Opened from the badge above the
@@ -238,7 +238,7 @@ export default function MetadataDialog({ onClose }: Props) {
   // left edge), not a dialog over the editor: see src/native/.
   if (PHONE) {
     return (
-      <Page
+      <PhonePage
         title="Metadata"
         onBack={onClose}
         canGoBack={!scrubbing}
@@ -246,7 +246,7 @@ export default function MetadataDialog({ onClose }: Props) {
       >
         <p className="truncate px-5 pt-3 text-xs text-slate-500 dark:text-slate-400">{selected.name}</p>
         {body}
-      </Page>
+      </PhonePage>
     )
   }
 

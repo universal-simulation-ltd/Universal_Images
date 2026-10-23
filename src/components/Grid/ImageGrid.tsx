@@ -1,6 +1,6 @@
+import { PhonePage } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import { formatBytes } from '../../lib/imageResize'
-import { Page } from '../../native/parts'
 import { PHONE } from '../../native/shell'
 
 interface Props {
@@ -93,10 +93,10 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
     // (Done is the page's Back). See src/native/.
     if (PHONE) {
       return (
-        <Page title={`${images.length} image${images.length === 1 ? '' : 's'}`} onBack={() => onBack?.()}>
+        <PhonePage title={`${images.length} image${images.length === 1 ? '' : 's'}`} onBack={() => onBack?.()}>
           {collageButton && <div className="flex justify-end px-3 pt-3">{collageButton}</div>}
           {grid}
-        </Page>
+        </PhonePage>
       )
     }
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useFileDrop } from '@unisim/sdk'
+import { PhonePage, useFileDrop, useScrollHint } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { DIALOG_BODY, DIALOG_FOOTER, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../../lib/dialog'
@@ -21,7 +21,6 @@ import {
 } from '../../lib/collage'
 import type { SourceImage } from '../../types/image'
 import { useDialog } from '../../lib/useDialog'
-import { Page, useScrollHint } from '../../native/parts'
 import { PHONE } from '../../native/shell'
 
 // Several of the open photos on one canvas — one left and one right, one above
@@ -379,7 +378,7 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
                 </div>
               </div>
               <input {...picker.inputProps} hidden />
-              <ul ref={strip.ref} style={PHONE ? strip.style : undefined} className="flex gap-2 overflow-x-auto pb-1">
+              <ul ref={strip.ref} style={PHONE ? strip.style : undefined} className={`flex gap-2 overflow-x-auto pb-1${PHONE ? ` ${strip.className}` : ''}`}>
                 {images.map((img) => {
                   const at = active.findIndex((s) => s.imageId === img.id)
                   const here = at === selected
@@ -584,14 +583,14 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
   // from the left edge), not a dialog over the editor: see src/native/.
   if (PHONE) {
     return (
-      <Page
+      <PhonePage
         title="Collage"
         onBack={onClose}
         canGoBack={!busy}
         footer={<div className="flex flex-col gap-2">{actions}</div>}
       >
         {body}
-      </Page>
+      </PhonePage>
     )
   }
 

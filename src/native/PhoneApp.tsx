@@ -1,4 +1,4 @@
-import { useFileDrop } from '@unisim/sdk'
+import { phoneConfirm, useFileDrop } from '@unisim/sdk'
 import { ABOUT } from '../components/Header/AppMenu'
 import EditShortcuts from '../components/Header/EditShortcuts'
 import ProductLogo from '../components/Header/ProductLogo'
@@ -6,7 +6,7 @@ import { loadArticles } from '../knowledge'
 import { useImageStore } from '../stores/imageStore'
 import { useThemeStore } from '../stores/themeStore'
 import { usePhoneNav } from './nav'
-import { ask, Row } from './parts'
+import { Row } from './parts'
 import { PhoneBar, PhoneLayers, type PhoneAppInfo } from './screens'
 import { useNT } from './strings'
 
@@ -107,7 +107,7 @@ export function ImagesPhoneLayers() {
                 value={<span className="tabular-nums">{images.length}</span>}
                 onClick={async () => {
                   closeMore()
-                  if (await ask(t('app.clear_confirm'), t('app.clear_yes'))) clearAll()
+                  if (await phoneConfirm({ message: t('app.clear_confirm'), confirmLabel: t('app.clear_yes'), danger: true })) clearAll()
                 }}
               />
             )}
