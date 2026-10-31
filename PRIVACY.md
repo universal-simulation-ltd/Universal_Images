@@ -7,8 +7,10 @@ go and read it.
 
 The short version: **your images are resized, converted, blurred and stripped
 by your own browser.** They are not uploaded to us to be processed, and there
-is no copy of them on our servers. There is no sign-in, either: no account to
-make, and nothing to hold one against.
+is no copy of them on our servers. There is no account to make, either, and
+nothing to hold one against. (If your browser already holds a UNI·SIM sign-in,
+the app recognises it so your suite-wide settings come with you; your images
+are never tied to it.)
 
 ---
 
@@ -137,10 +139,13 @@ above.
 
 ## What the app talks to a server for, even when your images don't
 
-- **Nothing about you.** There is no sign-in in any build — the website, the
-  phone apps or the desktop app (`noAccounts: true` in
-  [`src/main.tsx`](src/main.tsx)) — so there is no account, no "you opened the
-  app" event and no online copy of anything. The `@unisim/sdk` anonymous daily
+- **Nothing about you.** Images has no account of its own in any build — the
+  website, the phone apps or the desktop app (`noAccounts: true` in
+  [`src/main.tsx`](src/main.tsx)) — so there is no "you opened the app" event
+  and no online copy of anything. If your browser or phone already holds a
+  UNI·SIM sign-in (a Universal ID), the app recognises it so your suite-wide
+  settings, such as colour scheme and language, come with you, and Tune this
+  app offers a discreet Sign in; nothing about your images is tied to it. The `@unisim/sdk` anonymous daily
   open count is off with it, so the app does not count you either: no
   identifier, no install ID, no tally of opens, on any platform. (Until
   2026-10-20 a Universal ID could keep a backup of an image online. That was

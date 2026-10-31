@@ -26,13 +26,15 @@ const isDesktop = import.meta.env.MODE === 'desktop'
 // the navbar showed no profile/avatar. Env vars (via the vite define) still
 // override.
 //
-// No sign-in, in every build: web, phone and desktop (James, 2026-10-20: no
-// logins in first iterations unless they improve the experience;
+// No accounts of its own, in every build: web, phone and desktop (James,
+// 2026-10-20: no logins in first iterations unless they improve the experience;
 // Docs_UNI_SIM/login-free-plan.md). The only thing a Universal ID ever gave
 // here was "Back up this image online", and it is gone; the backup FILE (Save
 // to desktop, Import a backup) does that job with no account. `noAccounts:
-// true` drops the account rows and keeps the app signed out of the suite
-// session; with it the SDK's anonymous open count is off too (SDK 0.187), as
+// true` drops the account rows; since SDK 0.211.0 it no longer keeps the app
+// signed out: a suite session already held is read and followed (Global Tuning
+// comes with it) and Tune this app offers a discreet Sign in. With it the
+// SDK's anonymous open count is off too (SDK 0.187), as
 // in Charts, Beam and the rest. No <UsageTracker /> either: it only ever
 // recorded signed-in opens.
 const universalConfig = {

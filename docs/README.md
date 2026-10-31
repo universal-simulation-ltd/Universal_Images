@@ -96,11 +96,15 @@ nor "Restore background" ever shows an un-redacted frame.
 
 MIT licensed — free and open source, like all Universal Apps.
 
-## No sign-in (2026-10-20)
+## No accounts of its own (2026-10-20)
 
-Universal Images has no accounts in any build: `noAccounts: true` in
+Universal Images has no accounts of its own in any build: `noAccounts: true` in
 `src/main.tsx` (James: no logins in first iterations unless they improve the
-experience; `Docs_UNI_SIM/login-free-plan.md`, bucket A). The one thing a
+experience; `Docs_UNI_SIM/login-free-plan.md`, bucket A). Since `@unisim/sdk`
+0.211.0 that no longer means signed out: a suite session the browser or phone
+already holds is read and followed (the person's Global Tuning comes with it),
+and Tune this app offers a discreet Sign in. The navbar still has no account
+rows, avatar or greeting. The one thing a
 Universal ID gave was **Back up this image → "Hosted by UNI·SIM"**, the edited
 picture kept online in the `hosted-uploads` bucket. It was removed with
 `src/lib/hostedStore.ts`, `hostedPaths.ts`, `useFreeAllowance.ts` and their
@@ -215,9 +219,11 @@ so a later tidy-up cannot "finish the job" and break it.
 
 Added 2026-09-14, when the iPhone and Android apps were prepared for the stores.
 
-- **No sign-in, so no Delete my account and no demo login for App Review**
-  (2026-10-20). `noAccounts` hides the account rows the SDK would otherwise
-  draw, Delete my account among them.
+- **No accounts of its own, so no Delete my account and no demo login for App
+  Review** (2026-10-20). `noAccounts` hides the account rows the SDK would
+  otherwise draw, Delete my account among them. Since SDK 0.211.0, though,
+  Tune this app offers a discreet Sign in to a Universal ID; check whether App
+  Review then expects Delete my account before the next submission.
 - **The iOS privacy manifest** is `ios/App/App/PrivacyInfo.xcprivacy`. It
   declares no collected data (App Store Connect: "Data Not Collected") and
   `@capacitor/filesystem`'s file-date reads (C617.1). Keep it in step with
