@@ -1,5 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { BottomSheet, Chip, ChipToggle, phoneAlert, ValueChip } from '@unisim/sdk'
+import { BottomSheet, Chip, ChipToggle, buttonClass, phoneAlert, ValueChip } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import {
   computePresets,
@@ -16,6 +16,13 @@ import {
 import { downloadBlob } from '../../lib/download'
 import { groupedPresets } from '../../lib/socialPresets'
 import { PHONE } from '../../native/shell'
+import { DownloadIcon, Key } from '../Key'
+
+// The panel's full-width action rows are the suite's key buttons (SDK 0.216,
+// BRANDING.md → Buttons): a secondary with its emoji in the key, or a soft one
+// for the "undo" state (Remove crop, Restore background, Remove blur).
+const ACTION_ROW = `${buttonClass()} w-full justify-start`
+const ACTION_ROW_ON = `${buttonClass('soft')} w-full justify-start`
 import CropOverlay from './CropOverlay'
 import SocialCropOverlay from './SocialCropOverlay'
 import { RedactBoxesView, RedactEditor, viewFor } from './RedactLayer'
@@ -265,7 +272,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
           <button
             type="button"
             onClick={onShowGrid}
-            className="md:hidden inline-flex items-center gap-2 px-4 py-2.5 bg-orange-700 hover:bg-orange-800 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+            className={`${buttonClass('primary')} md:hidden`}
           >
             Open an image
           </button>
@@ -468,7 +475,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   <div className="px-3">
                     {/* AVIF only appears where the browser can actually encode it. */}
                     {/* WebP only where it can be encoded too — not Safari. */}
-                    <div className={['grid gap-1.5', avifOk && webpOk ? 'grid-cols-4' : avifOk || webpOk ? 'grid-cols-3' : 'grid-cols-2'].join(' ')}>
+                    <div className={['u-tabs grid w-full', avifOk && webpOk ? 'grid-cols-4' : avifOk || webpOk ? 'grid-cols-3' : 'grid-cols-2'].join(' ')}>
                       {(['image/jpeg', ...(webpOk ? ['image/webp'] : []), 'image/png', ...(avifOk ? ['image/avif'] : [])] as OutputFormat[]).map((f) => {
                         const isActive = target.format === f
                         return (
@@ -480,12 +487,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                               setTarget({ format: f })
                               if (convertMode) setConvertMode(false)
                             }}
-                            className={[
-                              'py-1.5 rounded-lg border text-xs font-medium transition-colors',
-                              isActive
-                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300'
-                                : 'border-slate-200 text-slate-600 hover:border-orange-400 dark:border-slate-600 dark:text-slate-300 dark:hover:border-orange-500'
-                            ].join(' ')}
+                            className="u-tab justify-center px-1 text-xs"
                           >
                             {FORMAT_LABEL[f]}
                           </button>
@@ -826,7 +828,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   <button
                     type="button"
                     onClick={clearCrop}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20 transition-colors"
+                    className={ACTION_ROW_ON}
                   >
                     {/* SVG, not `✕` — U+2715 is a ▯?▯ box on iOS. */}
                     <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
@@ -839,9 +841,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   <button
                     type="button"
                     onClick={addCenteredCrop}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 transition-colors"
+                    className={ACTION_ROW}
                   >
-                    <span aria-hidden="true">✂</span>
+                    <Key>✂</Key>
                     <span className="flex-1 text-left">Manual crop</span>
                     <span className="text-[10px] uppercase tracking-wide text-slate-400">or drag</span>
                   </button>
@@ -853,9 +855,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   onClick={() => setAutocropOpen((v) => !v)}
                   aria-expanded={autocropOpen}
                   aria-controls={`${foldId}-autocrop`}
-                  className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 transition-colors"
+                  className={`${ACTION_ROW} mt-2`}
                 >
-                  <span aria-hidden="true">🪄</span>
+                  <Key>🪄</Key>
                   <span className="flex-1 text-left">Autocrop</span>
                   <span
                     aria-hidden="true"
@@ -936,7 +938,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     type="button"
                     onClick={restoreBackground}
                     disabled={removingBg}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20 hover:bg-orange-100 disabled:opacity-60 transition-colors"
+                    className={ACTION_ROW_ON}
                   >
                     <span aria-hidden="true">↩</span>
                     <span className="flex-1 text-left">Restore background</span>
@@ -947,9 +949,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     type="button"
                     onClick={onRemoveBackground}
                     disabled={removingBg}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 disabled:opacity-60 disabled:cursor-wait transition-colors"
+                    className={`${ACTION_ROW} disabled:cursor-wait`}
                   >
-                    <span aria-hidden="true">🪄</span>
+                    <Key>🪄</Key>
                     <span className="flex-1 text-left">{removingBg ? 'Removing background…' : 'Remove background'}</span>
                     {!removingBg && <span className="text-[10px] uppercase tracking-wide text-slate-400">AI</span>}
                   </button>
@@ -1090,14 +1092,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   type="button"
                   onClick={() => setRedacting(!redacting)}
                   aria-pressed={redacting}
-                  className={[
-                    'w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors',
-                    redacting
-                      ? 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20'
-                      : 'border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10'
-                  ].join(' ')}
+                  className={redacting ? ACTION_ROW_ON : ACTION_ROW}
                 >
-                  <span aria-hidden="true">⬛</span>
+                  {redacting ? <span aria-hidden="true">⬛</span> : <Key>⬛</Key>}
                   <span className="flex-1 text-left">{redacting ? 'Done drawing boxes' : 'Draw boxes on the picture'}</span>
                 </button>
 
@@ -1201,9 +1198,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     type="button"
                     onClick={onDetectFaces}
                     disabled={detectingFaces}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 disabled:opacity-60 disabled:cursor-wait transition-colors"
+                    className={`${ACTION_ROW} disabled:cursor-wait`}
                   >
-                    <span aria-hidden="true">🙈</span>
+                    <Key>🙈</Key>
                     <span className="flex-1 text-left">{detectingFaces ? 'Detecting faces…' : 'Detect & blur faces'}</span>
                     {!detectingFaces && <span className="text-[10px] uppercase tracking-wide text-slate-400">AI</span>}
                   </button>
@@ -1226,7 +1223,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                       <button
                         type="button"
                         onClick={clearFaceBlur}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-orange-300 bg-orange-50 text-sm text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-300 dark:hover:bg-orange-500/20 hover:bg-orange-100 transition-colors"
+                        className={ACTION_ROW_ON}
                       >
                         <span aria-hidden="true">↩</span>
                         <span className="flex-1 text-left">Remove blur</span>
@@ -1236,15 +1233,15 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                       <button
                         type="button"
                         onClick={() => applyFaceBlur()}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 hover:border-orange-400 hover:bg-orange-50/40 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 transition-colors"
+                        className={ACTION_ROW}
                       >
-                        <span aria-hidden="true">🙈</span>
+                        <Key>🙈</Key>
                         <span className="flex-1 text-left">Blur {faceBoxes.length} {faceBoxes.length === 1 ? 'face' : 'faces'}</span>
                       </button>
                     )}
 
                     {/* Style — blur vs pixelate */}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="u-tabs grid w-full grid-cols-2">
                       {(['blur', 'pixelate'] as const).map((style) => {
                         const isActive = faceBlurStyle === style
                         return (
@@ -1253,12 +1250,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                             type="button"
                             onClick={() => setFaceBlurStyle(style)}
                             aria-pressed={isActive}
-                            className={[
-                              'py-1.5 rounded-lg border text-xs font-medium capitalize transition-colors',
-                              isActive
-                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300'
-                                : 'border-slate-200 text-slate-600 hover:border-orange-400 dark:border-slate-600 dark:text-slate-300 dark:hover:border-orange-500'
-                            ].join(' ')}
+                            className="u-tab justify-center capitalize"
                           >
                             {style}
                           </button>
@@ -1354,7 +1346,7 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   <button
                     type="button"
                     onClick={clearSocialCrop}
-                    className="w-full text-left text-[11px] text-orange-700 hover:text-orange-900 bg-orange-50 hover:bg-orange-100 rounded-md px-2 py-1.5 ring-1 ring-orange-200 dark:text-orange-300 dark:hover:text-orange-200 dark:bg-orange-500/10 dark:hover:bg-orange-500/20 dark:ring-orange-500/30 transition-colors"
+                    className={`${buttonClass('soft', 'sm')} w-full justify-start`}
                   >
                     Clear social crop · go back to free sizing
                   </button>
@@ -1439,8 +1431,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   type="button"
                   onClick={exportSelected}
                   disabled={exporting}
-                  className="flex-1 h-10 rounded-l-lg bg-orange-700 hover:bg-orange-800 text-white font-medium shadow-sm disabled:opacity-60 disabled:cursor-wait transition-colors"
+                  className={`${buttonClass('primary')} flex-1 justify-start rounded-r-none disabled:cursor-wait`}
                 >
+                  <Key><DownloadIcon /></Key>
                   {exporting ? 'Exporting…' : `Download ${FORMAT_LABEL[target.format]}`}
                 </button>
                 <button
@@ -1450,7 +1443,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                   aria-expanded={exportMenuOpen}
                   aria-label="More export options"
                   title="Format, quality and backup"
-                  className="shrink-0 inline-flex h-10 w-11 items-center justify-center rounded-r-lg border-l border-orange-800/40 bg-orange-700 hover:bg-orange-800 text-white shadow-sm transition-colors"
+                  // The split's caret: the same primary, joined on (one outline).
+                  className={`${buttonClass('primary')} shrink-0 w-11 px-0 -ml-px rounded-l-none`}
                 >
                   <svg
                     viewBox="0 0 20 20"

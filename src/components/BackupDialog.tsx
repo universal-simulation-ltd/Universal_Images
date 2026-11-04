@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Chip, PhonePage } from '@unisim/sdk'
+import { Chip, PhonePage, buttonClass } from '@unisim/sdk'
 import { useImageStore } from '../stores/imageStore'
 import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib/dialog'
 import { downloadBackup, importBackup } from '../lib/imageBackup'
 import { useDialog } from '../lib/useDialog'
 import { PHONE } from '../native/shell'
+import { DownloadIcon, Key, UploadIcon } from './Key'
 
 // "Back up this image" — a backup FILE the person keeps (the original plus the
 // crop, size and boxes), to import later on any device and carry on editing.
@@ -97,22 +98,18 @@ export default function BackupDialog() {
                 type="button"
                 onClick={onDownloadBackup}
                 disabled={!hasImage || importBusy}
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                className={buttonClass('primary')}
               >
-                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M10 3v10m0 0l-3.5-3.5M10 13l3.5-3.5M4 16h12" />
-                </svg>
+                <Key><DownloadIcon /></Key>
                 Download backup
               </button>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={importBusy}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800"
+                className={buttonClass()}
               >
-                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M10 17V7m0 0L6.5 10.5M10 7l3.5 3.5M4 4h12" />
-                </svg>
+                <Key><UploadIcon /></Key>
                 {importBusy ? 'Importing…' : 'Import a backup'}
               </button>
               <input

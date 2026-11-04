@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { PhonePage, useFileDrop, useScrollHint } from '@unisim/sdk'
+import { PhonePage, buttonClass, useFileDrop, useScrollHint } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import { useThemeStore } from '../../stores/themeStore'
 import { DIALOG_BODY, DIALOG_FOOTER, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../../lib/dialog'
@@ -22,6 +22,7 @@ import {
 import type { SourceImage } from '../../types/image'
 import { useDialog } from '../../lib/useDialog'
 import { PHONE } from '../../native/shell'
+import { DownloadIcon, Key, PlusIcon } from '../Key'
 
 // Several of the open photos on one canvas — one left and one right, one above
 // the other, a big one with two beside it, a grid.
@@ -562,17 +563,19 @@ export default function CollageDialog({ onClose }: { onClose: () => void }) {
               type="button"
               onClick={onAdd}
               disabled={!!busy || filled === 0}
-              className="flex-1 sm:flex-none rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              className={`${buttonClass()} flex-1 justify-start sm:flex-none`}
               title="Add the collage to your images, to resize or convert it like any other"
             >
+              <Key><PlusIcon /></Key>
               {busy === 'add' ? 'Adding…' : 'Add to images'}
             </button>
             <button
               type="button"
               onClick={onSave}
               disabled={!!busy || filled === 0}
-              className="flex-1 sm:flex-none rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+              className={`${buttonClass('primary')} flex-1 justify-start sm:flex-none`}
             >
+              <Key><DownloadIcon /></Key>
               {busy === 'save' ? 'Saving…' : 'Download'}
             </button>
           </div>
