@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from 'react'
 import { PhonePage, buttonClass } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
+import { web } from '../Key'
 import type { ScrubResult } from '../../lib/metadata'
 import { DIALOG_BODY, DIALOG_FOOTER, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../../lib/dialog'
 import LocationMap from './LocationMap'
@@ -218,7 +219,7 @@ export default function MetadataDialog({ onClose }: Props) {
           <button
             onClick={onClose}
             disabled={scrubbing}
-            className={buttonClass()}
+            className={web(buttonClass(), 'px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200')}
           >
             {scrubbed ? 'Done' : 'Close'}
           </button>
@@ -226,7 +227,7 @@ export default function MetadataDialog({ onClose }: Props) {
             <button
               onClick={onScrub}
               disabled={scrubbing}
-              className={buttonClass('primary')}
+              className={web(buttonClass('primary'), 'px-4 py-2 bg-orange-700 hover:bg-orange-800 text-white rounded text-sm font-medium disabled:opacity-50')}
             >
               {scrubbing ? 'Stripping…' : 'Scrub metadata'}
             </button>

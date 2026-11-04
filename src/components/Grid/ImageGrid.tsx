@@ -2,6 +2,7 @@ import { PhonePage, buttonClass } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import { formatBytes } from '../../lib/imageResize'
 import { PHONE } from '../../native/shell'
+import { web } from '../Key'
 
 interface Props {
   /** Full-screen overlay mode used on mobile. */
@@ -26,7 +27,7 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
       type="button"
       onClick={() => { setCollageOpen(true); onBack?.() }}
       title="Put these photos together in one image"
-      className={`${buttonClass('soft', 'sm')} normal-case tracking-normal -my-1.5`}
+      className={web(`${buttonClass('soft', 'sm')} normal-case tracking-normal -my-1.5`, 'normal-case tracking-normal text-xs font-semibold text-orange-700 hover:text-orange-800 px-2 py-1 -my-1 rounded-md hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-500/10 transition-colors')}
     >
       🧩 Collage
     </button>
@@ -112,7 +113,7 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
             <button
               type="button"
               onClick={onBack}
-              className={`${buttonClass('soft', 'sm')} -my-1.5`}
+              className={web(`${buttonClass('soft', 'sm')} -my-1.5`, 'text-xs font-semibold text-orange-700 hover:text-orange-800 px-2 py-1 rounded-md hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-500/10 transition-colors')}
             >
               Done
             </button>

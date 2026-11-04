@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { DropAnywhere, DropRing, buttonClass, phoneAlert, PrivacyNote, useFileDrop } from '@unisim/sdk'
 import DropWatermark from './DropWatermark'
+import { web } from '../Key'
 import { useImageStore } from '../../stores/imageStore'
 import ImageIllustration from './ImageIllustration'
 import { CONTAINER } from '../../lib/layout'
@@ -212,7 +213,7 @@ export default function LandingPage() {
                   type="button"
                   onClick={loadExample}
                   disabled={loadingExample}
-                  className={`${buttonClass()} mt-5 w-full disabled:cursor-wait`}
+                  className={web(`${buttonClass()} mt-5 w-full disabled:cursor-wait`, 'mt-5 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 disabled:opacity-60 disabled:cursor-wait transition-colors')}
                 >
                   <span aria-hidden="true">🧪</span>
                   {loadingExample ? 'Loading example…' : 'Try with example image'}
@@ -227,7 +228,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => openPicker(true)}
-                  className={`${buttonClass()} mt-3 w-full`}
+                  className={web(`${buttonClass()} mt-3 w-full`, 'mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 transition-colors')}
                 >
                   <span aria-hidden="true">🔄</span>
                   Convert &amp; compress — change format or quality

@@ -6,7 +6,7 @@ import { DIALOG_BODY, DIALOG_HEADER, DIALOG_OVERLAY, DIALOG_PANEL } from '../lib
 import { downloadBackup, importBackup } from '../lib/imageBackup'
 import { useDialog } from '../lib/useDialog'
 import { PHONE } from '../native/shell'
-import { DownloadIcon, Key, UploadIcon } from './Key'
+import { DownloadIcon, Key, UploadIcon, web } from './Key'
 
 // "Back up this image" — a backup FILE the person keeps (the original plus the
 // crop, size and boxes), to import later on any device and carry on editing.
@@ -98,18 +98,18 @@ export default function BackupDialog() {
                 type="button"
                 onClick={onDownloadBackup}
                 disabled={!hasImage || importBusy}
-                className={buttonClass('primary')}
+                className={web(buttonClass('primary'), 'inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white')}
               >
-                <Key><DownloadIcon /></Key>
+                <Key phone={<DownloadIcon className="h-4 w-4" />}><DownloadIcon /></Key>
                 Download backup
               </button>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={importBusy}
-                className={buttonClass()}
+                className={web(buttonClass(), 'inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:border-slate-500 dark:hover:bg-slate-800')}
               >
-                <Key><UploadIcon /></Key>
+                <Key phone={<UploadIcon className="h-4 w-4" />}><UploadIcon /></Key>
                 {importBusy ? 'Importing…' : 'Import a backup'}
               </button>
               <input

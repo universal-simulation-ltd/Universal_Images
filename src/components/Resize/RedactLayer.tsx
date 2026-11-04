@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { RedactBox, SourceCrop } from '../../types/image'
 import { MIN_REDACT, clampBox, isPaleFill, tapRedactBox } from '../../lib/redact'
 import { buttonClass } from '@unisim/sdk'
-import { CheckIcon, Key } from '../Key'
+import { CheckIcon, Key, web } from '../Key'
 
 /**
  * Source pixels → pane pixels: `screen = left + source * s`, per axis because
@@ -331,9 +331,9 @@ export function RedactEditor({
         onPointerDown={(e) => e.stopPropagation()}
         onClick={onDone}
         title="Stop drawing boxes (Esc)"
-        className={`${buttonClass('primary', 'sm')} absolute top-3 left-1/2 -translate-x-1/2 shadow-md`}
+        className={web(`${buttonClass('primary', 'sm')} absolute top-3 left-1/2 -translate-x-1/2 shadow-md`, 'absolute top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 bg-orange-700 hover:bg-orange-800 text-white text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-md')}
       >
-        <Key><CheckIcon /></Key>
+        <Key phone={<CheckIcon className="w-3.5 h-3.5" strokeWidth="2.5" />}><CheckIcon /></Key>
         Done
       </button>
       <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 max-w-[calc(100%-24px)]">
