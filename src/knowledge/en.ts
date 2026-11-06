@@ -215,7 +215,7 @@ If you zoom the location map in to county level, the web version of the app down
 
 ## What every Universal app sends
 
-There is no sign-in and no usage count: the app does not tell us when you open it or what you do in it, and it has no account to tie anything to. Nothing it sends includes anything about your images: not their names, sizes or contents.
+There is no account of its own and no usage count: the app does not tell us when you open it or what you do in it. If you are already signed in to a UNI·SIM app, it recognises you so your suite-wide settings, such as colour scheme and language, come with you, and Tune this app offers a discreet Sign in. Nothing it sends includes anything about your images: not their names, sizes or contents.
 
 There is no third-party analytics, tracking or advertising in the app.`,
   },

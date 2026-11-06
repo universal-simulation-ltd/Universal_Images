@@ -215,7 +215,7 @@ Se aproximar o mapa de localização até ao nível do distrito, a versão web d
 
 ## O que todas as aplicações Universal enviam
 
-Não há início de sessão nem contagem de utilização: a aplicação não nos diz quando a abre nem o que faz nela, e não existe nenhuma conta à qual associar seja o que for. Nada do que envia inclui qualquer informação sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
+Não há conta própria nem contagem de utilização: a aplicação não nos diz quando a abre nem o que faz nela. Se já tiver sessão iniciada numa aplicação UNI·SIM, a aplicação reconhece-a para que as suas definições comuns a todo o conjunto, como o esquema de cores e o idioma, o acompanhem, e Ajustar esta aplicação oferece um início de sessão discreto. Nada do que envia inclui qualquer informação sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
 
 Não há análises de terceiros, rastreio nem publicidade na aplicação.`,
   },

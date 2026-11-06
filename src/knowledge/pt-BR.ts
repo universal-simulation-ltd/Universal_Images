@@ -215,7 +215,7 @@ Se você aproximar o mapa de localização até o nível de condado, a versão w
 
 ## O que todo app Universal envia
 
-Não há login nem contagem de uso: o app não nos diz quando você o abre nem o que você faz nele, e não há conta à qual ligar nada. Nada do que ele envia inclui algo sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
+Não há conta própria nem contagem de uso: o app não nos diz quando você o abre nem o que você faz nele. Se você já fez login em um app da UNI·SIM, o app reconhece isso para que suas configurações de toda a suíte, como esquema de cores e idioma, venham junto, e Ajustar este app oferece um login discreto. Nada do que ele envia inclui algo sobre as suas imagens: nem os nomes, nem os tamanhos, nem o conteúdo.
 
 Não há análise de dados, rastreamento nem publicidade de terceiros no app.`,
   },

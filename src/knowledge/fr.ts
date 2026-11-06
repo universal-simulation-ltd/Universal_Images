@@ -215,7 +215,7 @@ Si vous zoomez sur la carte de localisation jusqu'au niveau du département ou d
 
 ## Ce que chaque application Universal envoie
 
-Il n'y a ni connexion ni décompte d'utilisation : l'application ne nous dit pas quand vous l'ouvrez ni ce que vous y faites, et il n'existe aucun compte auquel rattacher quoi que ce soit. Rien de ce qu'elle envoie ne contient quoi que ce soit sur vos images : ni leur nom, ni leur taille, ni leur contenu.
+Il n'y a ni compte propre ni décompte d'utilisation : l'application ne nous dit pas quand vous l'ouvrez ni ce que vous y faites. Si vous êtes déjà connecté à une application UNI·SIM, elle vous reconnaît pour que vos réglages communs à toute la suite, comme le thème de couleurs et la langue, vous suivent, et Régler cette application propose une connexion discrète. Rien de ce qu'elle envoie ne contient quoi que ce soit sur vos images : ni leur nom, ni leur taille, ni leur contenu.
 
 L'application ne contient aucun outil d'analyse, de suivi ou de publicité tiers.`,
   },
