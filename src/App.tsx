@@ -98,6 +98,9 @@ export default function App() {
           preferences dialog (Follow global / Light / Dark / System, since SDK
           0.143). `theme` stays the RESOLVED value the bar paints with. */}
       {PHONE ? <ImagesPhoneBar /> : <UniversalAppsNavBar
+        // Signed in, the bar says whose it is: "Bradley’s Images" ("James’ Images",
+        // "My Images" with no name), and Tune this app gets the account area (James, 2026-11-10 rollout).
+        personalTitle={(name) => (name ? `${/s$/i.test(name.trim()) ? `${name}’` : `${name}’s`} Images` : 'My Images')}
         product="images"
         productLogo={<ProductLogo />}
         productHomeHref={import.meta.env.BASE_URL}
