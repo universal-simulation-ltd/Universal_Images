@@ -166,6 +166,34 @@ export default function App() {
         )}
       </main>
 
+      {/* The website at phone width: the way to the image list, docked at the
+          foot (BRANDING.md → "On a phone, navigation sits at the bottom"; the
+          SDK's u-tabs--dock, which floats above the suite bar at
+          var(--u-bar-bottom) and pads <body> by its height — #root is
+          height: 100% of body's border-box, so the editor's scroller ends
+          above it). It used to be a small grid button in the filename row,
+          the only way there. A second tap goes back to the editor. Hidden
+          from 768px, where the list is the sidebar; the phone app keeps its
+          own button. */}
+      {hasImages && !PHONE && (
+        <div className="u-tabs u-tabs--dock md:hidden" role="group" aria-label="Images">
+          <button
+            type="button"
+            className="u-tab"
+            aria-pressed={mobileSidebarOpen}
+            onClick={() => setMobileSidebarOpen((open) => !open)}
+          >
+            <svg viewBox="0 0 12 12" className="w-3.5 h-3.5 shrink-0" fill="currentColor" aria-hidden="true">
+              <rect x="0.5" y="0.5" width="4.5" height="4.5" rx="0.75" />
+              <rect x="7" y="0.5" width="4.5" height="4.5" rx="0.75" />
+              <rect x="0.5" y="7" width="4.5" height="4.5" rx="0.75" />
+              <rect x="7" y="7" width="4.5" height="4.5" rx="0.75" />
+            </svg>
+            <span className="tabular-nums">All images ({images.length})</span>
+          </button>
+        </div>
+      )}
+
       {/* The website's footer. The phone app's credit is on its About page. */}
       {!hasImages && !loading && !PHONE && (
         <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
