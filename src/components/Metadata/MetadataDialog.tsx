@@ -8,6 +8,10 @@ import LocationMap from './LocationMap'
 import { useDialog } from '../../lib/useDialog'
 import { PHONE } from '../../native/shell'
 
+// A metadata row. On the website the Key box behind the list paints the fill
+// (a row's own square fill would poke out of the box's rounded corners).
+const FIELD_ROW = web('px-3 py-2', 'px-3 py-2 bg-white dark:bg-slate-900')
+
 // The "Metadata (identification)" panel. Opened from the badge above the
 // preview or from Actions → Metadata. Shows exactly what the selected photo
 // says about where, when and on what it was taken, and strips it on request.
@@ -131,7 +135,8 @@ export default function MetadataDialog({ onClose }: Props) {
           )}
 
           {!meta && !scrubbed && (
-            <div className="rounded-lg bg-slate-50 text-slate-600 px-4 py-3 text-sm dark:bg-slate-800/60 dark:text-slate-300">
+            // Nothing in frame (Boxes D · frame, empty) on the website.
+            <div className={web('u-box u-box--frame u-box--empty text-slate-600 px-4 py-6 text-sm dark:text-slate-300', 'rounded-lg bg-slate-50 text-slate-600 px-4 py-3 text-sm dark:bg-slate-800/60 dark:text-slate-300')}>
               No metadata found in this image. Nothing to strip.
             </div>
           )}
@@ -145,9 +150,14 @@ export default function MetadataDialog({ onClose }: Props) {
                 </div>
               )}
 
-              <dl className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden dark:divide-slate-800 dark:border-slate-700">
+              {/* What the file carries: a record of values, so the suite's Key
+                  box on the website (BRANDING.md → Boxes, C), its tab naming
+                  the record and its standards. The phone keeps its own list. */}
+              <div className={web('u-box u-box--key mt-4 p-0 pt-3 bg-white dark:bg-slate-900', '')}>
+              {!PHONE && <span className="u-box__key">Metadata · EXIF, IPTC, XMP</span>}
+              <dl className={web('divide-y divide-slate-100 dark:divide-slate-800', 'divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden dark:divide-slate-800 dark:border-slate-700')}>
                 {meta.fields.map((f) => (
-                  <div key={f.key} className="px-3 py-2 bg-white dark:bg-slate-900">
+                  <div key={f.key} className={FIELD_ROW}>
                     <dt className="text-[11px] uppercase tracking-wide text-slate-400 font-medium flex items-center gap-1.5">
                       {f.label}
                       {f.identifying && (
@@ -181,7 +191,7 @@ export default function MetadataDialog({ onClose }: Props) {
                   </div>
                 ))}
                 {meta.hasThumbnail && (
-                  <div className="px-3 py-2 bg-white dark:bg-slate-900">
+                  <div className={FIELD_ROW}>
                     <dt className="text-[11px] uppercase tracking-wide text-slate-400 font-medium flex items-center gap-1.5">
                       Embedded thumbnail
                       <span className="text-amber-600 normal-case tracking-normal dark:text-amber-400" title="Can identify you">
@@ -195,7 +205,7 @@ export default function MetadataDialog({ onClose }: Props) {
                   </div>
                 )}
                 {meta.otherCount > 0 && (
-                  <div className="px-3 py-2 bg-white dark:bg-slate-900">
+                  <div className={FIELD_ROW}>
                     <dt className="text-[11px] uppercase tracking-wide text-slate-400 font-medium">
                       Other tags
                     </dt>
@@ -208,6 +218,7 @@ export default function MetadataDialog({ onClose }: Props) {
                   </div>
                 )}
               </dl>
+              </div>
             </>
           )}
         </div>

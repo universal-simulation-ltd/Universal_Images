@@ -142,7 +142,12 @@ export default function LandingPage() {
                 Resize, crop, convert and shrink photos right here on your device. Drop one or many.
               </p>
 
-              <div className="@container mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6 dark:bg-slate-900 dark:border-slate-800">
+              {/* The front door is where images come in, with nothing in
+                  frame yet: the suite's Viewfinder box, empty (BRANDING.md →
+                  Boxes, D), all four corners muted and no outline. It keeps its
+                  white fill, which the drop circle is drawn for. The phone app
+                  keeps its own card (see Key.tsx). */}
+              <div className={web('@container u-box u-box--frame u-box--empty mt-7 bg-white rounded-lg p-5 sm:p-6 text-left dark:bg-slate-900', '@container mt-7 bg-white border border-slate-200 rounded-2xl shadow-sm p-5 sm:p-6 dark:bg-slate-900 dark:border-slate-800')}>
                 {/* The suite's shared drop circle (`DropRing` + `useFileDrop`
                     from @unisim/sdk) rather than a copy, so this is the same
                     front door Universal Compress, PDF and the Converter's All

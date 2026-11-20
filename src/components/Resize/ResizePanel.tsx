@@ -1219,7 +1219,8 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                     {!detectingFaces && <span className="text-[10px] uppercase tracking-wide text-slate-400">AI</span>}
                   </button>
                 ) : faceBoxes.length === 0 ? (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50/60 dark:border-slate-700 dark:bg-slate-800/40 p-3">
+                  // Nothing in frame (Boxes D · frame, empty) on the website.
+                  <div className={web('u-box u-box--frame u-box--empty px-3 py-4', 'rounded-lg border border-slate-200 bg-slate-50/60 dark:border-slate-700 dark:bg-slate-800/40 p-3')}>
                     <p className="text-[11px] text-slate-500 leading-snug dark:text-slate-400">No faces detected in this image.</p>
                     <button
                       type="button"
@@ -1425,9 +1426,13 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
                 <Chip size="sm">Convert</Chip>
               )}
             </div>
-            <div className="rounded-md bg-slate-50 ring-1 ring-slate-200 px-3 py-2 text-[11px] text-slate-600 leading-relaxed dark:bg-slate-800/60 dark:ring-slate-700 dark:text-slate-300">
+            {/* The figure the export will produce: a record carrying a value,
+                so the suite's Key box on the website (BRANDING.md → Boxes, C),
+                its tab saying what it is. The phone keeps its own (Key.tsx). */}
+            <div className={web('u-box u-box--key mt-4 bg-slate-50 px-3 pb-2 pt-4 text-[11px] text-slate-600 leading-relaxed dark:bg-slate-800/60 dark:text-slate-300', 'rounded-md bg-slate-50 ring-1 ring-slate-200 px-3 py-2 text-[11px] text-slate-600 leading-relaxed dark:bg-slate-800/60 dark:ring-slate-700 dark:text-slate-300')}>
+              {!PHONE && <span className="u-box__key">Estimated output</span>}
               <div className="flex items-center justify-between">
-                <span className="text-slate-500 dark:text-slate-400">Estimated output</span>
+                <span className="text-slate-500 dark:text-slate-400">{PHONE ? 'Estimated output' : 'Size'}</span>
                 <span className="font-medium tabular-nums text-slate-800 dark:text-slate-100">
                   {estimate.state === 'ready' && !openingNext
                     ? formatBytes(estimate.bytes)
@@ -1499,7 +1504,9 @@ export default function ResizePanel({ onShowGrid }: ResizePanelProps) {
               EXIF and location metadata are stripped on export.
             </p>
             {lastResult && (
-              <div className="text-[11px] text-slate-500 bg-slate-50 rounded-md px-3 py-2 leading-relaxed dark:text-slate-400 dark:bg-slate-800/60">
+              <div className={web('u-box u-box--key mt-4 text-[11px] text-slate-500 bg-slate-50 px-3 pb-2 pt-4 leading-relaxed dark:text-slate-400 dark:bg-slate-800/60', 'text-[11px] text-slate-500 bg-slate-50 rounded-md px-3 py-2 leading-relaxed dark:text-slate-400 dark:bg-slate-800/60')}>
+                {/* The last download's result (Boxes C · key, neutral). */}
+                {!PHONE && <span className="u-box__key">Last download</span>}
                 Saved <span className="font-medium text-slate-700 dark:text-slate-200">{lastResult.width}×{lastResult.height}</span>
                 {' · '}
                 <span className="font-medium text-slate-700 dark:text-slate-200">{formatBytes(lastResult.bytes)}</span>

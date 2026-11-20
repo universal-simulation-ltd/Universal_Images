@@ -4,6 +4,25 @@ import { formatBytes } from '../../lib/imageResize'
 import { PHONE } from '../../native/shell'
 import { web } from '../Key'
 
+// Each thumbnail is a tile you tap to open that image in the editor, so it
+// wears the suite's Orbit corner (BRANDING.md → Boxes, A) on the website. The
+// selected one keeps its orange edge, as a ring OUTSIDE the box so the arc
+// still sits on the corner. The phone app keeps its own tiles (see Key.tsx).
+const tileClass = (selected: boolean, phone: string) =>
+  web(
+    [
+      'u-box u-box--orbit u-box--row p-0 text-left transition-[border-color,box-shadow]',
+      selected
+        ? 'border-orange-500 ring-1 ring-orange-500 dark:border-orange-400 dark:ring-orange-400'
+        : 'border-slate-200 dark:border-slate-700'
+    ].join(' '),
+    phone
+  )
+// Inside an orbit tile the picture and caption round their own corners: the box
+// can't clip them (overflow would cut the arc off its corner).
+const tileTop = web('rounded-t-[13px] overflow-hidden', '')
+const tileFoot = web('rounded-b-[13px]', '')
+
 interface Props {
   /** Full-screen overlay mode used on mobile. */
   mobileExpanded?: boolean
@@ -49,14 +68,14 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                     type="button"
                     onClick={() => handleSelect(img.id)}
                     aria-current={isSelected ? 'true' : undefined}
-                    className={[
+                    className={tileClass(isSelected, [
                       'w-full rounded-xl border-2 overflow-hidden text-left transition-all',
                       isSelected
                         ? 'border-orange-500 shadow-md shadow-orange-500/20'
                         : 'border-slate-200 hover:border-orange-300 dark:border-slate-700 dark:hover:border-orange-500/60'
-                    ].join(' ')}
+                    ].join(' '))}
                   >
-                    <div className="checker-bg checker-pane aspect-square w-full">
+                    <div className={`checker-bg checker-pane aspect-square w-full ${tileTop}`}>
                       <img
                         src={img.objectUrl}
                         alt={img.name}
@@ -64,7 +83,7 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                         loading="lazy"
                       />
                     </div>
-                    <div className="px-2 py-2 bg-white border-t border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+                    <div className={`px-2 py-2 bg-white border-t border-slate-100 dark:bg-slate-900 dark:border-slate-800 ${tileFoot}`}>
                       <div className="truncate text-xs font-medium text-slate-700 dark:text-slate-200">{img.name}</div>
                       <div className="text-[10px] text-slate-400 mt-0.5">
                         {img.width}×{img.height} · {formatBytes(img.bytes)}
@@ -144,14 +163,14 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                 type="button"
                 onClick={() => selectImage(img.id)}
                 aria-current={isSelected ? 'true' : undefined}
-                className={[
+                className={tileClass(isSelected, [
                   'w-full rounded-lg border-2 overflow-hidden text-left transition-all',
                   isSelected
                     ? 'border-orange-500 shadow-md shadow-orange-500/20'
                     : 'border-slate-200 hover:border-orange-300 dark:border-slate-700 dark:hover:border-orange-500/60'
-                ].join(' ')}
+                ].join(' '))}
               >
-                <div className="checker-bg checker-pane aspect-square w-full">
+                <div className={`checker-bg checker-pane aspect-square w-full ${tileTop}`}>
                   <img
                     src={img.objectUrl}
                     alt={img.name}
@@ -159,7 +178,7 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                     loading="lazy"
                   />
                 </div>
-                <div className="px-2 py-1.5 bg-white border-t border-slate-100 dark:bg-slate-900 dark:border-slate-800">
+                <div className={`px-2 py-1.5 bg-white border-t border-slate-100 dark:bg-slate-900 dark:border-slate-800 ${tileFoot}`}>
                   <div className="truncate text-xs font-medium text-slate-700 dark:text-slate-200">{img.name}</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">
                     {img.width}×{img.height} · {formatBytes(img.bytes)}
