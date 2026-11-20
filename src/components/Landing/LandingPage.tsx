@@ -192,13 +192,13 @@ export default function LandingPage() {
                         <circle cx="8.5" cy="9.5" r="1.5" />
                         <path d="M21 15.5 16 11l-8 8" />
                       </svg>
-                      <span className="text-[15px] font-bold text-slate-900">
+                      <span className="text-[15px] font-bold text-slate-900 dark:text-slate-100">
                         {picker.over ? 'Drop to open' : 'Drop images here'}
                       </span>
                       {/* What it takes, on the circle itself — Compress and the
                           Converter both say so here, and until now this one
                           only said it once a drag was already under way. */}
-                      <span className="text-[11.5px] leading-relaxed text-slate-500">
+                      <span className="text-[11.5px] leading-relaxed text-slate-500 dark:text-slate-400">
                         JPEG · PNG · WebP · HEIC · GIF
                       </span>
                       <span className="mt-1 text-[11px] text-slate-400">or click to browse</span>
@@ -236,7 +236,9 @@ export default function LandingPage() {
                   className={web(`${buttonClass()} mt-3 w-full`, 'mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 hover:border-orange-400 hover:bg-orange-50/40 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-orange-500 dark:hover:bg-orange-500/10 transition-colors')}
                 >
                   <span aria-hidden="true">🔄</span>
-                  Convert &amp; compress — change format or quality
+                  {/* Suite buttons don't wrap: on a phone the tail ran past the
+                      button's edge, so below `sm` it says just the action. */}
+                  Convert &amp; compress<span className="hidden sm:inline">&nbsp;— change format or quality</span>
                 </button>
 
                 {/* Universal PDF's closing grid, in the same shape (2026-08-29).
