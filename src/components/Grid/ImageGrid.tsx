@@ -1,7 +1,10 @@
-import { PhonePage, buttonClass } from '@unisim/sdk'
+import { Button, PhonePage, SelectCheckbox, SelectionBar, SwipeGroup, SwipeRow, buttonClass } from '@unisim/sdk'
 import { useImageStore } from '../../stores/imageStore'
 import { formatBytes } from '../../lib/imageResize'
+import { removeSwipe, selectSwipe, useListSelect } from '../../native/listGestures'
 import { PHONE } from '../../native/shell'
+import { useNT } from '../../native/strings'
+import { offerUndo } from '../../native/undo'
 import { web } from '../Key'
 
 // Each thumbnail is a tile you tap to open that image in the editor, so it
@@ -36,8 +39,20 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
   const selectImage = useImageStore((s) => s.selectImage)
   const removeImage = useImageStore((s) => s.removeImage)
   const setCollageOpen = useImageStore((s) => s.setCollageOpen)
+  const t = useNT()
+  // The phone app's grid gestures (BRANDING.md ▸ "A deletable row swipes"):
+  // swipe a picture left to take it out (with Undo, edits and all), right to
+  // select it; hold to select. Only on the phone's grid page.
+  const phoneGrid = PHONE && mobileExpanded
+  const pick = useListSelect(images.map((i) => i.id), phoneGrid)
 
   if (images.length === 0) return null
+
+  function swipeOut(id: string, name: string) {
+    const { takeImage, restoreImage, forgetImage } = useImageStore.getState()
+    const taken = takeImage(id)
+    if (taken) offerUndo({ name, restore: () => restoreImage(taken), forget: () => forgetImage(taken) })
+  }
 
   // Two photos is the least a collage can be, so the shortcut waits for them.
   // The Actions menu's row is there from one (it can add the second).
@@ -62,11 +77,12 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
           <ul className="grid grid-cols-2 gap-3 p-3">
             {images.map((img) => {
               const isSelected = img.id === selectedId
-              return (
-                <li key={img.id} className="group relative">
+              const ticked = pick.sel.has(img.id)
+              const tile = (
+                <>
                   <button
                     type="button"
-                    onClick={() => handleSelect(img.id)}
+                    onClick={() => (pick.selecting ? pick.sel.toggle(img.id) : handleSelect(img.id))}
                     aria-current={isSelected ? 'true' : undefined}
                     className={tileClass(isSelected, [
                       'w-full rounded-xl border-2 overflow-hidden text-left transition-all',
@@ -90,6 +106,17 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                       </div>
                     </div>
                   </button>
+                  {pick.selecting ? (
+                    // Selection mode: a tick box where the ✕ was, and a tap
+                    // anywhere on the tile ticks it.
+                    <span className="absolute top-2 left-2 flex">
+                      <SelectCheckbox
+                        checked={ticked}
+                        onChange={() => pick.sel.toggle(img.id)}
+                        label={t('app.swipe_select_named', { name: img.name })}
+                      />
+                    </span>
+                  ) : (
                   <button
                     type="button"
                     aria-label={`Remove ${img.name}`}
@@ -103,6 +130,30 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
                       <path d="m4 4 8 8M12 4l-8 8" />
                     </svg>
                   </button>
+                  )}
+                </>
+              )
+              if (!phoneGrid) return <li key={img.id} className="group relative">{tile}</li>
+              return (
+                <li
+                  key={img.id}
+                  className="group relative"
+                  // A hold selects: no system menu (Save image…) under the finger.
+                  style={{ WebkitTouchCallout: 'none' }}
+                  onTouchStart={pick.selecting ? undefined : pick.holdStart(img.id)}
+                  data-grid-tile={img.id}
+                >
+                  <SwipeRow
+                    id={img.id}
+                    left={selectSwipe(t, img.name, () => pick.start(img.id))}
+                    right={removeSwipe(t, img.name, () => swipeOut(img.id, img.name))}
+                    disabled={pick.selecting}
+                    actionWidth={76}
+                    className="rounded-xl"
+                    frontClassName="relative bg-white dark:bg-slate-900"
+                  >
+                    {tile}
+                  </SwipeRow>
                 </li>
               )
             })}
@@ -114,8 +165,28 @@ export default function ImageGrid({ mobileExpanded = false, onBack }: Props) {
     if (PHONE) {
       return (
         <PhonePage title={`${images.length} image${images.length === 1 ? '' : 's'}`} onBack={() => onBack?.()}>
-          {collageButton && <div className="flex justify-end px-3 pt-3">{collageButton}</div>}
-          {grid}
+          {pick.selecting ? (
+            // The suite's select-several bar: Remove selected (the pictures
+            // leave the app, the photos on the phone stay), Clear, and Done.
+            <SelectionBar
+              sel={pick.sel}
+              action="remove"
+              noun={{ one: t('app.noun_one'), other: t('app.noun_other') }}
+              onDelete={(ids) => {
+                for (const id of ids) removeImage(id)
+                pick.leave()
+              }}
+              extra={
+                <Button size="sm" onClick={pick.leave} data-select-done>
+                  {t('app.select_done')}
+                </Button>
+              }
+              className="flex-wrap px-3 pt-3"
+            />
+          ) : (
+            collageButton && <div className="flex justify-end px-3 pt-3">{collageButton}</div>
+          )}
+          <SwipeGroup>{grid}</SwipeGroup>
         </PhonePage>
       )
     }

@@ -1,7 +1,8 @@
 import type { Dict } from './strings'
 
 // Universal Images's own words in the phone chrome: the rows of its ⋯ sheet
-// (the website's Actions menu) and the line About opens with.
+// (the website's Actions menu), the line About opens with, and the image
+// grid's swipes, hold to select and Undo.
 export const APP_STRINGS: Dict = {
   en: {
     what_it_does: 'Resizes, crops, converts and shrinks photos right here on your phone, and shows what a photo reveals about you before you share it. Nothing is uploaded.',
@@ -15,6 +16,14 @@ export const APP_STRINGS: Dict = {
     clear_all: 'Clear all images',
     clear_confirm: 'Remove all images?',
     clear_yes: 'Remove all',
+    swipe_remove: 'Remove',
+    swipe_remove_named: 'Remove {name}',
+    swipe_select: 'Select',
+    swipe_select_named: 'Select {name}',
+    removed_named: 'Removed {name}',
+    select_done: 'Done',
+    noun_one: 'image',
+    noun_other: 'images',
   },
   fr: {
     what_it_does: 'Redimensionne, recadre, convertit et allège vos photos directement sur votre téléphone, et montre ce qu’une photo révèle sur vous avant de la partager. Rien n’est envoyé.',
@@ -28,6 +37,14 @@ export const APP_STRINGS: Dict = {
     clear_all: 'Retirer toutes les images',
     clear_confirm: 'Retirer toutes les images ?',
     clear_yes: 'Tout retirer',
+    swipe_remove: 'Retirer',
+    swipe_remove_named: 'Retirer {name}',
+    swipe_select: 'Sélectionner',
+    swipe_select_named: 'Sélectionner {name}',
+    removed_named: 'Retiré : {name}',
+    select_done: 'OK',
+    noun_one: 'image',
+    noun_other: 'images',
   },
   es: {
     what_it_does: 'Cambia el tamaño, recorta, convierte y reduce fotos aquí mismo en tu teléfono, y te muestra lo que una foto revela de ti antes de compartirla. No se sube nada.',
@@ -41,6 +58,14 @@ export const APP_STRINGS: Dict = {
     clear_all: 'Quitar todas las imágenes',
     clear_confirm: '¿Quitar todas las imágenes?',
     clear_yes: 'Quitar todas',
+    swipe_remove: 'Quitar',
+    swipe_remove_named: 'Quitar {name}',
+    swipe_select: 'Seleccionar',
+    swipe_select_named: 'Seleccionar {name}',
+    removed_named: 'Quitado: {name}',
+    select_done: 'Listo',
+    noun_one: 'imagen',
+    noun_other: 'imágenes',
   },
   it: {
     what_it_does: 'Ridimensiona, ritaglia, converte e alleggerisce le foto direttamente sul tuo telefono, e mostra cosa rivela di te una foto prima di condividerla. Non viene caricato nulla.',
@@ -54,6 +79,14 @@ export const APP_STRINGS: Dict = {
     clear_all: 'Rimuovi tutte le immagini',
     clear_confirm: 'Rimuovere tutte le immagini?',
     clear_yes: 'Rimuovi tutte',
+    swipe_remove: 'Rimuovi',
+    swipe_remove_named: 'Rimuovi {name}',
+    swipe_select: 'Seleziona',
+    swipe_select_named: 'Seleziona {name}',
+    removed_named: 'Rimosso: {name}',
+    select_done: 'Fine',
+    noun_one: 'immagine',
+    noun_other: 'immagini',
   },
   de: {
     what_it_does: 'Skaliert, beschneidet, konvertiert und verkleinert Fotos direkt auf Ihrem Handy und zeigt, was ein Foto über Sie verrät, bevor Sie es teilen. Nichts wird hochgeladen.',
@@ -67,6 +100,14 @@ export const APP_STRINGS: Dict = {
     clear_all: 'Alle Bilder entfernen',
     clear_confirm: 'Alle Bilder entfernen?',
     clear_yes: 'Alle entfernen',
+    swipe_remove: 'Entfernen',
+    swipe_remove_named: '{name} entfernen',
+    swipe_select: 'Auswählen',
+    swipe_select_named: '{name} auswählen',
+    removed_named: 'Entfernt: {name}',
+    select_done: 'Fertig',
+    noun_one: 'Bild',
+    noun_other: 'Bilder',
   },
   'pt-BR': {
     what_it_does: 'Redimensiona, recorta, converte e reduz fotos aqui mesmo no seu celular, e mostra o que uma foto revela sobre você antes de compartilhar. Nada é enviado.',
@@ -80,6 +121,14 @@ export const APP_STRINGS: Dict = {
     clear_all: 'Remover todas as imagens',
     clear_confirm: 'Remover todas as imagens?',
     clear_yes: 'Remover todas',
+    swipe_remove: 'Remover',
+    swipe_remove_named: 'Remover {name}',
+    swipe_select: 'Selecionar',
+    swipe_select_named: 'Selecionar {name}',
+    removed_named: 'Removido: {name}',
+    select_done: 'Concluído',
+    noun_one: 'imagem',
+    noun_other: 'imagens',
   },
   'pt-PT': {
     what_it_does: 'Redimensiona, recorta, converte e reduz fotografias aqui mesmo no seu telemóvel, e mostra o que uma fotografia revela sobre si antes de a partilhar. Nada é carregado.',
@@ -93,6 +142,14 @@ export const APP_STRINGS: Dict = {
     clear_all: 'Remover todas as imagens',
     clear_confirm: 'Remover todas as imagens?',
     clear_yes: 'Remover todas',
+    swipe_remove: 'Remover',
+    swipe_remove_named: 'Remover {name}',
+    swipe_select: 'Selecionar',
+    swipe_select_named: 'Selecionar {name}',
+    removed_named: 'Removido: {name}',
+    select_done: 'Concluído',
+    noun_one: 'imagem',
+    noun_other: 'imagens',
   },
   tr: {
     what_it_does: 'Fotoğrafları doğrudan telefonunuzda yeniden boyutlandırır, kırpar, dönüştürür ve küçültür; paylaşmadan önce bir fotoğrafın sizin hakkınızda neyi açığa çıkardığını gösterir. Hiçbir şey yüklenmez.',
@@ -106,5 +163,13 @@ export const APP_STRINGS: Dict = {
     clear_all: 'Tüm resimleri kaldır',
     clear_confirm: 'Tüm resimler kaldırılsın mı?',
     clear_yes: 'Tümünü kaldır',
+    swipe_remove: 'Kaldır',
+    swipe_remove_named: '{name} öğesini kaldır',
+    swipe_select: 'Seç',
+    swipe_select_named: '{name} öğesini seç',
+    removed_named: 'Kaldırıldı: {name}',
+    select_done: 'Bitti',
+    noun_one: 'görsel',
+    noun_other: 'görsel',
   },
 }

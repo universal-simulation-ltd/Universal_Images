@@ -9,6 +9,7 @@ import { usePhoneNav } from './nav'
 import { Row } from './parts'
 import { PhoneBar, PhoneLayers, type PhoneAppInfo } from './screens'
 import { useNT } from './strings'
+import { UndoToast } from './undo'
 
 // Universal Images's phone chrome (iOS and Android). On the website the navbar
 // holds the Actions dropdown (File ▸ Open images / Make a collage, Clear all
@@ -16,7 +17,9 @@ import { useNT } from './strings'
 // About. On the phone the bar is the light bar, the mark and ⋯ (with an image
 // open, the quick edits sit beside ⋯ as they do in the website's bar); ⋯ is a
 // bottom sheet with the same rows, and Tune this app, the guides and About are
-// pages. "Clear all images" asks in a sheet, not the browser's confirm().
+// pages. "Clear all images" asks in a sheet, not the browser's confirm(). The
+// Undo toast for a picture swiped out of the grid is mounted here, with the
+// chrome, so it outlives the grid's page.
 
 const APP: PhoneAppInfo = {
   name: 'Universal Images',
@@ -117,6 +120,7 @@ export function ImagesPhoneLayers() {
         // half (language, colour scheme, default views).
         onReset={() => {}}
       />
+      <UndoToast />
     </>
   )
 }

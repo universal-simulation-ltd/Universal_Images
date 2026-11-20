@@ -61,6 +61,18 @@ interface ImageEdit {
   redactBoxes: RedactBox[]
 }
 
+/** An image taken out by `takeImage`, with everything it needs to come back. */
+export interface TakenImage {
+  image: SourceImage
+  /** Its place in the list. */
+  index: number
+  /** Its edits (the working state, if it was the open image). */
+  edit: ImageEdit | undefined
+  metadata: ImageMetadata | null | undefined
+  /** It was the open image. */
+  wasSelected: boolean
+}
+
 function revokeEditUrls(edit: ImageEdit | undefined) {
   if (!edit) return
   if (edit.bgOriginal) URL.revokeObjectURL(edit.bgOriginal.objectUrl)
@@ -199,6 +211,15 @@ interface ImageStore {
    */
   renameImage: (id: string, name: string) => void
   removeImage: (id: string) => void
+  /**
+   * Take an image out so it can be put back: the phone's swipe, which offers
+   * Undo. Nothing is freed until `forgetImage`, so its edits come back too.
+   */
+  takeImage: (id: string) => TakenImage | null
+  /** Put an image from `takeImage` back where it was (open again if it was open). */
+  restoreImage: (taken: TakenImage) => void
+  /** The Undo has gone: free what `takeImage` kept. */
+  forgetImage: (taken: TakenImage) => void
   clearAll: () => void
   setTarget: (partial: Partial<ResizeTarget>) => void
   /** Recompute target defaults (size + format) from the currently selected image. */
@@ -691,18 +712,40 @@ export const useImageStore = create<ImageStore>((set, get) => ({
   },
 
   removeImage(id) {
+    // Out, and freed at once: its preview, and its background and blur
+    // snapshots (the active ones if it was the open image, else its stash).
+    const taken = get().takeImage(id)
+    if (taken) get().forgetImage(taken)
+  },
+
+  takeImage(id) {
     const cur = get()
-    const removed = cur.images.find((i) => i.id === id)
-    if (removed) URL.revokeObjectURL(removed.objectUrl)
-    const edits = { ...cur.edits }
-    // Free the removed image's background snapshots — the active ones if it's the
-    // selected image, otherwise its stashed edit.
-    if (cur.selectedId === id) {
-      if (cur.bgOriginal) URL.revokeObjectURL(cur.bgOriginal.objectUrl)
-      if (cur.bgCutout) URL.revokeObjectURL(cur.bgCutout.objectUrl)
-      if (cur.faceOriginal) URL.revokeObjectURL(cur.faceOriginal.objectUrl)
+    const index = cur.images.findIndex((i) => i.id === id)
+    if (index < 0) return null
+    const wasSelected = cur.selectedId === id
+    const taken: TakenImage = {
+      image: cur.images[index]!,
+      index,
+      // The open image's working state lives in the active fields, not the
+      // stash: gather it the way selectImage does on the way out.
+      edit:
+        wasSelected && cur.target
+          ? {
+              target: cur.target,
+              crop: cur.crop,
+              socialCrop: cur.socialCrop,
+              bgFill: cur.bgFill,
+              bgOriginal: cur.bgOriginal,
+              bgCutout: cur.bgCutout,
+              faceOriginal: cur.faceOriginal,
+              faceBoxes: cur.faceBoxes,
+              redactBoxes: cur.redactBoxes
+            }
+          : cur.edits[id],
+      metadata: cur.metadata[id],
+      wasSelected
     }
-    revokeEditUrls(edits[id])
+    const edits = { ...cur.edits }
     delete edits[id]
     const metadata = { ...cur.metadata }
     delete metadata[id]
@@ -710,7 +753,7 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     const remaining = cur.images.filter((i) => i.id !== id)
     if (remaining.length === 0) {
       set({ images: [], selectedId: null, target: null, crop: null, socialCrop: null, autoCropNote: null, bgFill: null, bgOriginal: null, bgCutout: null, faceOriginal: null, faceBoxes: null, redactBoxes: [], redacting: false, selectedRedactId: null, edits: {}, metadata: {}, metadataOpen: false, collageOpen: false })
-      return
+      return taken
     }
     if (cur.selectedId === id) {
       const next = remaining[0]!
@@ -736,6 +779,28 @@ export const useImageStore = create<ImageStore>((set, get) => ({
     } else {
       set({ images: remaining, edits, metadata })
     }
+    return taken
+  },
+
+  restoreImage(taken) {
+    const cur = get()
+    const { image, index, edit, metadata, wasSelected } = taken
+    if (cur.images.some((i) => i.id === image.id)) return
+    const images = [...cur.images]
+    images.splice(Math.min(index, images.length), 0, image)
+    set({
+      images,
+      edits: edit ? { ...cur.edits, [image.id]: edit } : cur.edits,
+      metadata: metadata !== undefined ? { ...cur.metadata, [image.id]: metadata } : cur.metadata
+    })
+    // Open again if it was open, or if nothing is (it was the last one).
+    if (wasSelected || !cur.selectedId) get().selectImage(image.id)
+  },
+
+  forgetImage(taken) {
+    if (get().images.some((i) => i.id === taken.image.id)) return
+    URL.revokeObjectURL(taken.image.objectUrl)
+    revokeEditUrls(taken.edit)
   },
 
   clearAll() {
