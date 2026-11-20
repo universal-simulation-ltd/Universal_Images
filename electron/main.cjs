@@ -1,9 +1,12 @@
 const { app, BrowserWindow, shell } = require('electron')
 const path = require('node:path')
+const { installBrowserSignIn, installHubHandoff } = require('@unisim/sdk/electron')
 
 // Set by `npm run electron:dev` to load the live Vite dev server. When unset
 // (the packaged app), we load the built bundle from disk over `file://`.
 const DEV_SERVER_URL = process.env.ELECTRON_START_URL
+
+const ICON = path.join(__dirname, '..', 'dist', 'icon-512.png')
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -14,7 +17,10 @@ function createWindow() {
     backgroundColor: '#f8fafc',
     autoHideMenuBar: true,
     webPreferences: {
-      // The app uses no Node or Electron APIs — keep the renderer sandboxed.
+      // The page uses no Node APIs and stays sandboxed. Its one bridge is the
+      // SDK's desktop bridge (preload.cjs): hub pages opened signed in, and
+      // sign-in through the system browser.
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -39,6 +45,15 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Hub pages (profile, account) open in a window this app owns, signed in as
+  // the current user: the desktop session lives here and nowhere else.
+  installHubHandoff({ icon: ICON })
+  // Sign-in goes through the system browser (SDK 0.221.0): the desktop app
+  // can't see the browser's UNI·SIM session, so Tune this app → Sign in opens
+  // the hub's sign-in page there instead, and a person already signed in
+  // presses Continue once and comes back greeted by name. `images` is how the
+  // hub's /desktop-sign-in page names this app.
+  installBrowserSignIn({ app: 'images' })
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

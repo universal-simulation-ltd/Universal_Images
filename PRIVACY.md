@@ -145,7 +145,13 @@ above.
   and no online copy of anything. If your browser or phone already holds a
   UNI·SIM sign-in (a Universal ID), the app recognises it so your suite-wide
   settings, such as colour scheme and language, come with you, and Tune this
-  app offers a discreet Sign in; nothing about your images is tied to it. The `@unisim/sdk` anonymous daily
+  app offers a discreet Sign in; nothing about your images is tied to it.
+  In the desktop app, Sign in opens UNI·SIM's sign-in page in your own
+  browser, and the app waits for that one sign-in on a local-only address
+  (127.0.0.1) that nothing outside your computer can reach, closing it as soon
+  as the sign-in ends ([`electron/main.cjs`](electron/main.cjs),
+  `installBrowserSignIn` in `@unisim/sdk`).
+  The `@unisim/sdk` anonymous daily
   open count is off with it, so the app does not count you either: no
   identifier, no install ID, no tally of opens, on any platform. (Until
   2026-10-20 a Universal ID could keep a backup of an image online. That was
