@@ -8,9 +8,10 @@ go and read it.
 The short version: **your images are resized, converted, blurred and stripped
 by your own browser.** They are not uploaded to us to be processed, and there
 is no copy of them on our servers. There is no account to make, either, and
-nothing to hold one against. (If your browser already holds a UNI·SIM sign-in,
-the app recognises it so your suite-wide settings come with you; your images
-are never tied to it.)
+nothing to hold one against. (If your browser or phone already holds a UNI·SIM
+sign-in, the app recognises it: your suite-wide settings come with you, and
+what you pick in Tune this app is kept with your account. Your images are
+never tied to it.)
 
 ---
 
@@ -143,9 +144,14 @@ above.
   website, the phone apps or the desktop app (`noAccounts: true` in
   [`src/main.tsx`](src/main.tsx)) — so there is no "you opened the app" event
   and no online copy of anything. If your browser or phone already holds a
-  UNI·SIM sign-in (a Universal ID), the app recognises it so your suite-wide
-  settings, such as colour scheme and language, come with you, and Tune this
-  app offers a discreet Sign in; nothing about your images is tied to it.
+  UNI·SIM sign-in (a Universal ID), the app recognises it: your suite-wide
+  settings, such as colour scheme and language, come with you, and what you
+  pick in Tune this app is kept with your account (under your account ID, so
+  it follows you to your other devices). That is all it sends, and nothing
+  about your images is tied to it. On the website, Tune this app offers a
+  discreet Sign in; the iPhone and Android apps offer no sign-in of their own
+  and show nothing about accounts (`signInInTune` in
+  [`src/main.tsx`](src/main.tsx)).
   In the desktop app, Sign in opens UNI·SIM's sign-in page in your own
   browser, and the app waits for that one sign-in on a local-only address
   (127.0.0.1) that nothing outside your computer can reach, closing it as soon
