@@ -215,7 +215,7 @@ Wenn Sie die Standortkarte bis auf Regionsebene heranzoomen, lädt die Webversio
 
 ## Was jede Universal-App sendet
 
-Es gibt kein eigenes Konto und keine Nutzungszählung: Die App teilt uns weder mit, wann Sie sie öffnen, noch, was Sie darin tun. Sind Sie bereits bei einer UNI·SIM-App angemeldet, erkennt die App das, damit Ihre suiteweiten Einstellungen wie Farbschema und Sprache mitkommen, und „Diese App anpassen“ bietet eine dezente Anmeldung an. Nichts, was sie sendet, enthält etwas über Ihre Bilder: weder ihre Namen noch ihre Größen oder Inhalte.
+Es gibt kein eigenes Konto und keine Nutzungszählung: Die App teilt uns weder mit, wann Sie sie öffnen, noch, was Sie darin tun. Sind Sie bereits bei UNI·SIM angemeldet (auf dem Telefon über eine andere unserer Apps), erkennt die App das: Ihre suiteweiten Einstellungen wie Farbschema und Sprache kommen mit, und die Einstellungen aus „Diese App anpassen“ sowie der Name, mit dem Sie angesprochen werden möchten, werden in diesem Konto gespeichert. Die Telefon-App hat keine eigene Anmeldung; auf der Website bietet „Diese App anpassen“ eine dezente Anmeldung an. Nichts, was sie sendet, enthält etwas über Ihre Bilder: weder ihre Namen noch ihre Größen oder Inhalte.
 
 Die App enthält keine Analyse-, Tracking- oder Werbedienste von Drittanbietern.`,
   },

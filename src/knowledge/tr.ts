@@ -215,7 +215,7 @@ Konum haritasını il düzeyine yakınlaştırırsanız uygulamanın web sürüm
 
 ## Her Universal uygulamasının gönderdikleri
 
-Uygulamanın kendi hesabı ve kullanım sayımı yoktur: uygulama, onu ne zaman açtığınızı ya da içinde ne yaptığınızı bize bildirmez. Bir UNI·SIM uygulamasında zaten oturum açtıysanız uygulama bunu tanır; böylece renk düzeni ve dil gibi tüm pakette geçerli ayarlarınız sizinle gelir ve Bu uygulamayı ayarla bölümü göze batmayan bir oturum açma seçeneği sunar. Gönderdiği hiçbir şey görüntülerinizle ilgili bir şey içermez: ne adlarını, ne boyutlarını ne de içeriklerini.
+Uygulamanın kendi hesabı ve kullanım sayımı yoktur: uygulama, onu ne zaman açtığınızı ya da içinde ne yaptığınızı bize bildirmez. UNI·SIM'de zaten oturum açtıysanız (telefonda, başka bir uygulamamız aracılığıyla) uygulama bunu tanır: renk düzeni ve dil gibi tüm pakette geçerli ayarlarınız sizinle gelir; Bu uygulamayı ayarla bölümündeki ayarlarınız ve size hitap edilmesini istediğiniz ad o hesaba kaydedilir. Telefon uygulamasının kendi oturum açma özelliği yoktur; web sitesinde Bu uygulamayı ayarla bölümü göze batmayan bir oturum açma seçeneği sunar. Gönderdiği hiçbir şey görüntülerinizle ilgili bir şey içermez: ne adlarını, ne boyutlarını ne de içeriklerini.
 
 Uygulamada üçüncü taraf analiz, izleme ya da reklam yoktur.`,
   },

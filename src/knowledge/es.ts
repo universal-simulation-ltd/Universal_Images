@@ -215,7 +215,7 @@ Si acerca el mapa de ubicación al nivel de provincia o región, la versión web
 
 ## Lo que envían todas las aplicaciones Universal
 
-No hay una cuenta propia ni recuento de uso: la aplicación no nos dice cuándo la abre ni lo que hace en ella. Si ya ha iniciado sesión en una app de UNI·SIM, la aplicación lo reconoce para que sus ajustes comunes a todo el conjunto, como el esquema de colores y el idioma, le acompañen, y Ajustar esta app ofrece un discreto inicio de sesión. Nada de lo que envía incluye nada sobre sus imágenes: ni sus nombres, ni sus tamaños, ni su contenido.
+No hay una cuenta propia ni recuento de uso: la aplicación no nos dice cuándo la abre ni lo que hace en ella. Si ya ha iniciado sesión en UNI·SIM (en el teléfono, a través de otra de nuestras apps), la aplicación lo reconoce: sus ajustes comunes a todo el conjunto, como el esquema de colores y el idioma, le acompañan, y los ajustes de Ajustar esta app y el nombre con el que prefiere que le llamen se guardan en esa cuenta. La app del teléfono no tiene inicio de sesión propio; en el sitio web, Ajustar esta app ofrece un discreto inicio de sesión. Nada de lo que envía incluye nada sobre sus imágenes: ni sus nombres, ni sus tamaños, ni su contenido.
 
 La aplicación no incluye analítica, seguimiento ni publicidad de terceros.`,
   },

@@ -215,7 +215,7 @@ Se ingrandisci la mappa della posizione fino al livello di contea, la versione w
 
 ## Cosa invia ogni app Universal
 
-Non c'è un account proprio né alcun conteggio d'uso: l'app non ci dice quando la apri né cosa ci fai. Se hai già effettuato l'accesso a un'app UNI·SIM, l'app ti riconosce così che le tue impostazioni comuni a tutta la suite, come schema di colori e lingua, ti seguano, e Regola questa app offre un accesso discreto. Niente di ciò che invia include qualcosa sulle tue immagini: né i nomi, né le dimensioni, né il contenuto.
+Non c'è un account proprio né alcun conteggio d'uso: l'app non ci dice quando la apri né cosa ci fai. Se hai già effettuato l'accesso a UNI·SIM (sul telefono, tramite un'altra delle nostre app), l'app lo riconosce: le tue impostazioni comuni a tutta la suite, come schema di colori e lingua, ti seguono, e le impostazioni di Regola questa app e il nome con cui preferisci essere chiamato vengono salvati in quell'account. L'app per telefono non ha un accesso proprio; sul sito web, Regola questa app offre un accesso discreto. Niente di ciò che invia include qualcosa sulle tue immagini: né i nomi, né le dimensioni, né il contenuto.
 
 Nell'app non ci sono strumenti di analisi, tracciamento o pubblicità di terze parti.`,
   },
