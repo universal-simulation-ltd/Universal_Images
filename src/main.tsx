@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { UniversalProvider, installBoxStyles, installButtonStyles, installTabStyles } from '@unisim/sdk'
 import App from './App'
+import { PHONE } from './native/shell'
 import { useImageStore } from './stores/imageStore'
 import './index.css'
 
@@ -41,7 +42,7 @@ const isDesktop = import.meta.env.MODE === 'desktop'
 // to desktop, Import a backup) does that job with no account. `noAccounts:
 // true` drops the account rows; since SDK 0.211.0 it no longer keeps the app
 // signed out: a suite session already held is read and followed (Global Tuning
-// comes with it) and Tune this app offers a discreet Sign in. With it the
+// comes with it) and on the website Tune this app offers a discreet Sign in. With it the
 // SDK's anonymous open count is off too (SDK 0.187), as
 // in Charts, Beam and the rest. No <UsageTracker /> either: it only ever
 // recorded signed-in opens.
@@ -51,6 +52,11 @@ const universalConfig = {
   product: 'images' as const,
   cookieDomain: !isDesktop && import.meta.env.PROD ? '.unisim.co.uk' : undefined,
   noAccounts: true,
+  // The phone builds recognise a suite session silently and show NOTHING about
+  // accounts (James, 2026-11-21): no Sign in, no Your Universal ID, so App
+  // Review has no account to expect a Delete my account for. The website keeps
+  // Tune's discreet Sign in. `PHONE` is the native shell (src/native/shell.ts).
+  signInInTune: !PHONE,
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
